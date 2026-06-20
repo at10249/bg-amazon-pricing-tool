@@ -79,6 +79,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .empty-state p{font-size:0.8rem;max-width:340px;line-height:1.5;}
 .empty-btn{padding:9px 20px;border-radius:8px;background:#5b63f7;border:none;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:4px;}
 .flow-guide{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0;}
+.flow-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;}
+.flow-modal-overlay.open{display:flex;}
+.flow-modal{background:#1a1d27;border:1px solid #252836;border-radius:16px;padding:24px 26px;max-width:680px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;}
+.flow-modal-title{font-size:0.95rem;font-weight:800;color:#e8eaf0;margin-bottom:4px;}
+.flow-modal-sub{font-size:0.77rem;color:#555870;margin-bottom:18px;}
 .flow-step{display:flex;flex-direction:column;align-items:center;gap:4px;background:#1a1d27;border:1px solid #252836;border-radius:10px;padding:10px 14px;min-width:80px;max-width:108px;}
 .flow-step-num{font-size:1rem;line-height:1;}
 .flow-step-label{font-size:0.67rem;font-weight:700;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.05em;line-height:1.3;}
@@ -393,6 +398,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         </div>
         <div style="flex:1;"></div>
         <div id="pv-stage-badge"></div>
+        <button class="topbar-btn" onclick="document.getElementById('flow-modal').classList.add('open')" title="How to use this tool" data-en="? Guide" data-zh="? 指南">? Guide</button>
         <button class="topbar-btn" onclick="openEditModal()" data-en="Edit" data-zh="编辑">Edit</button>
         <button class="topbar-btn" onclick="shareProduct()" data-en="Share" data-zh="分享">Share</button>
         <button class="topbar-btn danger" onclick="deleteProduct()" data-en="Delete" data-zh="删除">Delete</button>
@@ -627,6 +633,68 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
           <div id="mfg_alerts"></div>
           <div class="alert info" style="font-size:0.74rem;">If the Minimum Viable Price is higher than the typical market price for this product category, the landed cost needs to come down or the seller's margin target needs adjusting. Share this output with your buyer.</div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ FLOW GUIDE MODAL ════════════════════ -->
+<div class="flow-modal-overlay" id="flow-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="flow-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div class="flow-modal-title" data-en="How to use this tool" data-zh="如何使用本工具">How to use this tool</div>
+        <div class="flow-modal-sub" data-en="Amazon Pricing &amp; Ad Stage Tracker — m19 methodology" data-zh="亚马逊定价与广告阶段追踪器 — m19方法论">Amazon Pricing &amp; Ad Stage Tracker — m19 methodology</div>
+      </div>
+      <button class="topbar-btn" onclick="document.getElementById('flow-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="flow-guide" style="margin-bottom:18px;">
+      <div class="flow-step">
+        <div class="flow-step-num">①</div>
+        <div class="flow-step-label" data-en="Add Product" data-zh="添加产品">Add Product</div>
+        <div class="flow-step-desc" data-en="COGS, fees &amp; margin target" data-zh="成本、费用和利润目标">COGS, fees &amp; margin target</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-step-num">②</div>
+        <div class="flow-step-label" data-en="Set Prices" data-zh="设置价格">Set Prices</div>
+        <div class="flow-step-desc" data-en="Calculator shows viable price" data-zh="计算器显示可行价格">Calculator shows viable price</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-step-num">③</div>
+        <div class="flow-step-label" data-en="Launch Ads" data-zh="投放广告">Launch Ads</div>
+        <div class="flow-step-desc" data-en="Mark Stage 1 in Ad Stages" data-zh="在广告阶段标记为阶段1">Mark Stage 1 in Ad Stages</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-step-num">④</div>
+        <div class="flow-step-label" data-en="Check-ins" data-zh="每周记录">Check-ins</div>
+        <div class="flow-step-desc" data-en="Record ACoS &amp; revenue weekly" data-zh="每周记录ACoS和收入">Record ACoS &amp; revenue weekly</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step" style="border-color:#166534;">
+        <div class="flow-step-num">✓</div>
+        <div class="flow-step-label" style="color:#4ade80;" data-en="Stable" data-zh="稳定盈利">Stable</div>
+        <div class="flow-step-desc" data-en="Profitable &amp; graduated" data-zh="盈利并完成晋升">Profitable &amp; graduated</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="① Calculator" data-zh="① 计算器">① Calculator</strong><br>
+        <span data-en="Enter COGS, FBA size tier, target margin and ad costs. The tool calculates your minimum viable list price and shows all four price tiers (List/Your/Sale/Clearance)." data-zh="输入货物成本、FBA尺寸等级、目标利润率和广告成本。工具将计算最低可行挂牌价，并显示四个价格层级（挂牌价/售价/促销价/清仓价）。">Enter COGS, FBA size tier, target margin and ad costs. The tool calculates your minimum viable list price and shows all four price tiers (List/Your/Sale/Clearance).</span>
+      </div>
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="② Ad Stages (m19 Methodology)" data-zh="② 广告阶段（m19方法论）">② Ad Stages (m19 Methodology)</strong><br>
+        <span data-en="m19 uses 3 stages: Stage 1 (pure visibility, collect data), Stage 2 (monthly budget, build volume), Stage 3 (ACoS target, step down to profitability). Graduation criteria are shown with live progress." data-zh="m19使用3个阶段：阶段1（纯曝光，收集数据）、阶段2（月度预算，积累销量）、阶段3（ACoS目标，逐步走向盈利）。晋升标准附有实时进度显示。">m19 uses 3 stages: Stage 1 (pure visibility, collect data), Stage 2 (monthly budget, build volume), Stage 3 (ACoS target, step down to profitability). Graduation criteria are shown with live progress.</span>
+      </div>
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="③ Weekly Check-ins" data-zh="③ 每周签到">③ Weekly Check-ins</strong><br>
+        <span data-en="Record ACoS, ad sales, total revenue and ad spend once per week. The tool tracks TACoS trend and fires kill signals if the product is failing (no sales, ACoS never improving, etc.)." data-zh="每周记录一次ACoS、广告销售量、总收入和广告支出。工具将追踪TACoS趋势，并在产品表现不佳时触发终止信号（无销售、ACoS持续不改善等）。">Record ACoS, ad sales, total revenue and ad spend once per week. The tool tracks TACoS trend and fires kill signals if the product is failing (no sales, ACoS never improving, etc.).</span>
+      </div>
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="④ Import Amazon Reports" data-zh="④ 导入亚马逊报告">④ Import Amazon Reports</strong><br>
+        <span data-en="In the Check-ins tab, import a Business Report (revenue + CVR) or Advertising Advertised Product Report (ACoS + spend) from Seller Central. The tool auto-detects the report type and matches by ASIN." data-zh="在签到标签中，从卖家中心导入业务报告（收入+转化率）或广告推广商品报告（ACoS+支出）。工具自动识别报告类型并通过ASIN匹配。">In the Check-ins tab, import a Business Report (revenue + CVR) or Advertising Advertised Product Report (ACoS + spend) from Seller Central. The tool auto-detects the report type and matches by ASIN.</span>
       </div>
     </div>
   </div>
@@ -1354,65 +1422,65 @@ function renderCalcTab(p) {
 
   document.getElementById('calc-inputs-html').innerHTML = `
     <div class="card">
-      <div class="card-title">Inputs Summary</div>
+      <div class="card-title">${t('Inputs Summary','输入摘要')}</div>
       <div style="font-size:0.75rem;color:#8b8fa8;line-height:1.7;">
-        <div><strong style="color:#e8eaf0;">Category:</strong> ${document.getElementById('f-category')?.options[[...document.getElementById('f-category')?.options||[]].findIndex(o=>o.value===p.inputs.category)]?.text||p.inputs.category}</div>
-        <div><strong style="color:#e8eaf0;">Size / Weight:</strong> ${p.inputs.sizetier.toUpperCase()} / ${p.inputs.weight}oz</div>
-        <div><strong style="color:#e8eaf0;">COGS:</strong> ${fmtC(cogs)}</div>
-        <div><strong style="color:#e8eaf0;">Target Margin:</strong> ${p.inputs.margin}%</div>
-        <div><strong style="color:#e8eaf0;">Total Other Costs:</strong> ${fmtC(otherCosts)}${vinePerUnit>0?` (incl. ${fmtC(vinePerUnit)} Vine)`:''}</div>
-        <div><strong style="color:#e8eaf0;">Vine:</strong> ${p.inputs.vine ? 'Enrolled ($200)' : 'Not enrolled'}</div>
-        <div><strong style="color:#e8eaf0;">Fuel Surcharge:</strong> ${p.inputs.surcharge ? 'Included' : 'Excluded'}</div>
+        <div><strong style="color:#e8eaf0;">${t('Category:','类别：')}</strong> ${document.getElementById('f-category')?.options[[...document.getElementById('f-category')?.options||[]].findIndex(o=>o.value===p.inputs.category)]?.text||p.inputs.category}</div>
+        <div><strong style="color:#e8eaf0;">${t('Size / Weight:','尺寸/重量：')}</strong> ${p.inputs.sizetier.toUpperCase()} / ${p.inputs.weight}oz</div>
+        <div><strong style="color:#e8eaf0;">${t('COGS:','货物成本：')}</strong> ${fmtC(cogs)}</div>
+        <div><strong style="color:#e8eaf0;">${t('Target Margin:','目标利润率：')}</strong> ${p.inputs.margin}%</div>
+        <div><strong style="color:#e8eaf0;">${t('Total Other Costs:','总其他成本：')}</strong> ${fmtC(otherCosts)}${vinePerUnit>0?` (incl. ${fmtC(vinePerUnit)} Vine)`:''}</div>
+        <div><strong style="color:#e8eaf0;">${t('Vine:','Vine：')}</strong> ${p.inputs.vine ? t('Enrolled ($200)','已注册（$200）') : t('Not enrolled','未注册')}</div>
+        <div><strong style="color:#e8eaf0;">${t('Fuel Surcharge:','燃油附加费：')}</strong> ${p.inputs.surcharge ? t('Included','已包含') : t('Excluded','未包含')}</div>
       </div>
-      <button class="btn" style="margin-top:10px;width:100%;" onclick="openEditModal()">Edit Inputs</button>
+      <button class="btn" style="margin-top:10px;width:100%;" onclick="openEditModal()">${t('Edit Inputs','编辑输入')}</button>
     </div>
     <div class="card">
-      <div class="card-title">Ad Targets</div>
+      <div class="card-title">${t('Ad Targets','广告目标')}</div>
       <div class="g3" style="gap:8px;">
-        <div class="stat"><div class="stat-label">Target ACoS</div><div class="stat-val blue">${p.inputs.tacos}%</div></div>
-        <div class="stat"><div class="stat-label">Break-even ACoS</div><div class="stat-val ${beAcos > p.inputs.tacos ? 'red':'green'}">${beAcos.toFixed(1)}%</div></div>
-        <div class="stat"><div class="stat-label">Max CPC</div><div class="stat-val blue">${fmtC(maxCPC)}</div></div>
+        <div class="stat"><div class="stat-label">${t('Target ACoS','目标ACoS')}</div><div class="stat-val blue">${p.inputs.tacos}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Break-even ACoS','盈亏平衡ACoS')}</div><div class="stat-val ${beAcos > p.inputs.tacos ? 'red':'green'}">${beAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Max CPC','最大CPC')}</div><div class="stat-val blue">${fmtC(maxCPC)}</div></div>
       </div>
       <div class="g3" style="gap:8px;margin-top:8px;">
-        <div class="stat"><div class="stat-label">Launch ACoS</div><div class="stat-val amber">${p.inputs.lacos}%</div></div>
-        <div class="stat"><div class="stat-label">Max CPC (Launch)</div><div class="stat-val amber">${fmtC(maxCPClaunch)}</div></div>
-        <div class="stat"><div class="stat-label">CVR</div><div class="stat-val">${p.inputs.cvr}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Launch ACoS','启动期ACoS')}</div><div class="stat-val amber">${p.inputs.lacos}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Max CPC (Launch)','最大CPC（启动期）')}</div><div class="stat-val amber">${fmtC(maxCPClaunch)}</div></div>
+        <div class="stat"><div class="stat-label">${t('CVR','转化率')}</div><div class="stat-val">${p.inputs.cvr}%</div></div>
       </div>
     </div>
   `;
 
   document.getElementById('calc-outputs-html').innerHTML = `
     <div class="pills">
-      <div class="pill hi"><span>FBA Fee</span><strong>${fmtC(ypF.fba)}${p.inputs.surcharge?' (+3.5%)':''}</strong></div>
-      <div class="pill hi"><span>Referral</span><strong>${fmtC(ypF.ref)}</strong></div>
-      <div class="pill"><span>COGS</span><strong>${fmtC(cogs)}</strong></div>
-      <div class="pill"><span>Other Costs</span><strong>${fmtC(otherCosts)}</strong></div>
-      <div class="pill ${ypF.pct<20?'warn':''}"><span>Profit/unit</span><strong>${fmtC(ypF.profit)}</strong></div>
+      <div class="pill hi"><span>${t('FBA Fee','FBA费用')}</span><strong>${fmtC(ypF.fba)}${p.inputs.surcharge?' (+3.5%)':''}</strong></div>
+      <div class="pill hi"><span>${t('Referral','佣金')}</span><strong>${fmtC(ypF.ref)}</strong></div>
+      <div class="pill"><span>${t('COGS','货物成本')}</span><strong>${fmtC(cogs)}</strong></div>
+      <div class="pill"><span>${t('Other Costs','其他成本')}</span><strong>${fmtC(otherCosts)}</strong></div>
+      <div class="pill ${ypF.pct<20?'warn':''}"><span>${t('Profit/unit','单件利润')}</span><strong>${fmtC(ypF.profit)}</strong></div>
     </div>
     <div class="tier list">
-      <div><div class="tier-name">List Price (MSRP)</div><div class="tier-sub">Ends .99 · Must verify at another retailer (Apr 23 2026)</div></div>
-      <div><div class="tier-price">${fmtC(listP)}</div><div class="tier-margin">${pctOff(listP,yp)}% above Your Price</div></div>
+      <div><div class="tier-name">${t('List Price (MSRP)','挂牌价（MSRP）')}</div><div class="tier-sub">${t('Ends .99 · Must verify at another retailer (Apr 23 2026)','尾数.99 · 须在其他零售商处核实（2026年4月23日）')}</div></div>
+      <div><div class="tier-price">${fmtC(listP)}</div><div class="tier-margin">${pctOff(listP,yp)}% ${t('above Your Price','高于您的售价')}</div></div>
     </div>
     <div class="tier your">
-      <div class="tier-badge">PRIMARY PRICE</div>
-      <div><div class="tier-name">Your Price (normal selling price)${priceClass&&priceClass.cls==='pm-normal'?`<span class="price-match pm-normal">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .95 · Hold ≥ 30 days between promos</div></div>
-      <div><div class="tier-price">${fmtC(yp)}</div><div class="tier-margin">${ypF.pct.toFixed(1)}% margin = ${fmtC(ypF.profit)}/unit</div></div>
+      <div class="tier-badge">${t('PRIMARY PRICE','主要售价')}</div>
+      <div><div class="tier-name">${t('Your Price (normal selling price)','您的售价（正常销售价格）')}${priceClass&&priceClass.cls==='pm-normal'?`<span class="price-match pm-normal">${t('CURRENT ✓','当前 ✓')}</span>`:''}</div><div class="tier-sub">${t('Ends .95 · Hold ≥ 30 days between promos','尾数.95 · 促销间隔≥30天')}</div></div>
+      <div><div class="tier-price">${fmtC(yp)}</div><div class="tier-margin">${ypF.pct.toFixed(1)}% ${t('margin','利润率')} = ${fmtC(ypF.profit)}/${t('unit','件')}</div></div>
     </div>
     <div class="tier sale">
-      <div class="tier-badge">SALE PRICE</div>
-      <div><div class="tier-name">Sale / Price Discount (Was→Now)${priceClass&&priceClass.cls==='pm-sale'?`<span class="price-match pm-sale">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .90 · ${pctOff(yp,saleP)}% off · Free Price Discount tool · max 30 days</div></div>
-      <div><div class="tier-price">${fmtC(saleP)}</div><div class="tier-margin">${saleF.pct.toFixed(1)}% margin = ${fmtC(saleF.profit)}/unit</div></div>
+      <div class="tier-badge">${t('SALE PRICE','促销价')}</div>
+      <div><div class="tier-name">${t('Sale / Price Discount (Was→Now)','促销折扣（原价→现价）')}${priceClass&&priceClass.cls==='pm-sale'?`<span class="price-match pm-sale">${t('CURRENT ✓','当前 ✓')}</span>`:''}</div><div class="tier-sub">${t(`Ends .90 · ${pctOff(yp,saleP)}% off · Free Price Discount tool · max 30 days`,`尾数.90 · 折扣${pctOff(yp,saleP)}% · 免费价格折扣工具 · 最多30天`)}</div></div>
+      <div><div class="tier-price">${fmtC(saleP)}</div><div class="tier-margin">${saleF.pct.toFixed(1)}% ${t('margin','利润率')} = ${fmtC(saleF.profit)}/${t('unit','件')}</div></div>
     </div>
     <div class="tier disc">
-      <div class="tier-badge">CLEARANCE</div>
-      <div><div class="tier-name">Clearance / Discount Price${priceClass&&priceClass.cls==='pm-clearance'?`<span class="price-match pm-clearance">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .97 · ${pctOff(yp,discP)}% off · signals one-off price · use sparingly</div></div>
-      <div><div class="tier-price">${fmtC(discP)}</div><div class="tier-margin">${discF.pct.toFixed(1)}% margin = ${fmtC(discF.profit)}/unit</div></div>
+      <div class="tier-badge">${t('CLEARANCE','清仓价')}</div>
+      <div><div class="tier-name">${t('Clearance / Discount Price','清仓/折扣价')}${priceClass&&priceClass.cls==='pm-clearance'?`<span class="price-match pm-clearance">${t('CURRENT ✓','当前 ✓')}</span>`:''}</div><div class="tier-sub">${t(`Ends .97 · ${pctOff(yp,discP)}% off · signals one-off price · use sparingly`,`尾数.97 · 折扣${pctOff(yp,discP)}% · 表示一次性价格 · 谨慎使用`)}</div></div>
+      <div><div class="tier-price">${fmtC(discP)}</div><div class="tier-margin">${discF.pct.toFixed(1)}% ${t('margin','利润率')} = ${fmtC(discF.profit)}/${t('unit','件')}</div></div>
     </div>
-    ${curPrice&&priceClass?`<div class="alert info">Current price ${fmtC(curPrice)} — ${priceClass.label} (from last check-in)</div>`:''}
-    ${ypF.pct<LOW_MARGIN_WARNING?`<div class="alert warn">⚠ Your Price margin below ${LOW_MARGIN_WARNING}% — thin buffer. Review costs or target price.</div>`:''}
-    ${saleF.profit<0?`<div class="alert bad">⚠ Sale Price below break-even. Reduce costs before using as launch discount.</div>`:''}
-    ${discF.profit<0?`<div class="alert bad">⚠ Clearance Price below break-even. Selling at a loss.</div>`:''}
-    ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit</div>`:''}
+    ${curPrice&&priceClass?`<div class="alert info">${t(`Current price ${fmtC(curPrice)} — ${priceClass.label} (from last check-in)`,`当前价格 ${fmtC(curPrice)} — ${priceClass.label}（来自最近签到）`)}</div>`:''}
+    ${ypF.pct<LOW_MARGIN_WARNING?`<div class="alert warn">${t(`⚠ Your Price margin below ${LOW_MARGIN_WARNING}% — thin buffer. Review costs or target price.`,`⚠ 您的售价利润率低于${LOW_MARGIN_WARNING}% — 缓冲不足，请检查成本或目标价格。`)}</div>`:''}
+    ${saleF.profit<0?`<div class="alert bad">${t('⚠ Sale Price below break-even. Reduce costs before using as launch discount.','⚠ 促销价低于盈亏平衡点。使用前请先降低成本。')}</div>`:''}
+    ${discF.profit<0?`<div class="alert bad">${t('⚠ Clearance Price below break-even. Selling at a loss.','⚠ 清仓价低于盈亏平衡点，目前在亏损销售。')}</div>`:''}
+    ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">${t(`✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit`,`✓ 所有价格层级均盈利。最低清仓利润：${fmtC(discF.profit)}/件`)}</div>`:''}
     ${(()=>{
       const sur = p.inputs.surcharge ? 1.035 : 1;
       const cliffs = [];
@@ -1427,7 +1495,7 @@ function renderCalcTab(p) {
       return cliffs.map(c=>`<div class="alert warn">${c}</div>`).join('');
     })()}
     <div class="bar-wrap">
-      <div class="bar-top"><span>Revenue breakdown at Your Price</span><span>Profit: ${ypF.pct.toFixed(1)}%</span></div>
+      <div class="bar-top"><span>${t('Revenue breakdown at Your Price','您的售价收入分解')}</span><span>${t('Profit:','利润：')} ${ypF.pct.toFixed(1)}%</span></div>
       <div class="bar">
         <div class="bar-seg" style="width:${cogs/yp*100}%;background:#f87171"></div>
         <div class="bar-seg" style="width:${ypF.fba/yp*100}%;background:#818cf8"></div>
@@ -1436,11 +1504,11 @@ function renderCalcTab(p) {
         <div class="bar-seg" style="width:${Math.max(0,ypF.profit/yp*100)}%;background:#4ade80"></div>
       </div>
       <div class="bar-legend">
-        <div class="bl"><div class="bl-dot" style="background:#f87171"></div>COGS</div>
+        <div class="bl"><div class="bl-dot" style="background:#f87171"></div>${t('COGS','成本')}</div>
         <div class="bl"><div class="bl-dot" style="background:#818cf8"></div>FBA</div>
-        <div class="bl"><div class="bl-dot" style="background:#f59e0b"></div>Referral</div>
-        <div class="bl"><div class="bl-dot" style="background:#22d3ee"></div>Other</div>
-        <div class="bl"><div class="bl-dot" style="background:#4ade80"></div>Profit</div>
+        <div class="bl"><div class="bl-dot" style="background:#f59e0b"></div>${t('Referral','佣金')}</div>
+        <div class="bl"><div class="bl-dot" style="background:#22d3ee"></div>${t('Other','其他')}</div>
+        <div class="bl"><div class="bl-dot" style="background:#4ade80"></div>${t('Profit','利润')}</div>
       </div>
     </div>
   `;
@@ -1457,7 +1525,9 @@ function renderStagesTab(p) {
   const stageIdx = stages.indexOf(lc);
 
   // Stage tracker visual
-  const stageNames = ['Pre-Launch','Stage 1','Stage 2','Stage 3','Stable'];
+  const stageNames = state.lang === 'zh'
+    ? ['预上线','阶段1','阶段2','阶段3','稳定']
+    : ['Pre-Launch','Stage 1','Stage 2','Stage 3','Stable'];
   let trackHtml = '<div class="stage-track">';
   stages.forEach((s, i) => {
     const cls = i < stageIdx ? 'done' : i === stageIdx ? 'active' : '';
@@ -1473,36 +1543,36 @@ function renderStagesTab(p) {
 
   if (lc === 'PRE_LAUNCH') {
     guideHtml = `<div class="stage-card active">
-      <div class="stage-card-title">Ready to Launch?</div>
-      <div class="stage-card-sub">When your ASIN goes live on Amazon, click to begin Stage 1.</div>
+      <div class="stage-card-title">${t('Ready to Launch?','准备好上线了吗？')}</div>
+      <div class="stage-card-sub">${t('When your ASIN goes live on Amazon, click to begin Stage 1.','当您的ASIN在亚马逊上线后，点击开始阶段1。')}</div>
       <div class="stage-mode">m19 Mode: Force Product Visibility</div>
       <ul class="checklist">
-        <li><div class="check-icon active">○</div>ASIN live on Amazon with images and bullet points</li>
-        <li><div class="check-icon active">○</div>Vine enrolled (if using) — enroll on Day 1</li>
-        <li><div class="check-icon active">○</div>Dedicated m19 strategy created for this ASIN only — never mix with established products</li>
-        <li><div class="check-icon active">○</div>Set initial bid: $1–$2 (adjust higher for competitive niches)</li>
-        <li><div class="check-icon active">○</div>Set daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day (low niche: ${fmtC(STAGE1_BUDGET_LOW)}, high niche: ${fmtC(STAGE1_BUDGET_HIGH)})</li>
+        <li><div class="check-icon active">○</div>${t('ASIN live on Amazon with images and bullet points','ASIN已在亚马逊上线，包含图片和要点')}</li>
+        <li><div class="check-icon active">○</div>${t('Vine enrolled (if using) — enroll on Day 1','已注册Vine（如使用）— 在第1天注册')}</li>
+        <li><div class="check-icon active">○</div>${t('Dedicated m19 strategy created for this ASIN only — never mix with established products','为此ASIN单独创建m19策略 — 切勿与成熟产品混合')}</li>
+        <li><div class="check-icon active">○</div>${t('Set initial bid: $1–$2 (adjust higher for competitive niches)','设置初始竞价：$1–$2（竞争激烈的细分市场适当调高）')}</li>
+        <li><div class="check-icon active">○</div>${t(`Set daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day (low niche: ${fmtC(STAGE1_BUDGET_LOW)}, high niche: ${fmtC(STAGE1_BUDGET_HIGH)})`,`设置日预算：${fmtC(STAGE1_BUDGET_MED)}/天（低竞争：${fmtC(STAGE1_BUDGET_LOW)}，高竞争：${fmtC(STAGE1_BUDGET_HIGH)}）`)}</li>
       </ul>
-      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_1')">Mark as Launched → Begin Stage 1</button>
+      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_1')">${t('Mark as Launched → Begin Stage 1','标记为已上线 → 开始阶段1')}</button>
     </div>`;
   }
 
   if (lc === 'STAGE_1') {
     const s1Ready = g.s1Ready;
     guideHtml = `<div class="stage-card active">
-      <div class="stage-card-title">Stage 1 — Force Product Visibility</div>
-      <div class="stage-card-sub">Goal: impressions, clicks, first sales. Pure data collection. Day ${g.daysS1} of ~3–7.</div>
+      <div class="stage-card-title">${t('Stage 1 — Force Product Visibility','阶段1 — 强制产品曝光')}</div>
+      <div class="stage-card-sub">${t(`Goal: impressions, clicks, first sales. Pure data collection. Day ${g.daysS1} of ~3–7.`,`目标：展示、点击、首批销售。纯数据收集阶段。第${g.daysS1}天（约3–7天）。`)}</div>
       <div class="stage-mode">m19 Mode: Force Product Visibility</div>
-      ${g.inVineWindow ? `<div class="alert info">Vine window active (~Day ${VINE_WINDOW_DAYS - g.daysS1} remaining). ACoS will appear very high due to Vine reviewers clicking ads. This is expected — do not optimise.</div>` : ''}
-      <div class="alert warn">Expected ACoS: Very high, can exceed 100%. This is NORMAL. Do NOT set ACoS targets yet.</div>
+      ${g.inVineWindow ? `<div class="alert info">${t(`Vine window active (~Day ${VINE_WINDOW_DAYS - g.daysS1} remaining). ACoS will appear very high due to Vine reviewers clicking ads. This is expected — do not optimise.`,`Vine窗口期活跃（约剩余${VINE_WINDOW_DAYS - g.daysS1}天）。由于Vine测评者点击广告，ACoS会很高，这是正常现象 — 请勿优化。`)}</div>` : ''}
+      <div class="alert warn">${t('Expected ACoS: Very high, can exceed 100%. This is NORMAL. Do NOT set ACoS targets yet.','预期ACoS：非常高，可能超过100%。这是正常现象，请勿设置ACoS目标。')}</div>
       <ul class="checklist">
-        <li><div class="check-icon ${g.daysS1>=S1_MIN_DAYS?'done':'active'}">${g.daysS1>=S1_MIN_DAYS?'✓':'○'}</div>At least ${S1_MIN_DAYS} days passed (Day ${g.daysS1} / ${S1_MIN_DAYS})</li>
-        <li><div class="check-icon ${p.checkins.some(c=>c.adSales>0)?'done':'active'}">${p.checkins.some(c=>c.adSales>0)?'✓':'○'}</div>First ad-attributed sales recorded</li>
-        <li><div class="check-icon active">○</div>Do NOT change bids or targeting yet — AI is learning</li>
+        <li><div class="check-icon ${g.daysS1>=S1_MIN_DAYS?'done':'active'}">${g.daysS1>=S1_MIN_DAYS?'✓':'○'}</div>${t(`At least ${S1_MIN_DAYS} days passed (Day ${g.daysS1} / ${S1_MIN_DAYS})`,`至少${S1_MIN_DAYS}天（第${g.daysS1}天 / ${S1_MIN_DAYS}天）`)}</li>
+        <li><div class="check-icon ${p.checkins.some(c=>c.adSales>0)?'done':'active'}">${p.checkins.some(c=>c.adSales>0)?'✓':'○'}</div>${t('First ad-attributed sales recorded','已记录首批广告归因销售')}</li>
+        <li><div class="check-icon active">○</div>${t('Do NOT change bids or targeting yet — AI is learning','请勿更改竞价或定向 — AI正在学习中')}</li>
       </ul>
-      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">Recommended daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day. Monthly equivalent: ~${fmtC(STAGE1_BUDGET_MED*30)}</div>
+      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">${t(`Recommended daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day. Monthly equivalent: ~${fmtC(STAGE1_BUDGET_MED*30)}`,`建议日预算：${fmtC(STAGE1_BUDGET_MED)}/天。月等值：约${fmtC(STAGE1_BUDGET_MED*30)}`)}</div>
       <button class="grad-btn" ${s1Ready?'':'disabled'} onclick="advanceStage(getActiveProduct(),'STAGE_2')">
-        ${s1Ready ? '→ Graduate to Stage 2' : `Waiting: ${g.daysS1<S1_MIN_DAYS?`${S1_MIN_DAYS-g.daysS1}d more needed.`:''} ${!p.checkins.some(c=>c.adSales>0)?'No ad sales yet.':''}`}
+        ${s1Ready ? t('→ Graduate to Stage 2','→ 晋升至阶段2') : `${t('Waiting:','等待中：')} ${g.daysS1<S1_MIN_DAYS?t(`${S1_MIN_DAYS-g.daysS1}d more needed.`,`还需${S1_MIN_DAYS-g.daysS1}天。`):''} ${!p.checkins.some(c=>c.adSales>0)?t('No ad sales yet.','暂无广告销售。'):''}`}
       </button>
     </div>`;
   }
@@ -1510,59 +1580,59 @@ function renderStagesTab(p) {
   if (lc === 'STAGE_2') {
     const vineEnd = g.vineEnd;
     guideHtml = `<div class="stage-card active">
-      <div class="stage-card-title">Stage 2 — Monthly Budget</div>
-      <div class="stage-card-sub">Goal: build sales volume. Let AI optimise bids. Day ${g.daysS2} of ~30.</div>
+      <div class="stage-card-title">${t('Stage 2 — Monthly Budget','阶段2 — 月度预算')}</div>
+      <div class="stage-card-sub">${t(`Goal: build sales volume. Let AI optimise bids. Day ${g.daysS2} of ~30.`,`目标：积累销量，让AI优化竞价。第${g.daysS2}天（约30天）。`)}</div>
       <div class="stage-mode">m19 Mode: Monthly Budget</div>
-      ${g.inVineWindow ? `<div class="alert info">Vine window still active — ad sales during this period do NOT count toward Stage 2 graduation (${g.postVineAdSales} post-Vine ad sales recorded so far).</div>` : ''}
+      ${g.inVineWindow ? `<div class="alert info">${t(`Vine window still active — ad sales during this period do NOT count toward Stage 2 graduation (${g.postVineAdSales} post-Vine ad sales recorded so far).`,`Vine窗口期仍活跃 — 此期间的广告销售不计入阶段2晋升标准（目前已记录${g.postVineAdSales}笔Vine后广告销售）。`)}</div>` : ''}
       <ul class="checklist">
-        <li><div class="check-icon ${g.daysS2>=S2_MIN_DAYS?'done':'active'}">${g.daysS2>=S2_MIN_DAYS?'✓':'○'}</div>At least ${S2_MIN_DAYS} days in Stage 2 (Day ${g.daysS2})</li>
-        <li><div class="check-icon ${g.postVineAdSales>=S2_AD_SALES_TARGET?'done':'active'}">${g.postVineAdSales>=S2_AD_SALES_TARGET?'✓':'○'}</div>${g.postVineAdSales} / ${S2_AD_SALES_TARGET} post-Vine ad sales in last 30 days</li>
-        <li><div class="check-icon active">○</div>Sales trend stable or growing (mark in check-in)</li>
-        <li><div class="check-icon active">○</div>Do NOT change bids/budget more than once per week — AI learning phase 1–2 weeks</li>
+        <li><div class="check-icon ${g.daysS2>=S2_MIN_DAYS?'done':'active'}">${g.daysS2>=S2_MIN_DAYS?'✓':'○'}</div>${t(`At least ${S2_MIN_DAYS} days in Stage 2 (Day ${g.daysS2})`,`阶段2至少${S2_MIN_DAYS}天（第${g.daysS2}天）`)}</li>
+        <li><div class="check-icon ${g.postVineAdSales>=S2_AD_SALES_TARGET?'done':'active'}">${g.postVineAdSales>=S2_AD_SALES_TARGET?'✓':'○'}</div>${g.postVineAdSales} / ${S2_AD_SALES_TARGET} ${t('post-Vine ad sales in last 30 days','Vine后广告销售量（近30天）')}</li>
+        <li><div class="check-icon active">○</div>${t('Sales trend stable or growing (mark in check-in)','销售趋势稳定或增长（在签到中记录）')}</li>
+        <li><div class="check-icon active">○</div>${t('Do NOT change bids/budget more than once per week — AI learning phase 1–2 weeks','每周调整竞价/预算不超过一次 — AI学习期需要1–2周')}</li>
       </ul>
-      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">Recommended monthly budget: ${fmtC(STAGE2_BUDGET_BASELINE)}+. Adjust higher for competitive niches.</div>
+      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">${t(`Recommended monthly budget: ${fmtC(STAGE2_BUDGET_BASELINE)}+. Adjust higher for competitive niches.`,`建议月预算：${fmtC(STAGE2_BUDGET_BASELINE)}+。竞争激烈的细分市场适当调高。`)}</div>
       <button class="grad-btn" ${g.s2Ready?'':'disabled'} onclick="advanceStage(getActiveProduct(),'STAGE_3')">
-        ${g.s2Ready ? '→ Graduate to Stage 3' : `Waiting: ${g.daysS2<S2_MIN_DAYS?`${S2_MIN_DAYS-g.daysS2}d more. `:''}${g.postVineAdSales<S2_AD_SALES_TARGET?`${S2_AD_SALES_TARGET-g.postVineAdSales} more post-Vine ad sales needed.`:''}`}
+        ${g.s2Ready ? t('→ Graduate to Stage 3','→ 晋升至阶段3') : `${t('Waiting:','等待中：')} ${g.daysS2<S2_MIN_DAYS?t(`${S2_MIN_DAYS-g.daysS2}d more. `,`还需${S2_MIN_DAYS-g.daysS2}天。`):''}${g.postVineAdSales<S2_AD_SALES_TARGET?t(`${S2_AD_SALES_TARGET-g.postVineAdSales} more post-Vine ad sales needed.`,`还需${S2_AD_SALES_TARGET-g.postVineAdSales}笔Vine后广告销售。`):''}`}
       </button>
     </div>`;
   }
 
   if (lc === 'STAGE_3') {
     guideHtml = `<div class="stage-card active">
-      <div class="stage-card-title">Stage 3 — ACoS Target</div>
-      <div class="stage-card-sub">Goal: shift to profitability. Gradually reduce ACoS target. Day ${g.daysS3} in Stage 3.</div>
+      <div class="stage-card-title">${t('Stage 3 — ACoS Target','阶段3 — ACoS目标')}</div>
+      <div class="stage-card-sub">${t(`Goal: shift to profitability. Gradually reduce ACoS target. Day ${g.daysS3} in Stage 3.`,`目标：转向盈利。逐步降低ACoS目标。进入阶段3第${g.daysS3}天。`)}</div>
       <div class="stage-mode">m19 Mode: ACoS Target</div>
       <div class="g3" style="gap:8px;margin-bottom:10px;">
-        <div class="stat"><div class="stat-label">Break-even ACoS (floor)</div><div class="stat-val red">${g.beAcos.toFixed(1)}%</div></div>
-        <div class="stat"><div class="stat-label">Current ACoS (last check-in)</div><div class="stat-val ${g.latestAcos?g.latestAcos<g.beAcos?'green':'amber':''}">
-          ${g.latestAcos !== undefined ? g.latestAcos.toFixed(1)+'%' : 'Not recorded'}</div></div>
-        <div class="stat"><div class="stat-label">Suggested Next Target</div><div class="stat-val blue">${g.suggestedAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Break-even ACoS (floor)','盈亏平衡ACoS（下限）')}</div><div class="stat-val red">${g.beAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Current ACoS (last check-in)','当前ACoS（最近签到）')}</div><div class="stat-val ${g.latestAcos?g.latestAcos<g.beAcos?'green':'amber':''}">
+          ${g.latestAcos !== undefined ? g.latestAcos.toFixed(1)+'%' : t('Not recorded','未记录')}</div></div>
+        <div class="stat"><div class="stat-label">${t('Suggested Next Target','建议下一目标')}</div><div class="stat-val blue">${g.suggestedAcos.toFixed(1)}%</div></div>
       </div>
       <ul class="checklist">
-        <li><div class="check-icon active">○</div>Start ACoS target at Stage 2 historical ACoS — not theoretical target</li>
-        <li><div class="check-icon active">○</div>Reduce in ${S3_ACOS_STEP}pp steps (e.g. 38% → 35% → 32%). Wait ${S3_STEP_WAIT_DAYS} days between each step.</li>
-        <li><div class="check-icon active">○</div>Never drop more than 5pp at once — risks crashing impressions</li>
-        <li><div class="check-icon active">○</div>Floor: ${g.beAcos.toFixed(1)}% (break-even). Keep target ${S3_ACOS_BUFFER}pp above floor: ${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%</li>
-        <li><div class="check-icon ${g.latestAcos&&g.latestAcos<g.beAcos?'done':'active'}">${g.latestAcos&&g.latestAcos<g.beAcos?'✓':'○'}</div>ACoS below break-even = every ad click is profitable</li>
+        <li><div class="check-icon active">○</div>${t('Start ACoS target at Stage 2 historical ACoS — not theoretical target','以阶段2的历史ACoS为起点 — 不是理论目标')}</li>
+        <li><div class="check-icon active">○</div>${t(`Reduce in ${S3_ACOS_STEP}pp steps (e.g. 38% → 35% → 32%). Wait ${S3_STEP_WAIT_DAYS} days between each step.`,`每次降低${S3_ACOS_STEP}个百分点（如38%→35%→32%），每步之间等待${S3_STEP_WAIT_DAYS}天。`)}</li>
+        <li><div class="check-icon active">○</div>${t('Never drop more than 5pp at once — risks crashing impressions','单次降幅不超过5个百分点 — 否则展示量可能骤降')}</li>
+        <li><div class="check-icon active">○</div>${t(`Floor: ${g.beAcos.toFixed(1)}% (break-even). Keep target ${S3_ACOS_BUFFER}pp above floor: ${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%`,`下限：${g.beAcos.toFixed(1)}%（盈亏平衡）。目标保持在下限以上${S3_ACOS_BUFFER}个百分点：${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%`)}</li>
+        <li><div class="check-icon ${g.latestAcos&&g.latestAcos<g.beAcos?'done':'active'}">${g.latestAcos&&g.latestAcos<g.beAcos?'✓':'○'}</div>${t('ACoS below break-even = every ad click is profitable','ACoS低于盈亏平衡 = 每次广告点击均盈利')}</li>
       </ul>
-      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STABLE')">→ Mark as Stable & Profitable</button>
+      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STABLE')">${t('→ Mark as Stable & Profitable','→ 标记为稳定盈利')}</button>
     </div>`;
   }
 
   if (lc === 'STABLE') {
     guideHtml = `<div class="stage-card" style="border-color:#4ade80;">
-      <div class="stage-card-title" style="color:#4ade80;">✓ Stable & Profitable</div>
-      <div class="stage-card-sub">This product is consistently profitable with ACoS below break-even. Consider merging into a broader portfolio strategy with margin-alike products.</div>
+      <div class="stage-card-title" style="color:#4ade80;">${t('✓ Stable & Profitable','✓ 稳定盈利')}</div>
+      <div class="stage-card-sub">${t('This product is consistently profitable with ACoS below break-even. Consider merging into a broader portfolio strategy with margin-alike products.','该产品持续盈利，ACoS低于盈亏平衡点。可考虑将其纳入更广泛的产品组合策略，与利润相近的产品协同管理。')}</div>
     </div>`;
   }
 
   if (lc === 'KILL_REVIEW') {
     guideHtml = `<div class="stage-card" style="border-color:#f87171;">
-      <div class="stage-card-title" style="color:#f87171;">Kill Review — Decision Needed</div>
-      <div class="stage-card-sub">One or more kill signals fired. Review the signals above and decide whether to continue or discontinue this product.</div>
+      <div class="stage-card-title" style="color:#f87171;">${t('Kill Review — Decision Needed','终止评估 — 需要决策')}</div>
+      <div class="stage-card-sub">${t('One or more kill signals fired. Review the signals above and decide whether to continue or discontinue this product.','一个或多个终止信号已触发。请查看上方信号并决定是否继续或停止该产品。')}</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_3')">Continue → Back to Stage 3</button>
-        <button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILLED')">Confirm Kill</button>
+        <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_3')">${t('Continue → Back to Stage 3','继续 → 返回阶段3')}</button>
+        <button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILLED')">${t('Confirm Kill','确认终止')}</button>
       </div>
     </div>`;
   }
@@ -2102,36 +2172,36 @@ function renderCouponCalc(p) {
   const couponCostPerUnit = couponVol > 0 ? monthlyCouponFee / couponVol : 0;
   const couponProfitPerUnit = couponAmt > 0 ? ypF.profit - couponAmt - couponCostPerUnit : null;
   el.innerHTML = `<div class="card" style="margin-top:14px;">
-    <div class="card-title">Coupon Calculator</div>
+    <div class="card-title">${t('Coupon Calculator','优惠券计算器')}</div>
     <div class="g2">
       <div>
         <div class="g2" style="gap:8px;">
           <div class="inp">
-            <label>Coupon Discount ($ off)</label>
+            <label>${t('Coupon Discount ($ off)','优惠券折扣（$优惠）')}</label>
             <input type="number" id="coupon-amt" value="${couponAmt||''}" min="0" step="0.01" placeholder="e.g. 3.00" oninput="saveCouponInput()">
-            <div class="hint">Customer saves this amount. Green badge requires ≥5% of price.</div>
+            <div class="hint">${t('Customer saves this amount. Green badge requires ≥5% of price.','顾客节省此金额。绿色徽章要求折扣≥价格的5%。')}</div>
           </div>
           <div class="inp">
-            <label>Expected Monthly Redemptions</label>
+            <label>${t('Expected Monthly Redemptions','预期月兑换量')}</label>
             <input type="number" id="coupon-vol" value="${couponVol||''}" min="0" step="1" placeholder="e.g. 50" oninput="saveCouponInput()">
           </div>
         </div>
-        <div class="alert info" style="font-size:0.73rem;">Coupon keeps listed price intact — "Was" anchor and Typical Price baseline are unaffected. Safer for the May 2026 Typical Price rule than a price discount.</div>
+        <div class="alert info" style="font-size:0.73rem;">${t('Coupon keeps listed price intact — "Was" anchor and Typical Price baseline are unaffected. Safer for the May 2026 Typical Price rule than a price discount.','优惠券不影响挂牌价 — "原价"锚点和典型价格基准不受影响。相比价格折扣，对2026年5月典型价格规则更安全。')}</div>
       </div>
       <div>
         ${couponAmt > 0 ? `
         <div class="mfg-out" style="margin-top:0;">
-          <div class="mfg-out-title">Coupon Economics</div>
-          <div class="mfg-row"><div class="mfg-row-l">Customer pays</div><div class="mfg-row-r">${fmtC(effectivePrice)}</div></div>
-          <div class="mfg-row"><div class="mfg-row-l">Discount given</div><div class="mfg-row-r white">${fmtC(couponAmt)} (${(couponAmt/yp*100).toFixed(1)}% off)</div></div>
-          <div class="mfg-row"><div class="mfg-row-l">Monthly fee ($5 flat + 2.5% of sales)</div><div class="mfg-row-r ${monthlyCouponFee>100?'amber':'white'}">${couponVol>0?fmtC(monthlyCouponFee):'set redemptions'}</div></div>
-          <div class="mfg-row"><div class="mfg-row-l">Extra cost per unit redeemed</div><div class="mfg-row-r white">${couponVol>0?fmtC(couponCostPerUnit):'—'}</div></div>
+          <div class="mfg-out-title">${t('Coupon Economics','优惠券经济模型')}</div>
+          <div class="mfg-row"><div class="mfg-row-l">${t('Customer pays','顾客实付')}</div><div class="mfg-row-r">${fmtC(effectivePrice)}</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">${t('Discount given','折扣金额')}</div><div class="mfg-row-r white">${fmtC(couponAmt)} (${(couponAmt/yp*100).toFixed(1)}% off)</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">${t('Monthly fee ($5 flat + 2.5% of sales)','月费（$5固定 + 2.5%销售额）')}</div><div class="mfg-row-r ${monthlyCouponFee>100?'amber':'white'}">${couponVol>0?fmtC(monthlyCouponFee):t('set redemptions','请设置兑换量')}</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">${t('Extra cost per unit redeemed','每件兑换额外成本')}</div><div class="mfg-row-r white">${couponVol>0?fmtC(couponCostPerUnit):'—'}</div></div>
           <div class="mfg-row" style="border-top:2px solid #252836;margin-top:4px;padding-top:6px;">
-            <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">Profit/unit with coupon</div>
-            <div class="mfg-row-r ${couponProfitPerUnit!==null&&couponProfitPerUnit>=0?'':'red'}">${couponVol>0&&couponProfitPerUnit!==null?fmtC(couponProfitPerUnit):'set redemptions'}</div>
+            <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">${t('Profit/unit with coupon','使用优惠券后单件利润')}</div>
+            <div class="mfg-row-r ${couponProfitPerUnit!==null&&couponProfitPerUnit>=0?'':'red'}">${couponVol>0&&couponProfitPerUnit!==null?fmtC(couponProfitPerUnit):t('set redemptions','请设置兑换量')}</div>
           </div>
         </div>
-        ` : '<div style="font-size:0.78rem;color:#555870;padding:8px 0;">Enter a discount amount to model coupon economics.</div>'}
+        ` : `<div style="font-size:0.78rem;color:#555870;padding:8px 0;">${t('Enter a discount amount to model coupon economics.','输入折扣金额以模拟优惠券经济效益。')}</div>`}
       </div>
     </div>
   </div>`;
