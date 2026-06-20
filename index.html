@@ -73,11 +73,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 /* ═══════════════════════════════════════════════════════════
    EMPTY STATE
 ═══════════════════════════════════════════════════════════ */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:#555870;text-align:center;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:12px;color:#555870;text-align:center;padding:32px 16px;}
 .empty-state svg{opacity:0.3;}
 .empty-state h2{font-size:1rem;color:#6b6f8a;}
-.empty-state p{font-size:0.8rem;max-width:320px;line-height:1.5;}
+.empty-state p{font-size:0.8rem;max-width:340px;line-height:1.5;}
 .empty-btn{padding:9px 20px;border-radius:8px;background:#5b63f7;border:none;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:4px;}
+.flow-guide{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0;}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:4px;background:#1a1d27;border:1px solid #252836;border-radius:10px;padding:10px 14px;min-width:80px;max-width:108px;}
+.flow-step-num{font-size:1rem;line-height:1;}
+.flow-step-label{font-size:0.67rem;font-weight:700;color:#8b8fa8;text-transform:uppercase;letter-spacing:0.05em;line-height:1.3;}
+.flow-step-desc{font-size:0.62rem;color:#555870;line-height:1.3;margin-top:2px;}
+.flow-arrow{color:#353849;font-size:1rem;flex-shrink:0;}
+@media(max-width:700px){.flow-arrow{display:none;}.flow-step{min-width:70px;padding:8px 10px;}}
 
 /* ═══════════════════════════════════════════════════════════
    CARDS, GRIDS, INPUTS
@@ -335,11 +342,46 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
   <div class="main" id="main-area">
     <!-- Empty state shown when no product selected -->
     <div id="empty-state" class="empty-state">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      <h2 data-en="No product selected" data-zh="未选择产品">No product selected</h2>
-      <p data-en="Add a product using the + button in the sidebar, or import a CSV file to get started." data-zh="使用侧边栏中的+按钮添加产品，或导入CSV文件开始使用。">Add a product using the + button in the sidebar, or import a CSV file to get started.</p>
-      <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
-      <button class="empty-btn" style="background:#1a2a1a;border:1px solid #166534;color:#4ade80;margin-top:0;" onclick="loadExampleProduct()">Load example — Cast Net 5ft</button>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <h2 data-en="Amazon Pricing &amp; Ad Stage Tracker" data-zh="亚马逊定价与广告阶段追踪器">Amazon Pricing &amp; Ad Stage Tracker</h2>
+      <p data-en="Track COGS, fees, ad stages, and weekly check-ins for your Amazon products using the m19 methodology." data-zh="使用m19方法论追踪您亚马逊产品的成本、费用、广告阶段和每周检查记录。">Track COGS, fees, ad stages, and weekly check-ins for your Amazon products using the m19 methodology.</p>
+
+      <div class="flow-guide">
+        <div class="flow-step">
+          <div class="flow-step-num">①</div>
+          <div class="flow-step-label" data-en="Add Product" data-zh="添加产品">Add Product</div>
+          <div class="flow-step-desc" data-en="COGS, fees &amp; margin target" data-zh="成本、费用和利润目标">COGS, fees &amp; margin target</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">②</div>
+          <div class="flow-step-label" data-en="Set Prices" data-zh="设置价格">Set Prices</div>
+          <div class="flow-step-desc" data-en="Calculator shows viable price" data-zh="计算器显示可行价格">Calculator shows viable price</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">③</div>
+          <div class="flow-step-label" data-en="Launch Ads" data-zh="投放广告">Launch Ads</div>
+          <div class="flow-step-desc" data-en="Mark Stage 1 in Ad Stages" data-zh="在广告阶段标记为阶段1">Mark Stage 1 in Ad Stages</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">④</div>
+          <div class="flow-step-label" data-en="Check-ins" data-zh="每周记录">Check-ins</div>
+          <div class="flow-step-desc" data-en="Record ACoS &amp; revenue weekly" data-zh="每周记录ACoS和收入">Record ACoS &amp; revenue weekly</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="border-color:#166534;">
+          <div class="flow-step-num">✓</div>
+          <div class="flow-step-label" style="color:#4ade80;" data-en="Stable" data-zh="稳定盈利">Stable</div>
+          <div class="flow-step-desc" data-en="Profitable &amp; graduated" data-zh="盈利并完成晋升">Profitable &amp; graduated</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
+        <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
+        <button class="empty-btn" style="background:#1a2a1a;border:1px solid #166534;color:#4ade80;" onclick="loadExampleProduct()" data-en="Load example — Cast Net 5ft" data-zh="加载示例 — 5英尺撒网">Load example — Cast Net 5ft</button>
+      </div>
     </div>
 
     <!-- Product view (shown when product selected) -->
@@ -392,36 +434,36 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         <!-- Amazon report import card -->
         <div class="card" style="margin-bottom:14px;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div class="card-title" style="margin:0;">Import from Amazon Seller Central</div>
-            <button class="topbar-btn" onclick="this.closest('.card').querySelector('#import-guide').classList.toggle('hidden-guide')">How to export ▾</button>
+            <div class="card-title" style="margin:0;" data-en="Import from Amazon Seller Central" data-zh="从亚马逊卖家中心导入">Import from Amazon Seller Central</div>
+            <button class="topbar-btn" onclick="this.closest('.card').querySelector('#import-guide').classList.toggle('hidden-guide')" data-en="How to export ▾" data-zh="如何导出 ▾">How to export ▾</button>
           </div>
           <div id="import-guide" class="hidden-guide" style="margin-top:12px;">
             <div class="g2" style="gap:16px;">
               <div>
-                <div style="font-size:0.7rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Business Report → Revenue &amp; CVR</div>
+                <div style="font-size:0.7rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Business Report → Revenue &amp; CVR" data-zh="业务报告 → 收入和转化率">Business Report → Revenue &amp; CVR</div>
                 <div class="tl" style="padding-left:14px;">
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Seller Central → Reports → Business Reports</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">"Detail Page Sales and Traffic by ASIN" tab</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Set date range to last 30 days → Download</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Seller Central → Reports → Business Reports" data-zh="卖家中心 → 报告 → 业务报告">Seller Central → Reports → Business Reports</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Detail Page Sales and Traffic by ASIN" tab' data-zh='"按ASIN的详情页销售和流量"标签'>"Detail Page Sales and Traffic by ASIN" tab</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Set date range to last 30 days → Download" data-zh="设置日期范围为最近30天 → 下载">Set date range to last 30 days → Download</div></div>
                 </div>
-                <div class="pill" style="margin-top:6px;"><span>Fills:</span><strong> Total Revenue, CVR</strong></div>
+                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Total Revenue, CVR" data-zh=" 总收入，转化率"> Total Revenue, CVR</strong></div>
               </div>
               <div>
-                <div style="font-size:0.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Advertising Report → ACoS &amp; Spend</div>
+                <div style="font-size:0.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Advertising Report → ACoS &amp; Spend" data-zh="广告报告 → ACoS和支出">Advertising Report → ACoS &amp; Spend</div>
                 <div class="tl" style="padding-left:14px;">
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Advertising Console → Reports → Create Report</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Sponsored Products → "Advertised Product" type</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Set date range → Request → Download</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Advertising Console → Reports → Create Report" data-zh="广告控制台 → 报告 → 创建报告">Advertising Console → Reports → Create Report</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='Sponsored Products → "Advertised Product" type' data-zh='赞助商品 → "推广商品"类型'>Sponsored Products → "Advertised Product" type</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Set date range → Request → Download" data-zh="设置日期范围 → 请求 → 下载">Set date range → Request → Download</div></div>
                 </div>
-                <div class="pill" style="margin-top:6px;"><span>Fills:</span><strong> ACoS, Ad Spend, Ad Sales</strong></div>
+                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" ACoS, Ad Spend, Ad Sales" data-zh=" ACoS，广告花费，广告销售"> ACoS, Ad Spend, Ad Sales</strong></div>
               </div>
             </div>
-            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in.</div>
+            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;" data-en="⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in." data-zh="⚠ 当前价格不在任何亚马逊导出文件中 — 请从您的商品页面手动读取并填写。请分别导入两份报告以完成完整记录。">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in.</div>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
-            <button class="btn primary" onclick="document.getElementById('amz-report-file').click()">Import Amazon Report CSV</button>
+            <button class="btn primary" onclick="document.getElementById('amz-report-file').click()" data-en="Import Amazon Report CSV" data-zh="导入亚马逊报告CSV">Import Amazon Report CSV</button>
             <input type="file" id="amz-report-file" accept=".csv,.txt" style="display:none" onchange="importAmazonReport(event)">
-            <span style="font-size:0.72rem;color:#555870;">Auto-detects Business Report or Advertising Report · matches by ASIN</span>
+            <span style="font-size:0.72rem;color:#555870;" data-en="Auto-detects Business Report or Advertising Report · matches by ASIN" data-zh="自动识别业务报告或广告报告 · 通过ASIN匹配">Auto-detects Business Report or Advertising Report · matches by ASIN</span>
           </div>
         </div>
 
@@ -1186,7 +1228,11 @@ function setLang(l) {
     if (txt !== null) el.textContent = txt;
   });
   saveToStorage();
+  renderAll();
 }
+
+// Translation helper for JS-generated HTML
+function t(en, zh) { return state.lang === 'zh' ? zh : en; }
 
 function setCurr(c) {
   state.currency = c;
@@ -1372,11 +1418,11 @@ function renderCalcTab(p) {
       const cliffs = [];
       if (yp >= 10 && yp < 10.50) {
         const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,9.95)*sur).toFixed(2);
-        cliffs.push(`⚡ Price band cliff: ${fmtC(yp)} is just above the $10 FBA tier. Pricing at $9.95 saves $${saving}/unit in FBA fees.`);
+        cliffs.push(t(`⚡ Price band cliff: ${fmtC(yp)} is just above the $10 FBA tier. Pricing at $9.95 saves $${saving}/unit in FBA fees.`,`⚡ 价格段临界点：${fmtC(yp)} 刚超过 $10 FBA 费率段。定价 $9.95 可节省 $${saving}/件 FBA费用。`));
       }
       if (yp >= 50 && yp < 50.50) {
         const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,49.95)*sur).toFixed(2);
-        cliffs.push(`⚡ Price band cliff: ${fmtC(yp)} is just above the $50 FBA tier. Pricing at $49.95 saves $${saving}/unit in FBA fees.`);
+        cliffs.push(t(`⚡ Price band cliff: ${fmtC(yp)} is just above the $50 FBA tier. Pricing at $49.95 saves $${saving}/unit in FBA fees.`,`⚡ 价格段临界点：${fmtC(yp)} 刚超过 $50 FBA 费率段。定价 $49.95 可节省 $${saving}/件 FBA费用。`));
       }
       return cliffs.map(c=>`<div class="alert warn">${c}</div>`).join('');
     })()}
@@ -1523,14 +1569,16 @@ function renderStagesTab(p) {
 
   // Stage timeline — shows dates and durations per stage
   const stageKeys = ['PRE_LAUNCH','STAGE_1','STAGE_2','STAGE_3','STABLE'];
-  const stageLabels = {'PRE_LAUNCH':'Pre-Launch','STAGE_1':'Stage 1','STAGE_2':'Stage 2','STAGE_3':'Stage 3','STABLE':'Stable'};
-  const relevantStages = stageKeys.filter(s => s === 'PRE_LAUNCH' || product.stageStartDates[s]);
+  const stageLabels = state.lang === 'zh'
+    ? {'PRE_LAUNCH':'预上线','STAGE_1':'阶段1','STAGE_2':'阶段2','STAGE_3':'阶段3','STABLE':'稳定'}
+    : {'PRE_LAUNCH':'Pre-Launch','STAGE_1':'Stage 1','STAGE_2':'Stage 2','STAGE_3':'Stage 3','STABLE':'Stable'};
+  const relevantStages = stageKeys.filter(s => s === 'PRE_LAUNCH' || p.stageStartDates[s]);
   let timelineHtml = '';
   if (relevantStages.length > 1 || (relevantStages.length === 1 && lc !== 'PRE_LAUNCH')) {
     const rows = relevantStages.map((s, i) => {
-      const startIso = s === 'PRE_LAUNCH' ? product.createdAt : product.stageStartDates[s];
+      const startIso = s === 'PRE_LAUNCH' ? p.createdAt : p.stageStartDates[s];
       const nextS = relevantStages[i+1];
-      const endIso = nextS ? (nextS === 'PRE_LAUNCH' ? product.createdAt : product.stageStartDates[nextS]) : null;
+      const endIso = nextS ? (nextS === 'PRE_LAUNCH' ? p.createdAt : p.stageStartDates[nextS]) : null;
       const startDate = new Date(startIso);
       const days = endIso
         ? Math.floor((new Date(endIso) - startDate)/86400000)
@@ -1539,16 +1587,16 @@ function renderStagesTab(p) {
       return `<div style="display:flex;gap:12px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #1e2130;">
         <div style="width:80px;font-size:0.7rem;font-weight:700;color:${isCurrent?'#818cf8':'#555870'};flex-shrink:0;">${stageLabels[s]}</div>
         <div style="font-size:0.7rem;color:#6b6f8a;flex-shrink:0;width:72px;">${startDate.toLocaleDateString()}</div>
-        <div style="font-size:0.7rem;color:${isCurrent?'#e8eaf0':'#6b6f8a'};">${endIso ? `${days}d` : isCurrent ? `${days}d (ongoing)` : '—'}</div>
-        ${isCurrent ? '<div style="font-size:0.65rem;background:#1a1d3a;border:1px solid #3a3d6e;border-radius:4px;padding:1px 7px;color:#818cf8;margin-left:4px;">current</div>' : ''}
+        <div style="font-size:0.7rem;color:${isCurrent?'#e8eaf0':'#6b6f8a'};">${endIso ? `${days}d` : isCurrent ? `${days}d (${t('ongoing','进行中')})` : '—'}</div>
+        ${isCurrent ? `<div style="font-size:0.65rem;background:#1a1d3a;border:1px solid #3a3d6e;border-radius:4px;padding:1px 7px;color:#818cf8;margin-left:4px;">${t('current','当前')}</div>` : ''}
       </div>`;
     });
     timelineHtml = `<div class="card" style="margin-bottom:14px;">
-      <div class="card-title">Stage History</div>
+      <div class="card-title">${t('Stage History','阶段历史')}</div>
       <div style="display:flex;gap:12px;padding:3px 0 6px;border-bottom:2px solid #252836;">
-        <div style="width:80px;font-size:0.62rem;color:#555870;font-weight:700;">STAGE</div>
-        <div style="font-size:0.62rem;color:#555870;font-weight:700;width:72px;">STARTED</div>
-        <div style="font-size:0.62rem;color:#555870;font-weight:700;">DURATION</div>
+        <div style="width:80px;font-size:0.62rem;color:#555870;font-weight:700;">${t('STAGE','阶段')}</div>
+        <div style="font-size:0.62rem;color:#555870;font-weight:700;width:72px;">${t('STARTED','开始时间')}</div>
+        <div style="font-size:0.62rem;color:#555870;font-weight:700;">${t('DURATION','持续时间')}</div>
       </div>
       ${rows.join('')}
     </div>`;
@@ -1589,21 +1637,22 @@ function renderCheckinsTab(p) {
         ${i<tacosPoints.length-1?'<div style="display:none;"></div>':''}
       </div>`;
     }).join(`<div style="flex:1;height:1px;background:#252836;align-self:flex-end;margin-bottom:0;"></div>`);
+    const trendLabel = trend==='improving'?t('improving','改善中'):trend==='worsening'?t('worsening','恶化中'):t('stable','稳定');
     trendHtml = `<div class="card" style="margin-bottom:12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="card-title" style="margin:0;">TACoS Trend</div>
-        <div style="font-size:0.82rem;font-weight:700;color:${col};">${icon} ${trend} &nbsp;<span style="font-size:0.7rem;color:#6b6f8a;font-weight:400;">${first.toFixed(1)}% → ${last.toFixed(1)}%</span></div>
+        <div class="card-title" style="margin:0;">${t('TACoS Trend','TACoS趋势')}</div>
+        <div style="font-size:0.82rem;font-weight:700;color:${col};">${icon} ${trendLabel} &nbsp;<span style="font-size:0.7rem;color:#6b6f8a;font-weight:400;">${first.toFixed(1)}% → ${last.toFixed(1)}%</span></div>
       </div>
       <div style="display:flex;align-items:flex-end;gap:4px;height:70px;">${bars}</div>
-      <div style="font-size:0.67rem;color:#555870;margin-top:4px;">Last ${tacosPoints.length} check-ins. Target: &lt;10% for healthy organic ratio.</div>
+      <div style="font-size:0.67rem;color:#555870;margin-top:4px;">${t(`Last ${tacosPoints.length} check-ins. Target: <10% for healthy organic ratio.`,`最近${tacosPoints.length}次记录。目标：<10%为健康自然销售比例。`)}</div>
     </div>`;
   }
 
   const sorted = [...p.checkins].reverse();
   document.getElementById('checkin-history').innerHTML = trendHtml + `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div class="card-title" style="margin:0;">Check-in History (${p.checkins.length})</div>
-      <button class="topbar-btn" onclick="exportCheckinsCSV('${p.id}')" style="font-size:0.72rem;">Export CSV</button>
+      <div class="card-title" style="margin:0;">${t('Check-in History','检查记录历史')} (${p.checkins.length})</div>
+      <button class="topbar-btn" onclick="exportCheckinsCSV('${p.id}')" style="font-size:0.72rem;">${t('Export CSV','导出CSV')}</button>
     </div>
     <div class="checkin-list">${sorted.map((ci, i) => {
       const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
