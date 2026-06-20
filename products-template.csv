@@ -1,0 +1,3 @@
+name,asin,category,size_tier,weight_oz,cogs,target_margin,inbound_shipping,inbound_placement,prep_labelling,storage,q4_storage,ppc_per_unit,returns_allowance,vine_enrolled,vine_units,other_overhead,target_acos,launch_acos,cvr,notes
+Example Widget,B0EXAMPLE1,home,ss,8,6.00,30,0.50,0.00,0.25,0.10,0.00,1.50,0.30,true,20,0.20,25,60,12,First product
+Example Gadget,B0EXAMPLE2,electronics,ls,24,18.00,28,0.80,0.30,0.25,0.15,0.00,2.00,0.50,true,20,0.30,22,55,10,Electronics higher competition

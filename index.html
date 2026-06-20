@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon FBA Pricing Tool</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   BASE RESET & TYPOGRAPHY
+═══════════════════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:#0c0e16;color:#e8eaf0;min-height:100vh;display:flex;flex-direction:column;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#12141c;}
+::-webkit-scrollbar-thumb{background:#2a2d3e;border-radius:3px;}
+
+/* ═══════════════════════════════════════════════════════════
+   APP SHELL — topbar + sidebar + main
+═══════════════════════════════════════════════════════════ */
+.topbar{height:52px;background:#13151f;border-bottom:1px solid #1e2130;display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:100;position:sticky;top:0;}
+.topbar-brand{font-size:0.9rem;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:-0.01em;}
+.topbar-brand span{color:#5b63f7;}
+.topbar-spacer{flex:1;}
+.topbar-btn{padding:5px 12px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid #252836;background:#1a1d27;color:#a0a3ba;transition:all 0.15s;white-space:nowrap;}
+.topbar-btn:hover{border-color:#5b63f7;color:#fff;}
+.topbar-btn.active{background:#5b63f7;border-color:#5b63f7;color:#fff;}
+.topbar-btn.danger{border-color:#7a0020;color:#f87171;}
+.topbar-btn.danger:hover{background:#2a1015;}
+.topbar-divider{width:1px;height:24px;background:#1e2130;flex-shrink:0;}
+
+.app-body{display:flex;flex:1;overflow:hidden;height:calc(100vh - 52px);}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════════ */
+.sidebar{width:220px;flex-shrink:0;background:#13151f;border-right:1px solid #1e2130;display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-header{padding:12px 14px;border-bottom:1px solid #1e2130;display:flex;align-items:center;justify-content:space-between;}
+.sidebar-title{font-size:0.68rem;font-weight:700;color:#6b6f8a;text-transform:uppercase;letter-spacing:0.08em;}
+.sidebar-add{width:24px;height:24px;border-radius:5px;border:1px solid #252836;background:transparent;color:#6b6f8a;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.sidebar-add:hover{border-color:#5b63f7;color:#5b63f7;background:#1a1d27;}
+.sidebar-scroll{flex:1;overflow-y:auto;padding:8px;}
+.sidebar-item{padding:9px 10px;border-radius:8px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;transition:all 0.15s;position:relative;}
+.sidebar-item:hover{background:#1a1d27;border-color:#252836;}
+.sidebar-item.active{background:#1e2040;border-color:#3a3d6e;}
+.sidebar-item-name{font-size:0.8rem;font-weight:600;color:#e8eaf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:28px;}
+.sidebar-item-asin{font-size:0.67rem;color:#555870;margin-top:1px;}
+.sidebar-item-badge{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:0.58rem;font-weight:800;padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;}
+.badge-prelaunch{background:#1e2130;color:#6b6f8a;}
+.badge-s1{background:#1a2040;color:#7dd3fc;}
+.badge-s2{background:#2a1a40;color:#c4b5fd;}
+.badge-s3{background:#1a2a1a;color:#86efac;}
+.badge-stable{background:#14532d;color:#4ade80;}
+.badge-kill{background:#7a0020;color:#fca5a5;}
+.badge-killed{background:#1e2130;color:#555870;}
+.sidebar-item-health{width:6px;height:6px;border-radius:50%;position:absolute;left:8px;top:50%;transform:translateY(-50%);}
+/* Push name over to make room for health dot */
+.sidebar-item-name{margin-left:10px;}
+.sidebar-bottom{padding:10px;border-top:1px solid #1e2130;}
+.sidebar-mode-btn{width:100%;padding:7px;border-radius:7px;font-size:0.75rem;font-weight:600;cursor:pointer;border:1px solid #252836;background:transparent;color:#6b6f8a;transition:all 0.15s;margin-bottom:4px;text-align:left;}
+.sidebar-mode-btn.active{background:#5b63f7;border-color:#5b63f7;color:#fff;}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN CONTENT AREA
+═══════════════════════════════════════════════════════════ */
+.main{flex:1;overflow-y:auto;padding:20px;}
+.main-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid #1e2130;padding-bottom:0;}
+.main-tab{padding:8px 16px;font-size:0.8rem;font-weight:500;cursor:pointer;border:none;background:transparent;color:#6b6f8a;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;}
+.main-tab.on{color:#818cf8;border-bottom-color:#5b63f7;}
+.main-tab:hover{color:#e8eaf0;}
+.main-panel{display:none;}
+.main-panel.on{display:block;}
+
+/* ═══════════════════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════════════════ */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:#555870;text-align:center;}
+.empty-state svg{opacity:0.3;}
+.empty-state h2{font-size:1rem;color:#6b6f8a;}
+.empty-state p{font-size:0.8rem;max-width:320px;line-height:1.5;}
+.empty-btn{padding:9px 20px;border-radius:8px;background:#5b63f7;border:none;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:4px;}
+
+/* ═══════════════════════════════════════════════════════════
+   CARDS, GRIDS, INPUTS
+═══════════════════════════════════════════════════════════ */
+.card{background:#1a1d27;border:1px solid #252836;border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.card-title{font-size:0.68rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:12px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+@media(max-width:1100px){.g3{grid-template-columns:1fr 1fr;}}
+@media(max-width:800px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+.full{grid-column:1/-1;}
+.gap{margin-top:14px;}
+
+/* Inputs */
+.inp{margin-bottom:10px;}
+.inp label{display:flex;align-items:center;gap:6px;font-size:0.75rem;color:#8b8fa8;margin-bottom:4px;}
+.req{color:#f87171;font-size:0.63rem;font-weight:700;background:#2a1015;padding:1px 5px;border-radius:3px;}
+.opt{color:#555870;font-size:0.63rem;}
+.typ{color:#5b63f7;font-size:0.63rem;background:#1a1d3a;padding:1px 6px;border-radius:3px;}
+input[type=number],input[type=text],select,textarea{width:100%;background:#12141c;border:1.5px solid #252836;border-radius:7px;color:#fff;font-size:0.85rem;padding:7px 10px;outline:none;transition:border-color 0.15s;appearance:none;-webkit-appearance:none;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6f8a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer;}
+input:focus,select:focus,textarea:focus{border-color:#5b63f7;}
+textarea{resize:vertical;min-height:60px;}
+.hint{font-size:0.67rem;color:#555870;margin-top:3px;line-height:1.4;}
+.check-row{display:flex;align-items:center;gap:8px;font-size:0.77rem;color:#8b8fa8;cursor:pointer;padding:5px 0;}
+input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:0;}
+.section-lbl{font-size:0.62rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;padding:3px 10px;border-radius:100px;display:inline-flex;align-items:center;gap:5px;margin-bottom:10px;}
+.lbl-in{background:#1a2a1a;color:#4ade80;border:1px solid #1e4a1e;}
+.lbl-out{background:#1a1a2e;color:#818cf8;border:1px solid #2a2a5e;}
+
+/* ═══════════════════════════════════════════════════════════
+   PRICE TIERS OUTPUT
+═══════════════════════════════════════════════════════════ */
+.tier{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:9px;margin-bottom:8px;background:#12141c;border-left:3px solid transparent;position:relative;}
+.tier.list{border-color:#555870;}.tier.your{border-color:#4ade80;}.tier.sale{border-color:#f59e0b;}.tier.disc{border-color:#a78bfa;}
+.tier-badge{position:absolute;top:-7px;left:12px;font-size:0.58rem;font-weight:800;padding:1px 7px;border-radius:100px;letter-spacing:0.05em;}
+.tier.your .tier-badge{background:#14532d;color:#4ade80;}.tier.sale .tier-badge{background:#78350f;color:#fcd34d;}.tier.disc .tier-badge{background:#3b0764;color:#c4b5fd;}
+.tier-name{font-size:0.8rem;font-weight:600;color:#e8eaf0;}
+.tier-sub{font-size:0.68rem;color:#6b6f8a;margin-top:2px;}
+.tier-price{font-size:1.25rem;font-weight:800;text-align:right;}
+.tier.list .tier-price{color:#8b8fa8;}.tier.your .tier-price{color:#4ade80;}.tier.sale .tier-price{color:#f59e0b;}.tier.disc .tier-price{color:#a78bfa;}
+.tier-margin{font-size:0.68rem;color:#6b6f8a;text-align:right;margin-top:2px;}
+
+/* Current price indicator */
+.price-match{display:inline-flex;align-items:center;gap:4px;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:100px;margin-left:8px;}
+.pm-normal{background:#14532d;color:#4ade80;}
+.pm-sale{background:#78350f;color:#fcd34d;}
+.pm-clearance{background:#3b0764;color:#c4b5fd;}
+.pm-above{background:#1e2130;color:#6b6f8a;}
+.pm-below{background:#7a0020;color:#fca5a5;}
+
+/* ═══════════════════════════════════════════════════════════
+   STAT BOXES
+═══════════════════════════════════════════════════════════ */
+.stat{background:#12141c;border-radius:8px;padding:10px 12px;}
+.stat-label{font-size:0.66rem;color:#6b6f8a;margin-bottom:3px;}
+.stat-val{font-size:1.0rem;font-weight:700;color:#fff;}
+.green{color:#4ade80;}.amber{color:#f59e0b;}.red{color:#f87171;}.blue{color:#7dd3fc;}.purple{color:#c4b5fd;}.cyan{color:#22d3ee;}
+
+/* ═══════════════════════════════════════════════════════════
+   ALERTS
+═══════════════════════════════════════════════════════════ */
+.alert{border-radius:7px;padding:9px 12px;font-size:0.77rem;line-height:1.45;margin-bottom:7px;}
+.alert.warn{background:#1f1a10;border:1px solid #7a5c00;color:#f59e0b;}
+.alert.bad{background:#1f1015;border:1px solid #7a0020;color:#f87171;}
+.alert.good{background:#0f1f14;border:1px solid #166534;color:#4ade80;}
+.alert.info{background:#0f1520;border:1px solid #1e3a5f;color:#7dd3fc;}
+
+/* ═══════════════════════════════════════════════════════════
+   COST BAR
+═══════════════════════════════════════════════════════════ */
+.bar-wrap{margin-top:10px;}
+.bar-top{display:flex;justify-content:space-between;font-size:0.69rem;color:#6b6f8a;margin-bottom:4px;}
+.bar{height:10px;border-radius:100px;background:#0c0e16;overflow:hidden;display:flex;}
+.bar-seg{height:100%;transition:width 0.3s;}
+.bar-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;}
+.bl{display:flex;align-items:center;gap:4px;font-size:0.68rem;color:#6b6f8a;}
+.bl-dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════════════════════
+   ADVERTISING STAGE ENGINE
+═══════════════════════════════════════════════════════════ */
+.stage-track{display:flex;gap:0;margin-bottom:16px;position:relative;}
+.stage-track::before{content:'';position:absolute;top:16px;left:20px;right:20px;height:2px;background:#1e2130;z-index:0;}
+.stage-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.stage-dot{width:32px;height:32px;border-radius:50%;border:2px solid #252836;background:#12141c;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#6b6f8a;margin-bottom:6px;transition:all 0.2s;}
+.stage-dot.done{background:#14532d;border-color:#4ade80;color:#4ade80;}
+.stage-dot.active{background:#1a1d3a;border-color:#5b63f7;color:#818cf8;box-shadow:0 0 0 4px rgba(91,99,247,0.15);}
+.stage-dot.warn{background:#2a1015;border-color:#f87171;color:#f87171;}
+.stage-label{font-size:0.65rem;color:#6b6f8a;text-align:center;white-space:nowrap;}
+.stage-label.active{color:#818cf8;font-weight:600;}
+.stage-label.done{color:#4ade80;}
+
+.stage-card{background:#12141c;border:1px solid #252836;border-radius:10px;padding:14px 16px;}
+.stage-card.active{border-color:#3a3d6e;background:#1a1d2e;}
+.stage-card-title{font-size:0.82rem;font-weight:700;color:#fff;margin-bottom:4px;}
+.stage-card-sub{font-size:0.72rem;color:#6b6f8a;margin-bottom:10px;}
+.stage-mode{display:inline-flex;align-items:center;gap:5px;background:#1a1d3a;border:1px solid #3a3d6e;border-radius:6px;padding:4px 10px;font-size:0.72rem;color:#818cf8;font-weight:600;margin-bottom:10px;}
+.checklist{list-style:none;}
+.checklist li{display:flex;align-items:flex-start;gap:8px;font-size:0.76rem;color:#8b8fa8;padding:4px 0;border-bottom:1px solid #1a1d27;}
+.checklist li:last-child{border-bottom:none;}
+.check-icon{width:16px;height:16px;border-radius:3px;border:1px solid #252836;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:0.6rem;}
+.check-icon.done{background:#14532d;border-color:#4ade80;color:#4ade80;}
+.check-icon.active{border-color:#5b63f7;}
+.check-icon.warn{background:#2a1015;border-color:#f87171;color:#f87171;}
+.grad-btn{padding:6px 14px;border-radius:6px;background:#5b63f7;border:none;color:#fff;font-size:0.75rem;font-weight:600;cursor:pointer;margin-top:10px;}
+.grad-btn:disabled{background:#252836;color:#555870;cursor:not-allowed;}
+.grad-btn.kill{background:#7a0020;color:#fca5a5;}
+
+/* ═══════════════════════════════════════════════════════════
+   CHECK-IN HISTORY
+═══════════════════════════════════════════════════════════ */
+.checkin-list{display:flex;flex-direction:column;gap:8px;}
+.checkin-item{background:#12141c;border:1px solid #252836;border-radius:8px;padding:12px 14px;}
+.checkin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.checkin-date{font-size:0.72rem;font-weight:600;color:#e8eaf0;}
+.checkin-del{background:transparent;border:none;color:#555870;cursor:pointer;font-size:0.75rem;padding:2px 6px;}
+.checkin-del:hover{color:#f87171;}
+.checkin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.checkin-cell{background:#0c0e16;border-radius:5px;padding:6px 8px;}
+.checkin-cell-label{font-size:0.62rem;color:#555870;}
+.checkin-cell-val{font-size:0.82rem;font-weight:600;color:#e8eaf0;margin-top:1px;}
+.checkin-notes{font-size:0.72rem;color:#6b6f8a;margin-top:6px;padding-top:6px;border-top:1px solid #1e2130;}
+
+/* ═══════════════════════════════════════════════════════════
+   KILL SIGNALS PANEL
+═══════════════════════════════════════════════════════════ */
+.kill-panel{background:#1f1015;border:1px solid #7a0020;border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+.kill-panel-title{font-size:0.8rem;font-weight:700;color:#f87171;margin-bottom:8px;}
+.kill-signal{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #2a1015;font-size:0.77rem;color:#fca5a5;line-height:1.4;}
+.kill-signal:last-child{border-bottom:none;}
+.kill-dot{width:6px;height:6px;border-radius:50%;background:#f87171;margin-top:5px;flex-shrink:0;}
+.warn-panel{background:#1f1a10;border:1px solid #7a5c00;border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+.warn-panel-title{font-size:0.8rem;font-weight:700;color:#f59e0b;margin-bottom:8px;}
+
+/* ═══════════════════════════════════════════════════════════
+   FEE PILLS
+═══════════════════════════════════════════════════════════ */
+.pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+.pill{background:#12141c;border:1px solid #252836;border-radius:6px;padding:5px 9px;font-size:0.71rem;}
+.pill span{color:#6b6f8a;} .pill strong{color:#fff;margin-left:3px;}
+.pill.hi{border-color:#5b63f7;} .pill.hi strong{color:#818cf8;}
+.pill.warn{border-color:#7a5c00;} .pill.warn strong{color:#f59e0b;}
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;}
+.modal-overlay.open{display:flex;}
+.modal{background:#1a1d27;border:1px solid #252836;border-radius:14px;padding:22px 24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal h2{font-size:1rem;font-weight:700;color:#fff;margin-bottom:16px;}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #252836;}
+.btn{padding:7px 18px;border-radius:7px;font-size:0.8rem;font-weight:600;cursor:pointer;border:1px solid #252836;background:#1a1d27;color:#a0a3ba;transition:all 0.15s;}
+.btn:hover{border-color:#5b63f7;color:#fff;}
+.btn.primary{background:#5b63f7;border-color:#5b63f7;color:#fff;}
+.btn.primary:hover{background:#4a52e6;}
+.btn.danger{background:#7a0020;border-color:#7a0020;color:#fca5a5;}
+
+/* ═══════════════════════════════════════════════════════════
+   MANUFACTURER MODE
+═══════════════════════════════════════════════════════════ */
+.mfg-hero{background:linear-gradient(135deg,#1a2a1a,#1a1d27);border:1px solid #1e4a1e;border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.mfg-hero h2{font-size:0.95rem;font-weight:700;color:#4ade80;margin-bottom:3px;}
+.mfg-hero p{font-size:0.76rem;color:#8b8fa8;line-height:1.5;}
+.mfg-out{background:#0f1f14;border:1px solid #166534;border-radius:9px;padding:14px 16px;margin-bottom:10px;}
+.mfg-out-title{font-size:0.67rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:9px;}
+.mfg-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a2a1a;}
+.mfg-row:last-child{border-bottom:none;}
+.mfg-row-l{font-size:0.76rem;color:#8b8fa8;}
+.mfg-row-r{font-size:0.84rem;font-weight:700;color:#4ade80;}
+.mfg-row-r.white{color:#fff;} .mfg-row-r.amber{color:#f59e0b;} .mfg-row-r.red{color:#f87171;}
+
+/* ═══════════════════════════════════════════════════════════
+   TIMELINE / GUIDE
+═══════════════════════════════════════════════════════════ */
+.tl{padding-left:18px;position:relative;}
+.tl::before{content:'';position:absolute;left:3px;top:8px;bottom:8px;width:2px;background:#252836;}
+.tl-item{position:relative;margin-bottom:14px;}
+.tl-item::before{content:'';position:absolute;left:-18px;top:5px;width:8px;height:8px;border-radius:50%;background:#5b63f7;}
+.tl-period{font-size:0.65rem;color:#5b63f7;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px;}
+.tl-action{font-size:0.8rem;color:#e8eaf0;font-weight:500;}
+.tl-desc{font-size:0.73rem;color:#8b8fa8;margin-top:2px;line-height:1.4;}
+
+/* Tabs within panels */
+.tabs{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{padding:5px 12px;border-radius:100px;font-size:0.76rem;font-weight:500;cursor:pointer;border:1px solid #252836;background:transparent;color:#6b6f8a;transition:all 0.15s;}
+.tab.on{background:#5b63f7;border-color:#5b63f7;color:#fff;}
+.sub-panel{display:none;}.sub-panel.on{display:block;}
+
+/* Scenarios 2x2 */
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:700px){.sc-grid{grid-template-columns:1fr;}}
+.sc{background:#12141c;border-radius:8px;padding:11px 13px;border-left:3px solid transparent;}
+.sc.sg{border-color:#4ade80;}.sc.sy{border-color:#f59e0b;}.sc.sp{border-color:#a78bfa;}.sc.sc2{border-color:#22d3ee;}
+.sc-badge{display:inline-block;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:100px;margin-bottom:5px;letter-spacing:0.05em;}
+.sc.sg .sc-badge{background:#14532d;color:#4ade80;}.sc.sy .sc-badge{background:#78350f;color:#fcd34d;}
+.sc.sp .sc-badge{background:#3b0764;color:#c4b5fd;}.sc.sc2 .sc-badge{background:#164e63;color:#67e8f9;}
+.sc-title{font-size:0.8rem;font-weight:600;color:#fff;margin-bottom:5px;}
+.sc ul{list-style:none;}.sc ul li{font-size:0.74rem;color:#8b8fa8;padding:2px 0 2px 11px;position:relative;line-height:1.35;}
+.sc ul li::before{content:"→";position:absolute;left:0;color:#555870;}
+
+/* Warn box */
+.warn-box{background:#1a1410;border:1px solid #854d0e;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:0.77rem;color:#fbbf24;line-height:1.5;}
+
+/* Rule list */
+.rule{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #1e2130;}
+.rule:last-child{border-bottom:none;}
+.rdot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.rdot.r{background:#f87171;}.rdot.a{background:#fbbf24;}.rdot.g{background:#4ade80;}.rdot.p{background:#a78bfa;}
+.rule-txt{font-size:0.76rem;color:#8b8fa8;line-height:1.45;}
+.rule-txt strong{color:#e8eaf0;}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ TOP BAR ════════════════════ -->
+<div class="topbar">
+  <div class="topbar-brand">Amazon FBA <span>Pricing Tool</span></div>
+  <div class="topbar-spacer"></div>
+  <button class="topbar-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
+  <button class="topbar-btn" id="btn-zh" onclick="setLang('zh')">🇨🇳 中文</button>
+  <div class="topbar-divider"></div>
+  <button class="topbar-btn active" id="btn-usd" onclick="setCurr('USD')">$ USD</button>
+  <button class="topbar-btn" id="btn-cny" onclick="setCurr('CNY')">¥ CNY</button>
+  <div class="topbar-divider"></div>
+  <button class="topbar-btn" onclick="exportJSON()" data-en="Export JSON" data-zh="导出JSON">Export JSON</button>
+  <button class="topbar-btn" onclick="document.getElementById('import-file').click()" data-en="Import JSON" data-zh="导入JSON">Import JSON</button>
+  <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+  <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
+  <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(event)">
+  <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
+</div>
+
+<!-- ════════════════════ APP BODY ════════════════════ -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title" data-en="Products" data-zh="产品">Products</span>
+      <button class="sidebar-add" onclick="openAddModal()" title="Add product">+</button>
+    </div>
+    <div class="sidebar-scroll" id="sidebar-list"></div>
+    <div class="sidebar-bottom">
+      <button class="sidebar-mode-btn active" id="sb-seller" onclick="setAppMode('seller')" data-en="Seller Mode" data-zh="卖家模式">Seller Mode</button>
+      <button class="sidebar-mode-btn" id="sb-mfg" onclick="setAppMode('mfg')" data-en="Manufacturer Mode" data-zh="制造商模式">Manufacturer Mode</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-area">
+    <!-- Empty state shown when no product selected -->
+    <div id="empty-state" class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <h2 data-en="No product selected" data-zh="未选择产品">No product selected</h2>
+      <p data-en="Add a product using the + button in the sidebar, or import a CSV file to get started." data-zh="使用侧边栏中的+按钮添加产品，或导入CSV文件开始使用。">Add a product using the + button in the sidebar, or import a CSV file to get started.</p>
+      <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
+    </div>
+
+    <!-- Product view (shown when product selected) -->
+    <div id="product-view" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:#fff;" id="pv-name">Product Name</div>
+          <div style="font-size:0.75rem;color:#555870;margin-top:2px;" id="pv-asin">ASIN</div>
+        </div>
+        <div style="flex:1;"></div>
+        <div id="pv-stage-badge"></div>
+        <button class="topbar-btn" onclick="openEditModal()" data-en="Edit" data-zh="编辑">Edit</button>
+        <button class="topbar-btn danger" onclick="deleteProduct()" data-en="Delete" data-zh="删除">Delete</button>
+      </div>
+
+      <!-- Kill signals shown prominently if active -->
+      <div id="pv-kill-signals"></div>
+
+      <div class="main-tabs">
+        <button class="main-tab on" onclick="mainTab(this,'tab-calc')" data-en="Calculator" data-zh="计算器">Calculator</button>
+        <button class="main-tab" onclick="mainTab(this,'tab-stages')" data-en="Ad Stages" data-zh="广告阶段">Ad Stages</button>
+        <button class="main-tab" onclick="mainTab(this,'tab-checkin')" data-en="Check-ins" data-zh="检查记录">Check-ins</button>
+        <button class="main-tab" onclick="mainTab(this,'tab-guide')" data-en="Strategy Guide" data-zh="策略指南">Strategy Guide</button>
+      </div>
+
+      <!-- TAB: CALCULATOR -->
+      <div id="tab-calc" class="main-panel on">
+        <div class="g2">
+          <div>
+            <div class="section-lbl lbl-in">▶ <span data-en="INPUTS" data-zh="输入">INPUTS</span></div>
+            <div id="calc-inputs-html"></div>
+          </div>
+          <div>
+            <div class="section-lbl lbl-out">◀ <span data-en="OUTPUTS" data-zh="输出">OUTPUTS</span></div>
+            <div id="calc-outputs-html"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: AD STAGES -->
+      <div id="tab-stages" class="main-panel">
+        <div id="stages-html"></div>
+      </div>
+
+      <!-- TAB: CHECK-INS -->
+      <div id="tab-checkin" class="main-panel">
+        <div class="card">
+          <div class="card-title" data-en="Record New Check-in" data-zh="记录新检查">Record New Check-in</div>
+          <div class="g3">
+            <div class="inp">
+              <label><span data-en="Current Amazon Price ($)" data-zh="当前亚马逊价格($)">Current Amazon Price ($)</span></label>
+              <input type="number" id="ci-price" step="0.01" min="0" placeholder="e.g. 19.95">
+              <div class="hint" data-en="The price currently showing on your Amazon listing" data-zh="当前在亚马逊列表上显示的价格">Current price showing on your listing</div>
+            </div>
+            <div class="inp">
+              <label><span data-en="Current ACoS (%)" data-zh="当前ACoS (%)">Current ACoS (%)</span></label>
+              <input type="number" id="ci-acos" step="0.1" min="0" placeholder="e.g. 38.5">
+            </div>
+            <div class="inp">
+              <label><span data-en="Ad Sales (last 30 days)" data-zh="广告销售（近30天）">Ad Sales (last 30 days)</span></label>
+              <input type="number" id="ci-adsales" step="1" min="0" placeholder="e.g. 32">
+            </div>
+          </div>
+          <div class="g3">
+            <div class="inp">
+              <label><span data-en="Total Revenue — last 30d ($)" data-zh="总收入—近30天($)">Total Revenue — last 30d ($)</span></label>
+              <input type="number" id="ci-rev" step="0.01" min="0" placeholder="e.g. 850.00">
+            </div>
+            <div class="inp">
+              <label><span data-en="Total Ad Spend — last 30d ($)" data-zh="广告总支出—近30天($)">Total Ad Spend — last 30d ($)</span></label>
+              <input type="number" id="ci-spend" step="0.01" min="0" placeholder="e.g. 120.00">
+            </div>
+            <div class="inp">
+              <label><span data-en="Organic Sales Growing?" data-zh="自然销售增长中？">Organic Sales Growing?</span></label>
+              <select id="ci-organic">
+                <option value="yes" data-en="Yes — growing" data-zh="是—增长中">Yes — growing</option>
+                <option value="stable" data-en="Stable / flat" data-zh="稳定/持平">Stable / flat</option>
+                <option value="no" data-en="No — declining" data-zh="否—下降中">No — declining</option>
+              </select>
+            </div>
+          </div>
+          <div class="inp">
+            <label><span data-en="Notes" data-zh="备注">Notes</span> <span class="opt">optional</span></label>
+            <textarea id="ci-notes" rows="2" placeholder="Any observations, changes made, issues noticed..."></textarea>
+          </div>
+          <button class="btn primary" onclick="recordCheckin()" data-en="Save Check-in" data-zh="保存检查">Save Check-in</button>
+        </div>
+        <div id="checkin-history"></div>
+      </div>
+
+      <!-- TAB: STRATEGY GUIDE -->
+      <div id="tab-guide" class="main-panel">
+        <div class="tabs">
+          <button class="tab on" onclick="subTab(this,'sg-when')">When to Use</button>
+          <button class="tab" onclick="subTab(this,'sg-timing')">Seasonal Calendar</button>
+          <button class="tab" onclick="subTab(this,'sg-ads')">Advertising</button>
+          <button class="tab" onclick="subTab(this,'sg-costs')">Hidden Costs</button>
+          <button class="tab" onclick="subTab(this,'sg-rules')">2026 Rules</button>
+        </div>
+        <div id="sg-when" class="sub-panel on">
+          <div class="sc-grid">
+            <div class="sc sg"><div class="sc-badge">YOUR PRICE</div><div class="sc-title">Default selling price — most of the year</div><ul><li>Hold ≥ 30 days between promo campaigns</li><li>Must be active to establish the "Was" baseline</li><li>Ends in .95 — signals standard retail</li><li>Never promo >50% of any 90-day window</li><li>Primary PPC bidding price for ACoS targets</li></ul></div>
+            <div class="sc sy"><div class="sc-badge">SALE / PRICE DISCOUNT</div><div class="sc-title">Strike-through "Was → Now" badge</div><ul><li>Product launch — first 30–60 days</li><li>Prime Day / Black Friday / major events</li><li>Clearing slow-moving inventory</li><li>Min ~5% off; max 30-day campaign (free tool)</li><li>Ends in .90 — signals promotional pricing</li></ul></div>
+            <div class="sc sp"><div class="sc-badge">CLEARANCE PRICE</div><div class="sc-title">One-time or flash conversion push</div><ul><li>When sale price isn't converting after 1–2 wks</li><li>Flash sale / urgent clearance of overstock</li><li>Temporary competitor price matching only</li><li>Ends in .97/.88/.77 — signals one-off price</li><li>Use sparingly — erodes "Was" anchor</li></ul></div>
+            <div class="sc sc2"><div class="sc-badge">COUPON</div><div class="sc-title">Green badge visible in search results</div><ul><li>Visibility without changing listed price</li><li>Post-launch: need ≥ 10 reviews, ≥ 3.5 stars</li><li>Does NOT affect Typical Price baseline (good)</li><li>Cost: $5 flat + 2.5% of attributed sales</li><li>Stacks with price discounts — math compounds</li></ul></div>
+          </div>
+        </div>
+        <div id="sg-timing" class="sub-panel">
+          <div class="tl">
+            <div class="tl-item"><div class="tl-period">LAUNCH — WEEK 1–4</div><div class="tl-action">Sale Price via Price Discount tool</div><div class="tl-desc">Set Your Price first, then apply a Price Discount. Drive velocity and reviews. Run PPC at Launch ACoS — accept losses to build rank. Enroll Vine immediately on Day 1 if using it.</div></div>
+            <div class="tl-item"><div class="tl-period">POST-LAUNCH — WEEK 5–12</div><div class="tl-action">Return to Your Price. No promotions.</div><div class="tl-desc">Let Your Price become the 30+90-day median. Rebuild "Was" anchor. Shift PPC toward Target ACoS as organic rank improves.</div></div>
+            <div class="tl-item"><div class="tl-period">Q1 (JAN–MAR) — POST-HOLIDAY</div><div class="tl-action">Your Price. Reduce ad spend. Protect margins.</div><div class="tl-desc">Low demand. Recover cash. Reset Typical Price if damaged by Q4 promos.</div></div>
+            <div class="tl-item"><div class="tl-period">Q2 (APR–JUN) — BUILD-UP</div><div class="tl-action">Your Price + Coupon if reviews ≥ 10, rating ≥ 3.5★</div><div class="tl-desc">Lift CTR via coupon without affecting Typical Price. Build Prime Day inventory. Stabilise price for 30+ days before June.</div></div>
+            <div class="tl-item"><div class="tl-period">PRIME DAY PREP — 30 DAYS BEFORE</div><div class="tl-action">Stop all discounts. Hold Your Price. Submit deals.</div><div class="tl-desc">Price Discount tool needs clean 30-day history. Submit Lightning Deal ($500, 20%+), Best Deal ($1,000, 15%+), or Prime Exclusive Discount ($245, 15%+).</div></div>
+            <div class="tl-item"><div class="tl-period">PRIME DAY (JUL) + Q3</div><div class="tl-action">Sale Price or Clearance. Maximum PPC.</div><div class="tl-desc">Highest H1 traffic. Accept lower margins for volume. Run PPC aggressively. Target TACoS, not per-campaign ACoS.</div></div>
+            <div class="tl-item"><div class="tl-period">Q4 PREP — SEPTEMBER</div><div class="tl-action">Your Price. Build stock. Rebuild Typical Price.</div><div class="tl-desc">FBA storage fees spike Oct–Dec. Send stock by late Sep. Hold Your Price 30+ days to reset "Was" before Black Friday.</div></div>
+            <div class="tl-item"><div class="tl-period">BLACK FRIDAY / CYBER MONDAY (NOV)</div><div class="tl-action">Sale Price or Clearance. All-in on PPC.</div><div class="tl-desc">Budget 2–3× daily PPC. Monitor hourly. ACoS will spike but TACoS stays healthy if organic is strong.</div></div>
+            <div class="tl-item"><div class="tl-period">YEAR-ROUND RULE</div><div class="tl-action">Never promo more than 50% of any 90-day window</div><div class="tl-desc">From May 18 2026: if below non-promo median >50% of any 90-day window, Amazon collapses your Typical Price. Permanent until 90 days recovery.</div></div>
+          </div>
+        </div>
+        <div id="sg-ads" class="sub-panel">
+          <div class="sc-grid" style="margin-bottom:12px;">
+            <div class="sc sg"><div class="sc-badge">ACoS TARGET</div><div class="sc-title">Advertising Cost of Sale</div><ul><li>ACoS = ad spend ÷ ad revenue × 100</li><li>Break-even ACoS = your net margin %</li><li>Target ACoS must be BELOW net margin</li><li>20–30% typical for established products</li><li>Launch: 50–80% acceptable when buying rank</li></ul></div>
+            <div class="sc sc2"><div class="sc-badge">TACoS TARGET</div><div class="sc-title">Total Advertising Cost of Sale</div><ul><li>TACoS = ad spend ÷ TOTAL revenue (paid+organic)</li><li>Better measure of true profitability than ACoS</li><li>Target TACoS 5–10% = healthy organic ratio</li><li>Falling TACoS over time = organic rank improving</li><li>Rising TACoS despite stable spend = organic declining</li></ul></div>
+            <div class="sc sy"><div class="sc-badge">MAX CPC</div><div class="sc-title">Maximum Cost Per Click</div><ul><li>Max CPC = Your Price × Target ACoS% × CVR%</li><li>Bids above this push ACoS above target</li><li>Use as hard cap in manual campaigns</li><li>Start bids at 70% of max CPC, adjust from data</li><li>Lower CVR = lower max CPC you can afford</li></ul></div>
+            <div class="sc sp"><div class="sc-badge">m19 STAGES</div><div class="sc-title">Tool-specific workflow</div><ul><li>Stage 1: Force Product Visibility — data collection</li><li>Stage 2: Monthly Budget — volume building</li><li>Stage 3: ACoS Target — profitability optimisation</li><li>Never mix new ASINs with established products</li><li>Give the AI 1–2 weeks to learn before changing anything</li></ul></div>
+          </div>
+          <div class="alert info">ACoS floor = your net margin %. Once ACoS drops below this, every ad click is profitable. The transition from Launch ACoS to Target ACoS typically takes 8–16 weeks depending on category competition.</div>
+        </div>
+        <div id="sg-costs" class="sub-panel">
+          <div class="warn-box">These costs are NOT in Amazon's quoted fees. Model them in the inputs — if you don't, actual margins will be lower than shown.</div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Inbound Shipping (China→FBA):</strong> Sea freight ~$0.30–$0.80/unit. Air freight ~$2–$5/unit. Divide total freight cost by units in shipment.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Inbound Placement Fee:</strong> If not using Amazon-optimised shipment splits (5+ identical cartons), Amazon charges $0.27–$1.58/unit standard-size. Increased significantly in 2026.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>FBA Storage Fees:</strong> $0.87/cu ft Jan–Sep, $2.40/cu ft Oct–Dec. Aged inventory surcharge after 181 days: $1.50–$6.90+/unit. Model your sell-through velocity carefully.</div></div>
+          <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>Returns Processing:</strong> Amazon keeps 20% of referral fee on all returns as admin charge. A 5% return rate can eliminate 1–2% net margin.</div></div>
+          <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>PPC / Advertising:</strong> New products typically spend $1.50–$4.00/unit blended. Not optional during launch — without PPC you will not rank.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Amazon Vine:</strong> $200 flat per ASIN. Target minimum 20 reviews. Vine window ~30 days. Vine-period sales are not real market demand — do not count toward Stage 2 graduation.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Coupon Fees:</strong> $5 flat per coupon + 2.5% of attributed sales (cap $2,000). Much cheaper at volume than old $0.60/redemption.</div></div>
+          <div class="rule"><div class="rdot p"></div><div class="rule-txt"><strong>FBA Inbound Defect Fee (2026):</strong> Misrouted/abandoned units: $0.32–$1.74 standard-size (was $0.02–$0.07 in 2025). Pack and label carefully.</div></div>
+          <div class="rule"><div class="rdot p"></div><div class="rule-txt"><strong>Overhead:</strong> Seller Central $39.99/mo, photography $300–$800 one-time, Brand Registry $500+ legal, tools $50–$100/mo, Vine $200/ASIN. Amortise across annual units.</div></div>
+        </div>
+        <div id="sg-rules" class="sub-panel">
+          <div class="warn-box">Two major rule changes hit April–May 2026. Inflated List Prices and persistent discounting to manufacture "Was/Now" badges no longer work reliably.</div>
+          <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>List Price — April 23, 2026:</strong> Must be substantiated by real Amazon sales at that price, OR evidence another retailer sold at that price recently. Amazon removes the strike-through if unverified.</div></div>
+          <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>Typical Price — May 18, 2026:</strong> If below non-promo median >50% of 90-day window, Amazon includes promo prices in Typical Price. Permanently deflates "Was" until 90 days at higher price.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Price Discount Tool:</strong> Free in Seller Central. Needs clean 30-day price history and ~5%+ off. Max 30 days. Creates "Was/Now" badge. Does not appear in Deals section.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>Coupon Fee Change — June 2, 2025:</strong> Changed from $0.60/redemption to $5 flat + 2.5% of attributed sales (cap $2,000). Recalculate ROI for all coupon campaigns.</div></div>
+          <div class="rule"><div class="rdot a"></div><div class="rule-txt"><strong>FBA Fuel Surcharge — April 17, 2026:</strong> 3.5% on top of every FBA fulfillment fee. $3.96 base fee → $4.10. All US/Canada FBA included.</div></div>
+          <div class="rule"><div class="rdot g"></div><div class="rule-txt"><strong>FBA Fee Price Bands — January 15, 2026:</strong> Fees differ by 3 price bands: &lt;$10, $10–$50, &gt;$50. Pricing at $9.99 vs $10.00 triggers a different FBA fee tier.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANUFACTURER MODE VIEW -->
+    <div id="mfg-view" style="display:none;">
+      <div class="mfg-hero">
+        <h2>Manufacturer / Supplier Pricing Tool</h2>
+        <p>Enter your landed cost and target margin. This tool calculates the minimum quote price and shows what the Amazon seller will need to list at — share with your buyer to align before agreeing unit pricing.</p>
+      </div>
+      <div class="g2">
+        <div>
+          <div class="section-lbl lbl-in">▶ INPUTS — Manufacturer fills in these fields</div>
+          <div class="card">
+            <div class="card-title">Your Costs &amp; Targets</div>
+            <div class="inp"><label>Landed Cost per Unit ($) <span class="req">REQUIRED</span></label><input type="number" id="m_landed" value="5.00" min="0" step="0.01" oninput="calcMfg()"><div class="hint">Factory cost + inbound freight + import duties + prep. ALL-IN cost delivered to Amazon warehouse.</div></div>
+            <div class="g2">
+              <div class="inp"><label>Your Manufacturer Margin (%) <span class="req">REQUIRED</span></label><input type="number" id="m_mfg_margin" value="35" min="1" max="90" step="1" oninput="calcMfg()"><div class="hint">Your profit on the price you quote the seller.</div></div>
+              <div class="inp"><label>Seller's Target Net Margin (%) <span class="req">REQUIRED</span></label><input type="number" id="m_seller_margin" value="30" min="1" max="90" step="1" oninput="calcMfg()"><div class="hint">Ask your buyer for this number.</div></div>
+            </div>
+            <div class="g2">
+              <div class="inp"><label>Amazon Category <span class="req">REQUIRED</span></label>
+                <select id="m_category" onchange="calcMfg()">
+                  <option value="15">Home / Sports / Office / Toys — 15%</option>
+                  <option value="15b">Beauty &amp; Personal Care — 8–15%</option>
+                  <option value="8">Electronics — 8%</option>
+                  <option value="17">Apparel — 5–17%</option>
+                  <option value="15s">Shoes &amp; Handbags — 5–15%</option>
+                  <option value="8c">Computers — 8%</option>
+                  <option value="6p">Personal Computers — 6%</option>
+                  <option value="6">Major Appliances — 7.5%</option>
+                  <option value="20j">Jewelry — 5–20%</option>
+                </select>
+              </div>
+              <div class="inp"><label>FBA Size Tier <span class="req">REQUIRED</span></label>
+                <select id="m_sizetier" onchange="calcMfg()">
+                  <option value="ss">Small Standard (≤16oz)</option>
+                  <option value="ls">Large Standard (up to 20lb)</option>
+                  <option value="lb">Large Bulky</option>
+                  <option value="xl">Extra-Large (&lt;50lb)</option>
+                </select>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="inp"><label>Shipping Weight (oz) <span class="req">REQUIRED</span></label><input type="number" id="m_weight" value="8" min="0.1" step="0.1" oninput="calcMfg()"></div>
+              <div class="inp"><label>Seller's Other Costs ($/unit) <span class="opt">typical: $2.50</span></label><input type="number" id="m_other" value="2.50" min="0" step="0.01" oninput="calcMfg()"><div class="hint">PPC, storage, returns, overhead. Ask seller or use $2.50.</div></div>
+            </div>
+            <label class="check-row"><input type="checkbox" id="m_surcharge" checked onchange="calcMfg()"> Include 3.5% FBA fuel surcharge (from Apr 17 2026)</label>
+          </div>
+        </div>
+        <div>
+          <div class="section-lbl lbl-out">◀ OUTPUTS</div>
+          <div class="mfg-out"><div class="mfg-out-title">Your Pricing to the Seller</div><div id="mfg_seller_price"></div></div>
+          <div class="mfg-out" style="background:#0f1020;border-color:#2a2a5e;"><div class="mfg-out-title" style="color:#818cf8;">Seller's Amazon Price Tiers</div><div id="mfg_amazon_tiers"></div></div>
+          <div id="mfg_alerts"></div>
+          <div class="alert info" style="font-size:0.74rem;">If the Minimum Viable Price is higher than the typical market price for this product category, the landed cost needs to come down or the seller's margin target needs adjusting. Share this output with your buyer.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ ADD/EDIT PRODUCT MODAL ════════════════════ -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <h2 id="modal-title">Add Product</h2>
+    <input type="hidden" id="modal-product-id">
+
+    <div class="g2">
+      <div class="inp"><label>Product Name <span class="req">REQUIRED</span></label><input type="text" id="f-name" placeholder="e.g. Blue Widget Pro"></div>
+      <div class="inp"><label>ASIN <span class="opt">optional</span></label><input type="text" id="f-asin" placeholder="B0XXXXXXXXX"></div>
+    </div>
+
+    <div class="g2">
+      <div class="inp"><label>Amazon Category <span class="req">REQUIRED</span></label>
+        <select id="f-category">
+          <option value="15">Home / Kitchen / Sports / Office / Toys — 15%</option>
+          <option value="15b">Beauty &amp; Personal Care — 8–15%</option>
+          <option value="15c">Grocery &amp; Gourmet — 8–15%</option>
+          <option value="17">Apparel &amp; Accessories — 5–17%</option>
+          <option value="15s">Shoes &amp; Handbags — 5–15%</option>
+          <option value="8">Electronics — 8%</option>
+          <option value="8c">Computers — 8%</option>
+          <option value="8cam">Camera &amp; Photo — 8%</option>
+          <option value="6p">Personal Computers — 6%</option>
+          <option value="6">Major Appliances — 7.5%</option>
+          <option value="20j">Jewelry — 20%/5%</option>
+          <option value="16w">Watches — 16%/3%</option>
+          <option value="20">Gift Cards — 20%</option>
+          <option value="45">Amazon Device Accessories — 45%</option>
+          <option value="12">Books / Media — 15% + closing</option>
+        </select>
+      </div>
+      <div class="g2" style="gap:8px;">
+        <div class="inp"><label>Size Tier <span class="req">REQUIRED</span></label>
+          <select id="f-sizetier">
+            <option value="ss">Small Standard</option>
+            <option value="ls">Large Standard</option>
+            <option value="lb">Large Bulky</option>
+            <option value="xl">Extra-Large</option>
+          </select>
+        </div>
+        <div class="inp"><label>Weight (oz) <span class="req">REQUIRED</span></label><input type="number" id="f-weight" value="8" min="0.1" step="0.1"></div>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div class="inp"><label>COGS per unit ($) <span class="req">REQUIRED</span></label><input type="number" id="f-cogs" value="6.00" step="0.01" min="0"><div class="hint">Manufacturing cost only</div></div>
+      <div class="inp"><label>Target Net Margin (%) <span class="req">REQUIRED</span> <span class="typ">typical: 25–35%</span></label><input type="number" id="f-margin" value="30" step="1" min="1" max="90"></div>
+    </div>
+
+    <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Additional Costs</div>
+    <div class="g3">
+      <div class="inp"><label>Inbound Shipping ($/unit) <span class="typ">typical: $0.50</span></label><input type="number" id="f-inbound" value="0.50" step="0.01" min="0"><div class="hint">China→FBA freight ÷ units</div></div>
+      <div class="inp"><label>Inbound Placement ($/unit) <span class="typ">typical: $0.00</span></label><input type="number" id="f-placement" value="0.00" step="0.01" min="0"><div class="hint">0 if using Amazon-optimised splits (5+ cartons)</div></div>
+      <div class="inp"><label>Prep &amp; Labelling ($/unit) <span class="typ">typical: $0.25</span></label><input type="number" id="f-prep" value="0.25" step="0.01" min="0"><div class="hint">FNSKU label + polybag if needed</div></div>
+    </div>
+    <div class="g3">
+      <div class="inp"><label>Storage per unit/mo ($) <span class="typ">typical: $0.10</span></label><input type="number" id="f-storage" value="0.10" step="0.01" min="0"><div class="hint">Avg across ~45-day sell-through</div></div>
+      <div class="inp"><label>Q4 Storage Surcharge ($/unit) <span class="typ">typical: $0.00</span></label><input type="number" id="f-q4storage" value="0.00" step="0.01" min="0"><div class="hint">Oct–Dec only. $2.40/cu ft vs $0.87</div></div>
+      <div class="inp"><label>PPC per unit ($) <span class="typ">typical: $1.50</span></label><input type="number" id="f-ppc" value="1.50" step="0.01" min="0"><div class="hint">Total ad spend ÷ units sold (blended)</div></div>
+    </div>
+    <div class="g3">
+      <div class="inp"><label>Returns Allowance ($/unit) <span class="typ">typical: $0.30</span></label><input type="number" id="f-returns" value="0.30" step="0.01" min="0"><div class="hint">~3% return rate × avg $10 loss</div></div>
+      <div class="inp"><label>Other / Overhead ($/unit) <span class="typ">typical: $0.20</span></label><input type="number" id="f-other" value="0.20" step="0.01" min="0"><div class="hint">Tools, photography, brand registry amortised</div></div>
+      <div></div>
+    </div>
+
+    <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Vine Programme</div>
+    <div class="g3">
+      <div class="inp">
+        <label class="check-row" style="margin:0;"><input type="checkbox" id="f-vine"> <span>Enrolled in Vine ($200/ASIN)</span></label>
+        <div class="hint">Vine: 30-day window, target 20 reviews. Adjusts stage graduation logic.</div>
+      </div>
+      <div class="inp"><label>Vine Target Reviews <span class="typ">typical: 20</span></label><input type="number" id="f-vine-units" value="20" step="1" min="1"><div class="hint">Amortised into cost: $200 ÷ annual units</div></div>
+      <div class="inp"><label>Expected Annual Units (for Vine cost calc)</label><input type="number" id="f-annual-units" value="500" step="1" min="1"><div class="hint">Used to amortise $200 Vine cost per unit</div></div>
+    </div>
+
+    <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Advertising Targets</div>
+    <div class="g3">
+      <div class="inp"><label>Target ACoS (%) <span class="req">REQUIRED</span> <span class="typ">typical: 25%</span></label><input type="number" id="f-tacos" value="25" step="1" min="1" max="100"></div>
+      <div class="inp"><label>Launch ACoS (%) <span class="typ">typical: 60%</span></label><input type="number" id="f-lacos" value="60" step="1" min="1" max="200"></div>
+      <div class="inp"><label>Conversion Rate CVR (%) <span class="typ">typical: 12%</span></label><input type="number" id="f-cvr" value="12" step="0.1" min="0.1" max="100"></div>
+    </div>
+
+    <label class="check-row"><input type="checkbox" id="f-surcharge" checked> Include 3.5% FBA fuel surcharge (from Apr 17 2026)</label>
+
+    <div class="inp" style="margin-top:10px;"><label>Notes <span class="opt">optional</span></label><textarea id="f-notes" rows="2" placeholder="Product notes, launch date, any context..."></textarea></div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveProduct()" id="modal-save-btn">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// RULE: ALL BUSINESS LOGIC CONSTANTS ARE DEFINED HERE FOR EASY LLM MODIFICATION
+// See LOGIC.md for full documentation of each constant.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// RULE: Currency conversion rate. Static — update manually when rate changes.
+// LOGIC.md Section 12
+const CNY_RATE = 7.25;
+
+// RULE: Vine programme costs and timing
+// LOGIC.md Section 4
+const VINE_COST = 200;           // Flat fee per ASIN in USD
+const VINE_WINDOW_DAYS = 30;     // Days the Vine window stays open after enrollment
+
+// RULE: m19 Stage 1 — Force Product Visibility
+// LOGIC.md Section 5, Stage 1
+const S1_MIN_DAYS = 3;           // Minimum days in Stage 1 before graduation allowed
+const S1_KILL_DAYS = 14;         // Days with zero sales before kill signal fires (Vine-adjusted)
+const STAGE1_BUDGET_LOW = 15;    // Recommended daily budget ($) for low-competition niches
+const STAGE1_BUDGET_MED = 30;    // Recommended daily budget ($) for medium-competition niches
+const STAGE1_BUDGET_HIGH = 60;   // Recommended daily budget ($) for high-competition niches
+
+// RULE: m19 Stage 2 — Monthly Budget
+// LOGIC.md Section 5, Stage 2
+const S2_MIN_DAYS = 30;          // Minimum days in Stage 2 before graduation allowed
+const S2_AD_SALES_TARGET = 40;   // Ad sales needed (post-Vine) to graduate Stage 2
+const S2_KILL_DAYS = 60;         // Days in Stage 2 before kill signal fires if sales target not met
+const STAGE2_BUDGET_BASELINE = 500; // Baseline monthly budget in USD
+
+// RULE: m19 Stage 3 — ACoS Target
+// LOGIC.md Section 5, Stage 3
+const S3_ACOS_STEP = 3;          // Recommended ACoS reduction step size (percentage points)
+const S3_STEP_WAIT_DAYS = 5;     // Minimum days between ACoS target step-downs
+const S3_ACOS_BUFFER = 3;        // Buffer above break-even ACoS floor (pp) to avoid impression loss
+const S3_KILL_DAYS = 90;         // Days in Stage 3 before kill signal fires if unprofitable + no organic growth
+
+// RULE: Stable product graduation criteria
+// LOGIC.md Section 6
+const STABLE_MIN_S3_DAYS = 60;   // Minimum days in Stage 3 before marking as Stable
+
+// RULE: Kill signal thresholds
+// LOGIC.md Section 7
+const K1_DAYS = 14;              // Kill Signal 1: Stage 1 zero sales threshold (days)
+const K4_SPEND_RATIO = 1.5;      // Kill Signal 4: Cumulative ad spend / total revenue danger threshold
+const STALE_DAYS = 21;           // Days without check-in before stale warning fires
+
+// RULE: Price tier rounding endings
+// LOGIC.md Section 2
+const PRICE_LIST_END = 0.99;     // List Price ends in .99 (MSRP signal)
+const PRICE_YOUR_END = 0.95;     // Your Price ends in .95 (standard retail signal)
+const PRICE_SALE_END = 0.90;     // Sale Price ends in .90 (promotional signal)
+const PRICE_DISC_END = 0.97;     // Clearance Price ends in .97 (one-off/irregular signal)
+
+// RULE: Price tier discount multipliers
+// LOGIC.md Section 2
+const SALE_DISCOUNT = 0.94;      // Sale Price = Your Price × 0.94 (6% off, >5% to trigger badge)
+const CLEARANCE_DISCOUNT = 0.91; // Clearance Price = Sale Price × 0.91 (~9% below sale)
+const LIST_PREMIUM = 1.10;       // List Price = Your Price × 1.10 (10% MSRP premium)
+
+// RULE: Price tier classification tolerance (±%)
+// LOGIC.md Section 8
+const PRICE_MATCH_TOLERANCE = 0.02; // ±2% tolerance for current price vs tier matching
+
+// RULE: Seller margin warning threshold
+const LOW_MARGIN_WARNING = 20;   // Warn if Your Price margin drops below this %
+
+// RULE: Minimum viable seller margin for manufacturer mode warning
+const MFG_MIN_SELLER_MARGIN = 15; // Warn if seller margin < 15% in manufacturer output
+
+// RULE: localStorage data key. Increment version suffix if schema changes.
+// LOGIC.md Section 10
+const STORAGE_KEY = 'amazon_pricing_tool_v1';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let state = {
+  version: 1,
+  lang: 'en',
+  currency: 'USD',
+  appMode: 'seller',
+  activeProductId: null,
+  products: []
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PERSISTENCE — localStorage + JSON export/import
+// LOGIC.md Section 10
+// ═══════════════════════════════════════════════════════════════════════════
+function saveToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e) { console.warn('Storage save failed:', e); }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const loaded = JSON.parse(raw);
+      // RULE: Schema version check — if version differs, run migration (future use)
+      if (loaded.version === 1) { state = loaded; }
+    }
+  } catch(e) { console.warn('Storage load failed:', e); }
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `amazon-pricing-tool-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.version || !imported.products) { alert('Invalid export file format.'); return; }
+      if (!confirm('Import will replace ALL current data. Continue?')) return;
+      state = imported;
+      saveToStorage();
+      renderAll();
+    } catch(err) { alert('Failed to parse JSON file: ' + err.message); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CSV IMPORT
+// LOGIC.md Section 11
+// ═══════════════════════════════════════════════════════════════════════════
+const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
+  electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
+  jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
+    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
+    let imported = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+      if (!row.name || !row.cogs) continue;
+      const p = createDefaultProduct();
+      p.name = row.name || 'Unnamed Product';
+      p.asin = row.asin || '';
+      p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
+      p.inputs.sizetier = ['ss','ls','lb','xl'].includes(row.size_tier) ? row.size_tier : 'ss';
+      p.inputs.weight = parseFloat(row.weight_oz) || 8;
+      p.inputs.cogs = parseFloat(row.cogs) || 6;
+      p.inputs.margin = parseFloat(row.target_margin) || 30;
+      p.inputs.inbound = parseFloat(row.inbound_shipping) || 0.50;
+      p.inputs.placement = parseFloat(row.inbound_placement) || 0;
+      p.inputs.prep = parseFloat(row.prep_labelling) || 0.25;
+      p.inputs.storage = parseFloat(row.storage) || 0.10;
+      p.inputs.q4storage = parseFloat(row.q4_storage) || 0;
+      p.inputs.ppc = parseFloat(row.ppc_per_unit) || 1.50;
+      p.inputs.returns = parseFloat(row.returns_allowance) || 0.30;
+      p.inputs.vine = row.vine_enrolled?.toLowerCase() === 'true';
+      p.inputs.vineUnits = parseInt(row.vine_units) || 20;
+      p.inputs.annualUnits = parseInt(row.annual_units) || 500;
+      p.inputs.other = parseFloat(row.other_overhead) || 0.20;
+      p.inputs.tacos = parseFloat(row.target_acos) || 25;
+      p.inputs.lacos = parseFloat(row.launch_acos) || 60;
+      p.inputs.cvr = parseFloat(row.cvr) || 12;
+      p.notes = row.notes || '';
+      state.products.push(p);
+      imported++;
+    }
+    saveToStorage();
+    renderAll();
+    alert(`Imported ${imported} product${imported !== 1 ? 's' : ''}.`);
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT DATA MODEL
+// ═══════════════════════════════════════════════════════════════════════════
+function createDefaultProduct(overrides = {}) {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    name: 'New Product',
+    asin: '',
+    createdAt: new Date().toISOString(),
+    lifecycle: 'PRE_LAUNCH',    // RULE: possible values: PRE_LAUNCH, STAGE_1, STAGE_2, STAGE_3, STABLE, KILL_REVIEW, KILLED
+    stageStartDates: {},        // { STAGE_1: ISO, STAGE_2: ISO, STAGE_3: ISO, STABLE: ISO }
+    checkins: [],
+    notes: '',
+    inputs: {
+      category: '15', sizetier: 'ss', weight: 8,
+      cogs: 6, margin: 30,
+      inbound: 0.50, placement: 0, prep: 0.25, storage: 0.10, q4storage: 0,
+      ppc: 1.50, returns: 0.30, other: 0.20,
+      vine: false, vineUnits: 20, annualUnits: 500,
+      tacos: 25, lacos: 60, cvr: 12,
+      surcharge: true
+    },
+    ...overrides
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEE CALCULATIONS
+// LOGIC.md Sections 1.1, 1.2, 1.3
+// ═══════════════════════════════════════════════════════════════════════════
+
+// RULE: Referral fee by category. Source: Amazon Seller Central, frozen 2025–2026.
+function getReferralFee(catKey, price) {
+  const m = (r) => Math.max(0.30, price * r);
+  switch(catKey) {
+    case '15':   return m(0.15);
+    case '15b':  return Math.max(0.30, price < 10  ? price*0.08 : price*0.15);
+    case '15c':  return Math.max(0.30, price < 15  ? price*0.08 : price*0.15);
+    case '17':   return price<=15 ? m(0.05) : price<=20 ? m(0.10) : m(0.17);
+    case '15s':  return price<=75 ? m(0.05) : price<=150 ? m(0.10) : m(0.15);
+    case '8':    case '8c': case '8cam': return m(0.08);
+    case '6p':   return m(0.06);
+    case '6':    return m(0.075);
+    case '20j':  return price<=250 ? m(0.20) : Math.max(0.30, 250*0.20+(price-250)*0.05);
+    case '16w':  return price<=1500 ? Math.max(2.00,price*0.16) : Math.max(2.00,1500*0.16+(price-1500)*0.03);
+    case '20':   return price*0.20;
+    case '45':   return m(0.45);
+    case '12':   return m(0.15) + 1.80; // Books: 15% + $1.80 closing fee
+    default:     return m(0.15);
+  }
+}
+
+// RULE: FBA fulfillment fee tables, 2026 rate card.
+// Structure: [max_oz, price_band_<10, price_band_10-50, price_band_>50]
+// Source: Amazon Seller Central, effective January 15, 2026
+const SS_TABLE = [
+  [2,2.43,3.32,3.58],[4,2.49,3.42,3.68],[6,2.56,3.45,3.71],[8,2.66,3.54,3.80],
+  [10,2.77,3.68,3.94],[12,2.82,3.78,4.04],[14,2.92,3.91,4.17],[16,2.95,3.96,4.22]
+];
+const LS_TABLE = [
+  [4,2.91,3.73,3.99],[8,3.13,3.95,4.21],[12,3.38,4.20,4.46],[16,3.78,4.60,4.86],
+  [20,4.22,5.04,5.30],[24,4.60,5.42,5.68],[28,4.75,5.57,5.83],[32,5.00,5.82,6.08],
+  [36,5.10,5.92,6.18],[40,5.28,6.10,6.36],[44,5.44,6.26,6.52],[48,5.85,6.67,6.93]
+];
+
+function getFBAFee(tier, wOz, price) {
+  // RULE: Price band selection — three bands affect fee
+  const b = price < 10 ? 0 : price <= 50 ? 1 : 2;
+  if (tier === 'ss') {
+    for (const r of SS_TABLE) if (wOz <= r[0]) return r[b+1];
+    return SS_TABLE[SS_TABLE.length-1][b+1];
+  }
+  if (tier === 'ls') {
+    // RULE: Large Standard 3lb+ formula: base + $0.08 per 4oz above 48oz
+    if (wOz > 48) { const bases=[6.15,6.97,7.23]; return bases[b]+Math.ceil((wOz-48)/4)*0.08; }
+    for (const r of LS_TABLE) if (wOz <= r[0]) return r[b+1];
+    return 6.97;
+  }
+  if (tier === 'lb') return [9.61,10.10,10.84][b];   // RULE: Large Bulky flat rates by price band
+  if (tier === 'xl') return [26.33,27.12,28.01][b];  // RULE: Extra-Large flat rates by price band
+  return 3.96;
+}
+
+// RULE: Price tier rounding — rounds UP to next occurrence of target cents ending
+function roundEnd(raw, cents) {
+  let c = Math.floor(raw) + cents;
+  while (c < raw) c += 1;
+  return c;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRICE CALCULATION ENGINE
+// LOGIC.md Sections 2, 3
+// ═══════════════════════════════════════════════════════════════════════════
+function calcPrices(inputs) {
+  const { category, sizetier, weight, cogs, margin, inbound, placement, prep,
+    storage, q4storage, ppc, returns, vine, vineUnits, annualUnits, other,
+    tacos, lacos, cvr, surcharge } = inputs;
+
+  // RULE: Vine cost amortised per unit = $200 / expected annual units
+  const vinePerUnit = vine ? (VINE_COST / Math.max(annualUnits, 1)) : 0;
+  const otherCosts = inbound + placement + prep + storage + q4storage + ppc + returns + other + vinePerUnit;
+  const totalFixed = cogs + otherCosts;
+
+  // RULE: Iterative price solver — 12 iterations to converge
+  // Needed because referral fee and FBA fee both depend on price itself
+  let yp = totalFixed / (1 - margin/100);
+  for (let i = 0; i < 12; i++) {
+    const fbaB = getFBAFee(sizetier, weight, yp);
+    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
+    const ref  = getReferralFee(category, yp);
+    yp = (totalFixed + fba + ref) / (1 - margin/100);
+  }
+  yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
+
+  // Helper: get all fee breakdown at a given price
+  const getAll = (price) => {
+    const fbaB = getFBAFee(sizetier, weight, price);
+    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
+    const ref  = getReferralFee(category, price);
+    const profit = price - cogs - fba - ref - otherCosts;
+    return { fba, ref, profit, pct: profit/price*100, otherCosts };
+  };
+
+  // RULE: Derive other price tiers from Your Price using discount multipliers
+  const listP = roundEnd(yp * LIST_PREMIUM - (1 - PRICE_LIST_END), PRICE_LIST_END);
+  const saleP = roundEnd(yp * SALE_DISCOUNT - (1 - PRICE_SALE_END), PRICE_SALE_END);
+  const discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1 - PRICE_DISC_END), PRICE_DISC_END);
+
+  const ypF    = getAll(yp);
+  const listF  = getAll(listP);
+  const saleF  = getAll(saleP);
+  const discF  = getAll(discP);
+
+  // RULE: Max CPC formula: price × target_acos% × conversion_rate%
+  const maxCPC  = yp * (tacos/100) * (cvr/100);
+  const beAcos  = ypF.pct; // Break-even ACoS = net margin % at Your Price
+
+  return { yp, listP, saleP, discP, ypF, listF, saleF, discF,
+    cogs, otherCosts, vinePerUnit, maxCPC, beAcos,
+    targetRoas: 100/tacos, launchRoas: 100/lacos,
+    maxCPClaunch: yp * (lacos/100) * (cvr/100) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KILL SIGNAL ENGINE
+// LOGIC.md Section 7
+// ═══════════════════════════════════════════════════════════════════════════
+function checkKillSignals(product) {
+  const signals = [];
+  const warnings = [];
+  const lc = product.lifecycle;
+  const now = Date.now();
+  const daysSince = (iso) => iso ? Math.floor((now - new Date(iso).getTime()) / 86400000) : 0;
+
+  // RULE: Kill Signal 5 — stale check-in (warning, not kill)
+  const lastCheckin = product.checkins[product.checkins.length - 1];
+  if (lastCheckin) {
+    const staleDays = daysSince(lastCheckin.date);
+    if (staleDays > STALE_DAYS) {
+      warnings.push(`No check-in recorded for ${staleDays} days. Last check-in: ${new Date(lastCheckin.date).toLocaleDateString()}.`);
+    }
+  }
+
+  if (lc === 'STAGE_1') {
+    const daysInS1 = daysSince(product.stageStartDates.STAGE_1);
+    const inVineWindow = product.inputs.vine && daysInS1 <= VINE_WINDOW_DAYS;
+    // RULE: Kill Signal 1 — Zero sales in Stage 1 (Vine-adjusted)
+    // Vine exception: if still in Vine window, suppress kill signal
+    if (daysInS1 >= K1_DAYS && !inVineWindow) {
+      const hasAnySales = product.checkins.some(c => (c.adSales || 0) > 0);
+      if (!hasAnySales) {
+        signals.push(`Kill Signal 1: No ad-attributed sales after ${daysInS1} days in Stage 1 with Vine window closed. Product may have fundamental discoverability issues.`);
+      }
+    }
+  }
+
+  if (lc === 'STAGE_2') {
+    const s2Start = new Date(product.stageStartDates.STAGE_2 || product.createdAt);
+    const daysInS2 = daysSince(product.stageStartDates.STAGE_2);
+    // RULE: Vine adjustment — only count ad sales after Vine window end
+    const vineEnd = product.inputs.vine
+      ? new Date(new Date(product.stageStartDates.STAGE_1 || product.createdAt).getTime() + VINE_WINDOW_DAYS * 86400000)
+      : new Date(0);
+    const postVineSales = product.checkins
+      .filter(c => new Date(c.date) > vineEnd)
+      .reduce((sum, c) => sum + (c.adSales || 0), 0);
+
+    // RULE: Kill Signal 2 — Insufficient velocity in Stage 2
+    if (daysInS2 >= S2_KILL_DAYS && postVineSales < S2_AD_SALES_TARGET) {
+      signals.push(`Kill Signal 2: Only ${postVineSales} post-Vine ad sales after ${daysInS2} days in Stage 2 (target: ${S2_AD_SALES_TARGET}). Insufficient demand velocity.`);
+    }
+  }
+
+  if (lc === 'STAGE_3') {
+    const prices = calcPrices(product.inputs);
+    const daysInS3 = daysSince(product.stageStartDates.STAGE_3);
+    // RULE: Kill Signal 3 — Persistent unprofitability in Stage 3
+    // Triggers only if BOTH: (a) ACoS never below break-even, AND (b) organic not growing
+    if (daysInS3 >= S3_KILL_DAYS) {
+      const everBelowBE = product.checkins.some(c =>
+        c.currentAcos !== undefined && c.currentAcos < prices.beAcos
+      );
+      const organicGrowing = product.checkins.slice(-3).some(c => c.organicGrowing === 'yes');
+      if (!everBelowBE && !organicGrowing) {
+        signals.push(`Kill Signal 3: ACoS has never dropped below break-even (${prices.beAcos.toFixed(1)}%) after ${daysInS3} days in Stage 3, and organic sales are not growing. Product may be structurally unprofitable.`);
+      }
+    }
+  }
+
+  // RULE: Kill Signal 4 — Ad spend money pit (all stages)
+  const totalRev = product.checkins.reduce((s,c) => s+(c.totalRevenue||0), 0);
+  const totalSpend = product.checkins.reduce((s,c) => s+(c.totalAdSpend||0), 0);
+  if (totalRev > 0 && totalSpend > totalRev * K4_SPEND_RATIO) {
+    signals.push(`Danger: Cumulative ad spend ($${totalSpend.toFixed(0)}) is ${((totalSpend/totalRev)*100).toFixed(0)}% of total revenue ($${totalRev.toFixed(0)}). Threshold is ${K4_SPEND_RATIO*100}%. Product may be a money pit.`);
+  }
+
+  return { signals, warnings };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE GUIDANCE ENGINE (m19-specific naming)
+// LOGIC.md Section 5
+// TO CHANGE AD PLATFORM: Update stage names, mode labels, and guidance text
+// in the renderStageCard() function while keeping graduation criteria identical.
+// ═══════════════════════════════════════════════════════════════════════════
+function daysSinceISO(iso) {
+  if (!iso) return 0;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+function getStageGuidance(product) {
+  const prices = calcPrices(product.inputs);
+  const lc = product.lifecycle;
+  const daysS1 = daysSinceISO(product.stageStartDates.STAGE_1);
+  const daysS2 = daysSinceISO(product.stageStartDates.STAGE_2);
+  const daysS3 = daysSinceISO(product.stageStartDates.STAGE_3);
+
+  const vineEnd = product.inputs.vine
+    ? new Date(new Date(product.stageStartDates.STAGE_1 || product.createdAt).getTime() + VINE_WINDOW_DAYS * 86400000)
+    : new Date(0);
+  const inVineWindow = product.inputs.vine && new Date() < vineEnd;
+
+  // Post-Vine ad sales (for Stage 2 graduation)
+  const postVineAdSales = product.checkins
+    .filter(c => new Date(c.date) > vineEnd)
+    .reduce((s, c) => s + (c.adSales || 0), 0);
+
+  // Latest ACoS from check-ins
+  const latestCheckin = product.checkins[product.checkins.length - 1];
+  const latestAcos = latestCheckin?.currentAcos;
+
+  // S1 graduation criteria
+  const s1Ready = daysS1 >= S1_MIN_DAYS && product.checkins.some(c => (c.adSales||0) > 0);
+
+  // S2 graduation criteria
+  const s2Ready = daysS2 >= S2_MIN_DAYS && postVineAdSales >= S2_AD_SALES_TARGET;
+
+  // S3 step-down suggestion
+  const suggestedAcos = latestAcos ? Math.max(
+    prices.beAcos + S3_ACOS_BUFFER,
+    latestAcos - S3_ACOS_STEP
+  ) : prices.tacos;
+
+  return {
+    prices, lc, daysS1, daysS2, daysS3, inVineWindow, vineEnd,
+    postVineAdSales, latestAcos, s1Ready, s2Ready, suggestedAcos,
+    beAcos: prices.beAcos
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRICE TIER CLASSIFIER (for check-in current price comparison)
+// LOGIC.md Section 8
+// ═══════════════════════════════════════════════════════════════════════════
+function classifyPrice(currentPrice, prices) {
+  if (!currentPrice || currentPrice <= 0) return null;
+  const tol = PRICE_MATCH_TOLERANCE;
+  const within = (a, b) => Math.abs(a - b) / b <= tol;
+  if (within(currentPrice, prices.listP))   return { label: 'At List Price / MSRP', cls: 'pm-above' };
+  if (within(currentPrice, prices.yp))      return { label: 'At Your Price (normal)', cls: 'pm-normal' };
+  if (within(currentPrice, prices.saleP))   return { label: 'Running Sale Price', cls: 'pm-sale' };
+  if (within(currentPrice, prices.discP))   return { label: 'Running Clearance Price', cls: 'pm-clearance' };
+  if (currentPrice > prices.listP)          return { label: 'Above List Price — check', cls: 'pm-above' };
+  if (currentPrice < prices.discP)          return { label: 'Below Clearance — urgent', cls: 'pm-below' };
+  return { label: 'Custom price', cls: '' };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CURRENCY & LANGUAGE
+// ═══════════════════════════════════════════════════════════════════════════
+function fmtC(usd) {
+  if (state.currency === 'CNY') return '¥' + (usd * CNY_RATE).toFixed(2);
+  return '$' + Math.abs(usd).toFixed(2);
+}
+
+function setLang(l) {
+  state.lang = l;
+  document.getElementById('btn-en').classList.toggle('active', l==='en');
+  document.getElementById('btn-zh').classList.toggle('active', l==='zh');
+  document.querySelectorAll('[data-en]').forEach(el => {
+    const txt = el.getAttribute('data-' + l) || el.getAttribute('data-en');
+    if (txt !== null) el.textContent = txt;
+  });
+  saveToStorage();
+}
+
+function setCurr(c) {
+  state.currency = c;
+  document.getElementById('btn-usd').classList.toggle('active', c==='USD');
+  document.getElementById('btn-cny').classList.toggle('active', c==='CNY');
+  saveToStorage();
+  if (state.activeProductId) renderProductView();
+}
+
+function setAppMode(m) {
+  state.appMode = m;
+  document.getElementById('sb-seller').classList.toggle('active', m==='seller');
+  document.getElementById('sb-mfg').classList.toggle('active', m==='mfg');
+  document.getElementById('product-view').style.display   = m==='seller' && state.activeProductId ? '' : 'none';
+  document.getElementById('mfg-view').style.display       = m==='mfg' ? '' : 'none';
+  document.getElementById('empty-state').style.display    = m==='seller' && !state.activeProductId ? '' : 'none';
+  if (m==='mfg') calcMfg();
+  saveToStorage();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIFECYCLE STAGE HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+const STAGE_META = {
+  PRE_LAUNCH:  { label:'Pre-Launch', cls:'badge-prelaunch', health:'#555870' },
+  STAGE_1:     { label:'Stage 1',    cls:'badge-s1',        health:'#7dd3fc' },
+  STAGE_2:     { label:'Stage 2',    cls:'badge-s2',        health:'#c4b5fd' },
+  STAGE_3:     { label:'Stage 3',    cls:'badge-s3',        health:'#86efac' },
+  STABLE:      { label:'Stable ✓',   cls:'badge-stable',    health:'#4ade80' },
+  KILL_REVIEW: { label:'Kill Review',cls:'badge-kill',      health:'#f87171' },
+  KILLED:      { label:'Killed',     cls:'badge-killed',    health:'#555870' }
+};
+
+function advanceStage(product, toStage) {
+  product.lifecycle = toStage;
+  product.stageStartDates[toStage] = new Date().toISOString();
+  saveToStorage();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SIDEBAR RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function renderSidebar() {
+  const list = document.getElementById('sidebar-list');
+  if (!state.products.length) { list.innerHTML = '<div style="font-size:0.73rem;color:#555870;padding:8px;text-align:center;">No products yet</div>'; return; }
+  list.innerHTML = state.products.map(p => {
+    const meta = STAGE_META[p.lifecycle] || STAGE_META.PRE_LAUNCH;
+    const { signals } = checkKillSignals(p);
+    const health = signals.length > 0 ? '#f87171' : meta.health;
+    const isActive = p.id === state.activeProductId;
+    return `<div class="sidebar-item${isActive?' active':''}" onclick="selectProduct('${p.id}')">
+      <div class="sidebar-item-health" style="background:${health}"></div>
+      <div class="sidebar-item-name">${p.name}</div>
+      ${p.asin ? `<div class="sidebar-item-asin">${p.asin}</div>` : ''}
+      <span class="sidebar-item-badge ${meta.cls}">${meta.label}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT VIEW RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function selectProduct(id) {
+  state.activeProductId = id;
+  state.appMode = 'seller';
+  document.getElementById('sb-seller').classList.add('active');
+  document.getElementById('sb-mfg').classList.remove('active');
+  saveToStorage();
+  renderAll();
+}
+
+function renderProductView() {
+  const p = state.products.find(x => x.id === state.activeProductId);
+  if (!p) return;
+  const meta = STAGE_META[p.lifecycle] || STAGE_META.PRE_LAUNCH;
+  document.getElementById('pv-name').textContent = p.name;
+  document.getElementById('pv-asin').textContent = p.asin ? `ASIN: ${p.asin}` : 'No ASIN set';
+  document.getElementById('pv-stage-badge').innerHTML = `<span class="sidebar-item-badge ${meta.cls}" style="position:static;font-size:0.75rem;padding:4px 10px;">${meta.label}</span>`;
+  renderKillSignals(p);
+  renderCalcTab(p);
+  renderStagesTab(p);
+  renderCheckinsTab(p);
+}
+
+function renderKillSignals(p) {
+  const { signals, warnings } = checkKillSignals(p);
+  let html = '';
+  if (signals.length) {
+    html += `<div class="kill-panel"><div class="kill-panel-title">⚠ Kill Signals Active — Review Required</div>`;
+    signals.forEach(s => html += `<div class="kill-signal"><div class="kill-dot"></div>${s}</div>`);
+    html += `<button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILL_REVIEW')">Mark as Kill Review</button></div>`;
+  }
+  if (warnings.length) {
+    html += `<div class="warn-panel"><div class="warn-panel-title">⚠ Warnings</div>`;
+    warnings.forEach(w => html += `<div style="font-size:0.77rem;color:#f59e0b;padding:4px 0;">${w}</div>`);
+    html += `</div>`;
+  }
+  document.getElementById('pv-kill-signals').innerHTML = html;
+}
+
+function getActiveProduct() {
+  return state.products.find(x => x.id === state.activeProductId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALCULATOR TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function renderCalcTab(p) {
+  const prices = calcPrices(p.inputs);
+  const { yp, listP, saleP, discP, ypF, listF, saleF, discF, cogs, otherCosts,
+    vinePerUnit, maxCPC, beAcos, maxCPClaunch } = prices;
+  const pctOff = (a,b) => Math.round((1-b/a)*100);
+
+  // Current price classification
+  const lastCI = p.checkins[p.checkins.length-1];
+  const curPrice = lastCI?.currentPrice;
+  const priceClass = curPrice ? classifyPrice(curPrice, prices) : null;
+
+  document.getElementById('calc-inputs-html').innerHTML = `
+    <div class="card">
+      <div class="card-title">Inputs Summary</div>
+      <div style="font-size:0.75rem;color:#8b8fa8;line-height:1.7;">
+        <div><strong style="color:#e8eaf0;">Category:</strong> ${document.getElementById('f-category')?.options[[...document.getElementById('f-category')?.options||[]].findIndex(o=>o.value===p.inputs.category)]?.text||p.inputs.category}</div>
+        <div><strong style="color:#e8eaf0;">Size / Weight:</strong> ${p.inputs.sizetier.toUpperCase()} / ${p.inputs.weight}oz</div>
+        <div><strong style="color:#e8eaf0;">COGS:</strong> ${fmtC(cogs)}</div>
+        <div><strong style="color:#e8eaf0;">Target Margin:</strong> ${p.inputs.margin}%</div>
+        <div><strong style="color:#e8eaf0;">Total Other Costs:</strong> ${fmtC(otherCosts)}${vinePerUnit>0?` (incl. ${fmtC(vinePerUnit)} Vine)`:''}</div>
+        <div><strong style="color:#e8eaf0;">Vine:</strong> ${p.inputs.vine ? 'Enrolled ($200)' : 'Not enrolled'}</div>
+        <div><strong style="color:#e8eaf0;">Fuel Surcharge:</strong> ${p.inputs.surcharge ? 'Included' : 'Excluded'}</div>
+      </div>
+      <button class="btn" style="margin-top:10px;width:100%;" onclick="openEditModal()">Edit Inputs</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Ad Targets</div>
+      <div class="g3" style="gap:8px;">
+        <div class="stat"><div class="stat-label">Target ACoS</div><div class="stat-val blue">${p.inputs.tacos}%</div></div>
+        <div class="stat"><div class="stat-label">Break-even ACoS</div><div class="stat-val ${beAcos > p.inputs.tacos ? 'red':'green'}">${beAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">Max CPC</div><div class="stat-val blue">${fmtC(maxCPC)}</div></div>
+      </div>
+      <div class="g3" style="gap:8px;margin-top:8px;">
+        <div class="stat"><div class="stat-label">Launch ACoS</div><div class="stat-val amber">${p.inputs.lacos}%</div></div>
+        <div class="stat"><div class="stat-label">Max CPC (Launch)</div><div class="stat-val amber">${fmtC(maxCPClaunch)}</div></div>
+        <div class="stat"><div class="stat-label">CVR</div><div class="stat-val">${p.inputs.cvr}%</div></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('calc-outputs-html').innerHTML = `
+    <div class="pills">
+      <div class="pill hi"><span>FBA Fee</span><strong>${fmtC(ypF.fba)}${p.inputs.surcharge?' (+3.5%)':''}</strong></div>
+      <div class="pill hi"><span>Referral</span><strong>${fmtC(ypF.ref)}</strong></div>
+      <div class="pill"><span>COGS</span><strong>${fmtC(cogs)}</strong></div>
+      <div class="pill"><span>Other Costs</span><strong>${fmtC(otherCosts)}</strong></div>
+      <div class="pill ${ypF.pct<20?'warn':''}"><span>Profit/unit</span><strong>${fmtC(ypF.profit)}</strong></div>
+    </div>
+    <div class="tier list">
+      <div><div class="tier-name">List Price (MSRP)</div><div class="tier-sub">Ends .99 · Must verify at another retailer (Apr 23 2026)</div></div>
+      <div><div class="tier-price">${fmtC(listP)}</div><div class="tier-margin">${pctOff(listP,yp)}% above Your Price</div></div>
+    </div>
+    <div class="tier your">
+      <div class="tier-badge">PRIMARY PRICE</div>
+      <div><div class="tier-name">Your Price (normal selling price)${priceClass&&priceClass.cls==='pm-normal'?`<span class="price-match pm-normal">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .95 · Hold ≥ 30 days between promos</div></div>
+      <div><div class="tier-price">${fmtC(yp)}</div><div class="tier-margin">${ypF.pct.toFixed(1)}% margin = ${fmtC(ypF.profit)}/unit</div></div>
+    </div>
+    <div class="tier sale">
+      <div class="tier-badge">SALE PRICE</div>
+      <div><div class="tier-name">Sale / Price Discount (Was→Now)${priceClass&&priceClass.cls==='pm-sale'?`<span class="price-match pm-sale">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .90 · ${pctOff(yp,saleP)}% off · Free Price Discount tool · max 30 days</div></div>
+      <div><div class="tier-price">${fmtC(saleP)}</div><div class="tier-margin">${saleF.pct.toFixed(1)}% margin = ${fmtC(saleF.profit)}/unit</div></div>
+    </div>
+    <div class="tier disc">
+      <div class="tier-badge">CLEARANCE</div>
+      <div><div class="tier-name">Clearance / Discount Price${priceClass&&priceClass.cls==='pm-clearance'?`<span class="price-match pm-clearance">CURRENT ✓</span>`:''}</div><div class="tier-sub">Ends .97 · ${pctOff(yp,discP)}% off · signals one-off price · use sparingly</div></div>
+      <div><div class="tier-price">${fmtC(discP)}</div><div class="tier-margin">${discF.pct.toFixed(1)}% margin = ${fmtC(discF.profit)}/unit</div></div>
+    </div>
+    ${curPrice&&priceClass?`<div class="alert info">Current price ${fmtC(curPrice)} — ${priceClass.label} (from last check-in)</div>`:''}
+    ${ypF.pct<LOW_MARGIN_WARNING?`<div class="alert warn">⚠ Your Price margin below ${LOW_MARGIN_WARNING}% — thin buffer. Review costs or target price.</div>`:''}
+    ${saleF.profit<0?`<div class="alert bad">⚠ Sale Price below break-even. Reduce costs before using as launch discount.</div>`:''}
+    ${discF.profit<0?`<div class="alert bad">⚠ Clearance Price below break-even. Selling at a loss.</div>`:''}
+    ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit</div>`:''}
+    <div class="bar-wrap">
+      <div class="bar-top"><span>Revenue breakdown at Your Price</span><span>Profit: ${ypF.pct.toFixed(1)}%</span></div>
+      <div class="bar">
+        <div class="bar-seg" style="width:${cogs/yp*100}%;background:#f87171"></div>
+        <div class="bar-seg" style="width:${ypF.fba/yp*100}%;background:#818cf8"></div>
+        <div class="bar-seg" style="width:${ypF.ref/yp*100}%;background:#f59e0b"></div>
+        <div class="bar-seg" style="width:${otherCosts/yp*100}%;background:#22d3ee"></div>
+        <div class="bar-seg" style="width:${Math.max(0,ypF.profit/yp*100)}%;background:#4ade80"></div>
+      </div>
+      <div class="bar-legend">
+        <div class="bl"><div class="bl-dot" style="background:#f87171"></div>COGS</div>
+        <div class="bl"><div class="bl-dot" style="background:#818cf8"></div>FBA</div>
+        <div class="bl"><div class="bl-dot" style="background:#f59e0b"></div>Referral</div>
+        <div class="bl"><div class="bl-dot" style="background:#22d3ee"></div>Other</div>
+        <div class="bl"><div class="bl-dot" style="background:#4ade80"></div>Profit</div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AD STAGES TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function renderStagesTab(p) {
+  const g = getStageGuidance(p);
+  const lc = p.lifecycle;
+  const stages = ['PRE_LAUNCH','STAGE_1','STAGE_2','STAGE_3','STABLE'];
+  const stageIdx = stages.indexOf(lc);
+
+  // Stage tracker visual
+  const stageNames = ['Pre-Launch','Stage 1','Stage 2','Stage 3','Stable'];
+  let trackHtml = '<div class="stage-track">';
+  stages.forEach((s, i) => {
+    const cls = i < stageIdx ? 'done' : i === stageIdx ? 'active' : '';
+    const lcls = i < stageIdx ? 'done' : i === stageIdx ? 'active' : '';
+    trackHtml += `<div class="stage-step">
+      <div class="stage-dot ${cls}">${i < stageIdx ? '✓' : i+1}</div>
+      <div class="stage-label ${lcls}">${stageNames[i]}</div>
+    </div>`;
+  });
+  trackHtml += '</div>';
+
+  let guideHtml = '';
+
+  if (lc === 'PRE_LAUNCH') {
+    guideHtml = `<div class="stage-card active">
+      <div class="stage-card-title">Ready to Launch?</div>
+      <div class="stage-card-sub">When your ASIN goes live on Amazon, click to begin Stage 1.</div>
+      <div class="stage-mode">m19 Mode: Force Product Visibility</div>
+      <ul class="checklist">
+        <li><div class="check-icon active">○</div>ASIN live on Amazon with images and bullet points</li>
+        <li><div class="check-icon active">○</div>Vine enrolled (if using) — enroll on Day 1</li>
+        <li><div class="check-icon active">○</div>Dedicated m19 strategy created for this ASIN only — never mix with established products</li>
+        <li><div class="check-icon active">○</div>Set initial bid: $1–$2 (adjust higher for competitive niches)</li>
+        <li><div class="check-icon active">○</div>Set daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day (low niche: ${fmtC(STAGE1_BUDGET_LOW)}, high niche: ${fmtC(STAGE1_BUDGET_HIGH)})</li>
+      </ul>
+      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_1')">Mark as Launched → Begin Stage 1</button>
+    </div>`;
+  }
+
+  if (lc === 'STAGE_1') {
+    const s1Ready = g.s1Ready;
+    guideHtml = `<div class="stage-card active">
+      <div class="stage-card-title">Stage 1 — Force Product Visibility</div>
+      <div class="stage-card-sub">Goal: impressions, clicks, first sales. Pure data collection. Day ${g.daysS1} of ~3–7.</div>
+      <div class="stage-mode">m19 Mode: Force Product Visibility</div>
+      ${g.inVineWindow ? `<div class="alert info">Vine window active (~Day ${VINE_WINDOW_DAYS - g.daysS1} remaining). ACoS will appear very high due to Vine reviewers clicking ads. This is expected — do not optimise.</div>` : ''}
+      <div class="alert warn">Expected ACoS: Very high, can exceed 100%. This is NORMAL. Do NOT set ACoS targets yet.</div>
+      <ul class="checklist">
+        <li><div class="check-icon ${g.daysS1>=S1_MIN_DAYS?'done':'active'}">${g.daysS1>=S1_MIN_DAYS?'✓':'○'}</div>At least ${S1_MIN_DAYS} days passed (Day ${g.daysS1} / ${S1_MIN_DAYS})</li>
+        <li><div class="check-icon ${p.checkins.some(c=>c.adSales>0)?'done':'active'}">${p.checkins.some(c=>c.adSales>0)?'✓':'○'}</div>First ad-attributed sales recorded</li>
+        <li><div class="check-icon active">○</div>Do NOT change bids or targeting yet — AI is learning</li>
+      </ul>
+      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">Recommended daily budget: ${fmtC(STAGE1_BUDGET_MED)}/day. Monthly equivalent: ~${fmtC(STAGE1_BUDGET_MED*30)}</div>
+      <button class="grad-btn" ${s1Ready?'':'disabled'} onclick="advanceStage(getActiveProduct(),'STAGE_2')">
+        ${s1Ready ? '→ Graduate to Stage 2' : `Waiting: ${g.daysS1<S1_MIN_DAYS?`${S1_MIN_DAYS-g.daysS1}d more needed.`:''} ${!p.checkins.some(c=>c.adSales>0)?'No ad sales yet.':''}`}
+      </button>
+    </div>`;
+  }
+
+  if (lc === 'STAGE_2') {
+    const vineEnd = g.vineEnd;
+    guideHtml = `<div class="stage-card active">
+      <div class="stage-card-title">Stage 2 — Monthly Budget</div>
+      <div class="stage-card-sub">Goal: build sales volume. Let AI optimise bids. Day ${g.daysS2} of ~30.</div>
+      <div class="stage-mode">m19 Mode: Monthly Budget</div>
+      ${g.inVineWindow ? `<div class="alert info">Vine window still active — ad sales during this period do NOT count toward Stage 2 graduation (${g.postVineAdSales} post-Vine ad sales recorded so far).</div>` : ''}
+      <ul class="checklist">
+        <li><div class="check-icon ${g.daysS2>=S2_MIN_DAYS?'done':'active'}">${g.daysS2>=S2_MIN_DAYS?'✓':'○'}</div>At least ${S2_MIN_DAYS} days in Stage 2 (Day ${g.daysS2})</li>
+        <li><div class="check-icon ${g.postVineAdSales>=S2_AD_SALES_TARGET?'done':'active'}">${g.postVineAdSales>=S2_AD_SALES_TARGET?'✓':'○'}</div>${g.postVineAdSales} / ${S2_AD_SALES_TARGET} post-Vine ad sales in last 30 days</li>
+        <li><div class="check-icon active">○</div>Sales trend stable or growing (mark in check-in)</li>
+        <li><div class="check-icon active">○</div>Do NOT change bids/budget more than once per week — AI learning phase 1–2 weeks</li>
+      </ul>
+      <div style="font-size:0.75rem;color:#6b6f8a;margin-top:8px;">Recommended monthly budget: ${fmtC(STAGE2_BUDGET_BASELINE)}+. Adjust higher for competitive niches.</div>
+      <button class="grad-btn" ${g.s2Ready?'':'disabled'} onclick="advanceStage(getActiveProduct(),'STAGE_3')">
+        ${g.s2Ready ? '→ Graduate to Stage 3' : `Waiting: ${g.daysS2<S2_MIN_DAYS?`${S2_MIN_DAYS-g.daysS2}d more. `:''}${g.postVineAdSales<S2_AD_SALES_TARGET?`${S2_AD_SALES_TARGET-g.postVineAdSales} more post-Vine ad sales needed.`:''}`}
+      </button>
+    </div>`;
+  }
+
+  if (lc === 'STAGE_3') {
+    guideHtml = `<div class="stage-card active">
+      <div class="stage-card-title">Stage 3 — ACoS Target</div>
+      <div class="stage-card-sub">Goal: shift to profitability. Gradually reduce ACoS target. Day ${g.daysS3} in Stage 3.</div>
+      <div class="stage-mode">m19 Mode: ACoS Target</div>
+      <div class="g3" style="gap:8px;margin-bottom:10px;">
+        <div class="stat"><div class="stat-label">Break-even ACoS (floor)</div><div class="stat-val red">${g.beAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">Current ACoS (last check-in)</div><div class="stat-val ${g.latestAcos?g.latestAcos<g.beAcos?'green':'amber':''}">
+          ${g.latestAcos !== undefined ? g.latestAcos.toFixed(1)+'%' : 'Not recorded'}</div></div>
+        <div class="stat"><div class="stat-label">Suggested Next Target</div><div class="stat-val blue">${g.suggestedAcos.toFixed(1)}%</div></div>
+      </div>
+      <ul class="checklist">
+        <li><div class="check-icon active">○</div>Start ACoS target at Stage 2 historical ACoS — not theoretical target</li>
+        <li><div class="check-icon active">○</div>Reduce in ${S3_ACOS_STEP}pp steps (e.g. 38% → 35% → 32%). Wait ${S3_STEP_WAIT_DAYS} days between each step.</li>
+        <li><div class="check-icon active">○</div>Never drop more than 5pp at once — risks crashing impressions</li>
+        <li><div class="check-icon active">○</div>Floor: ${g.beAcos.toFixed(1)}% (break-even). Keep target ${S3_ACOS_BUFFER}pp above floor: ${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%</li>
+        <li><div class="check-icon ${g.latestAcos&&g.latestAcos<g.beAcos?'done':'active'}">${g.latestAcos&&g.latestAcos<g.beAcos?'✓':'○'}</div>ACoS below break-even = every ad click is profitable</li>
+      </ul>
+      <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STABLE')">→ Mark as Stable & Profitable</button>
+    </div>`;
+  }
+
+  if (lc === 'STABLE') {
+    guideHtml = `<div class="stage-card" style="border-color:#4ade80;">
+      <div class="stage-card-title" style="color:#4ade80;">✓ Stable & Profitable</div>
+      <div class="stage-card-sub">This product is consistently profitable with ACoS below break-even. Consider merging into a broader portfolio strategy with margin-alike products.</div>
+    </div>`;
+  }
+
+  if (lc === 'KILL_REVIEW') {
+    guideHtml = `<div class="stage-card" style="border-color:#f87171;">
+      <div class="stage-card-title" style="color:#f87171;">Kill Review — Decision Needed</div>
+      <div class="stage-card-sub">One or more kill signals fired. Review the signals above and decide whether to continue or discontinue this product.</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STAGE_3')">Continue → Back to Stage 3</button>
+        <button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILLED')">Confirm Kill</button>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('stages-html').innerHTML = trackHtml + guideHtml;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHECK-INS TAB
+// ═══════════════════════════════════════════════════════════════════════════
+function renderCheckinsTab(p) {
+  const prices = calcPrices(p.inputs);
+  if (!p.checkins.length) {
+    document.getElementById('checkin-history').innerHTML = '<div style="font-size:0.78rem;color:#555870;text-align:center;padding:20px;">No check-ins yet. Record your first one above.</div>';
+    return;
+  }
+  const sorted = [...p.checkins].reverse();
+  document.getElementById('checkin-history').innerHTML = `
+    <div class="card-title" style="margin-top:4px;">Check-in History (${p.checkins.length})</div>
+    <div class="checkin-list">${sorted.map((ci, i) => {
+      const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
+      const tacos = ci.totalRevenue && ci.totalAdSpend ? (ci.totalAdSpend/ci.totalRevenue*100) : null;
+      return `<div class="checkin-item">
+        <div class="checkin-header">
+          <div class="checkin-date">${new Date(ci.date).toLocaleDateString()} ${new Date(ci.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+          <button class="checkin-del" onclick="deleteCheckin('${p.id}','${ci.id}')">✕</button>
+        </div>
+        <div class="checkin-grid">
+          <div class="checkin-cell">
+            <div class="checkin-cell-label">Current Price</div>
+            <div class="checkin-cell-val">${ci.currentPrice ? fmtC(ci.currentPrice) : '—'}
+              ${priceClass ? `<span class="price-match ${priceClass.cls}" style="font-size:0.58rem;">${priceClass.label}</span>` : ''}</div>
+          </div>
+          <div class="checkin-cell"><div class="checkin-cell-label">ACoS</div><div class="checkin-cell-val" style="color:${ci.currentAcos?(ci.currentAcos<prices.beAcos?'#4ade80':ci.currentAcos<prices.beAcos*1.5?'#f59e0b':'#f87171'):'#fff'}">${ci.currentAcos !== undefined ? ci.currentAcos.toFixed(1)+'%' : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">Ad Sales (30d)</div><div class="checkin-cell-val">${ci.adSales !== undefined ? ci.adSales : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">TACoS</div><div class="checkin-cell-val" style="color:${tacos?(tacos<10?'#4ade80':tacos<20?'#f59e0b':'#f87171'):'#fff'}">${tacos !== null ? tacos.toFixed(1)+'%' : '—'}</div></div>
+        </div>
+        ${ci.notes ? `<div class="checkin-notes">${ci.notes}</div>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+}
+
+function recordCheckin() {
+  const p = state.products.find(x => x.id === state.activeProductId);
+  if (!p) return;
+  const ci = {
+    id: Date.now().toString(36),
+    date: new Date().toISOString(),
+    currentPrice: parseFloat(document.getElementById('ci-price').value) || undefined,
+    currentAcos: parseFloat(document.getElementById('ci-acos').value) || undefined,
+    adSales: parseInt(document.getElementById('ci-adsales').value) || undefined,
+    totalRevenue: parseFloat(document.getElementById('ci-rev').value) || undefined,
+    totalAdSpend: parseFloat(document.getElementById('ci-spend').value) || undefined,
+    organicGrowing: document.getElementById('ci-organic').value,
+    notes: document.getElementById('ci-notes').value.trim()
+  };
+  p.checkins.push(ci);
+  // Clear form
+  ['ci-price','ci-acos','ci-adsales','ci-rev','ci-spend','ci-notes'].forEach(id => { document.getElementById(id).value = ''; });
+  saveToStorage();
+  renderAll();
+}
+
+function deleteCheckin(productId, checkinId) {
+  const p = state.products.find(x => x.id === productId);
+  if (!p || !confirm('Delete this check-in?')) return;
+  p.checkins = p.checkins.filter(c => c.id !== checkinId);
+  saveToStorage();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MANUFACTURER MODE CALC
+// ═══════════════════════════════════════════════════════════════════════════
+function calcMfg() {
+  const landed  = parseFloat(document.getElementById('m_landed').value) || 5;
+  const mMgn    = parseFloat(document.getElementById('m_mfg_margin').value) || 35;
+  const sMgn    = parseFloat(document.getElementById('m_seller_margin').value) || 30;
+  const catKey  = document.getElementById('m_category').value;
+  const tier    = document.getElementById('m_sizetier').value;
+  const wOz     = parseFloat(document.getElementById('m_weight').value) || 8;
+  const sOther  = parseFloat(document.getElementById('m_other').value) || 2.5;
+  const sur     = document.getElementById('m_surcharge').checked;
+
+  const mfgPrice = landed / (1 - mMgn/100);
+
+  let yp = (mfgPrice + sOther) / (1 - sMgn/100);
+  for (let i = 0; i < 12; i++) {
+    const fba = getFBAFee(tier, wOz, yp) * (sur ? 1.035 : 1.0);
+    const ref = getReferralFee(catKey, yp);
+    yp = (mfgPrice + sOther + fba + ref) / (1 - sMgn/100);
+  }
+  yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
+
+  const ypFba = getFBAFee(tier, wOz, yp) * (sur ? 1.035 : 1.0);
+  const ypRef = getReferralFee(catKey, yp);
+  const ypProfit = yp - mfgPrice - sOther - ypFba - ypRef;
+  const ypPct = ypProfit/yp*100;
+
+  const saleP = roundEnd(yp * SALE_DISCOUNT - (1-PRICE_SALE_END), PRICE_SALE_END);
+  const discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1-PRICE_DISC_END), PRICE_DISC_END);
+  const listP = roundEnd(yp * LIST_PREMIUM - (1-PRICE_LIST_END), PRICE_LIST_END);
+  const getM = (pr) => { const f=getFBAFee(tier,wOz,pr)*(sur?1.035:1); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
+  const pctOff = (a,b) => Math.round((1-b/a)*100);
+
+  document.getElementById('mfg_seller_price').innerHTML = `
+    <div class="mfg-row"><div class="mfg-row-l">Your Landed Cost / unit</div><div class="mfg-row-r white">${fmtC(landed)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Manufacturer Margin</div><div class="mfg-row-r white">${mMgn}%</div></div>
+    <div class="mfg-row" style="border-top:2px solid #166534;margin-top:6px;padding-top:8px;"><div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;font-size:0.84rem;">→ Quote Price to Seller</div><div class="mfg-row-r" style="font-size:1.15rem;">${fmtC(mfgPrice)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Your Profit / unit</div><div class="mfg-row-r">${fmtC(mfgPrice - landed)}</div></div>
+  `;
+
+  document.getElementById('mfg_amazon_tiers').innerHTML = `
+    <div class="mfg-row"><div class="mfg-row-l">Seller COGS (= your quote)</div><div class="mfg-row-r white">${fmtC(mfgPrice)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Amazon FBA Fee</div><div class="mfg-row-r white">${fmtC(ypFba)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Amazon Referral Fee</div><div class="mfg-row-r white">${fmtC(ypRef)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Seller Other Costs (PPC etc)</div><div class="mfg-row-r white">${fmtC(sOther)}</div></div>
+    <div class="mfg-row" style="border-top:2px solid #2a2a5e;margin-top:6px;padding-top:8px;">
+      <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">→ Min Viable Amazon Price</div>
+      <div class="mfg-row-r amber" style="font-size:1.05rem;">${fmtC(yp)}</div>
+    </div>
+    <div class="mfg-row"><div class="mfg-row-l">List Price (MSRP)</div><div class="mfg-row-r white">${fmtC(listP)}</div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Sale Price (${pctOff(yp,saleP)}% off)</div><div class="mfg-row-r white">${fmtC(saleP)} <span style="font-size:0.7rem;color:#6b6f8a;">${getM(saleP)}% margin</span></div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Clearance Price (${pctOff(yp,discP)}% off)</div><div class="mfg-row-r white">${fmtC(discP)} <span style="font-size:0.7rem;color:#6b6f8a;">${getM(discP)}% margin</span></div></div>
+    <div class="mfg-row"><div class="mfg-row-l">Seller Profit / unit (at min price)</div><div class="mfg-row-r ${ypProfit>0?'':'red'}">${fmtC(ypProfit)}</div></div>
+  `;
+
+  let al = '';
+  if (ypProfit < 0) al += `<div class="alert bad">⚠ Seller cannot be profitable at any reasonable Amazon price at this quote. Quote needs to come down.</div>`;
+  else if (ypPct < MFG_MIN_SELLER_MARGIN) al += `<div class="alert warn">⚠ Seller margin below ${MFG_MIN_SELLER_MARGIN}% — very difficult to compete on Amazon at this cost level.</div>`;
+  else al += `<div class="alert good">✓ Cost structure viable. Seller min price: ${fmtC(yp)} with ${ypPct.toFixed(1)}% margin.</div>`;
+  document.getElementById('mfg_alerts').innerHTML = al;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL — ADD / EDIT PRODUCT
+// ═══════════════════════════════════════════════════════════════════════════
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'Add Product';
+  document.getElementById('modal-save-btn').textContent = 'Add Product';
+  document.getElementById('modal-product-id').value = '';
+  // Reset to defaults
+  const d = createDefaultProduct().inputs;
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-asin').value = '';
+  document.getElementById('f-category').value = d.category;
+  document.getElementById('f-sizetier').value = d.sizetier;
+  document.getElementById('f-weight').value = d.weight;
+  document.getElementById('f-cogs').value = d.cogs;
+  document.getElementById('f-margin').value = d.margin;
+  document.getElementById('f-inbound').value = d.inbound;
+  document.getElementById('f-placement').value = d.placement;
+  document.getElementById('f-prep').value = d.prep;
+  document.getElementById('f-storage').value = d.storage;
+  document.getElementById('f-q4storage').value = d.q4storage;
+  document.getElementById('f-ppc').value = d.ppc;
+  document.getElementById('f-returns').value = d.returns;
+  document.getElementById('f-other').value = d.other;
+  document.getElementById('f-vine').checked = d.vine;
+  document.getElementById('f-vine-units').value = d.vineUnits;
+  document.getElementById('f-annual-units').value = d.annualUnits;
+  document.getElementById('f-tacos').value = d.tacos;
+  document.getElementById('f-lacos').value = d.lacos;
+  document.getElementById('f-cvr').value = d.cvr;
+  document.getElementById('f-surcharge').checked = d.surcharge;
+  document.getElementById('f-notes').value = '';
+  document.getElementById('product-modal').classList.add('open');
+}
+
+function openEditModal() {
+  const p = state.products.find(x => x.id === state.activeProductId);
+  if (!p) return;
+  document.getElementById('modal-title').textContent = 'Edit Product';
+  document.getElementById('modal-save-btn').textContent = 'Save Changes';
+  document.getElementById('modal-product-id').value = p.id;
+  document.getElementById('f-name').value = p.name;
+  document.getElementById('f-asin').value = p.asin;
+  document.getElementById('f-category').value = p.inputs.category;
+  document.getElementById('f-sizetier').value = p.inputs.sizetier;
+  document.getElementById('f-weight').value = p.inputs.weight;
+  document.getElementById('f-cogs').value = p.inputs.cogs;
+  document.getElementById('f-margin').value = p.inputs.margin;
+  document.getElementById('f-inbound').value = p.inputs.inbound;
+  document.getElementById('f-placement').value = p.inputs.placement;
+  document.getElementById('f-prep').value = p.inputs.prep;
+  document.getElementById('f-storage').value = p.inputs.storage;
+  document.getElementById('f-q4storage').value = p.inputs.q4storage;
+  document.getElementById('f-ppc').value = p.inputs.ppc;
+  document.getElementById('f-returns').value = p.inputs.returns;
+  document.getElementById('f-other').value = p.inputs.other;
+  document.getElementById('f-vine').checked = p.inputs.vine;
+  document.getElementById('f-vine-units').value = p.inputs.vineUnits;
+  document.getElementById('f-annual-units').value = p.inputs.annualUnits;
+  document.getElementById('f-tacos').value = p.inputs.tacos;
+  document.getElementById('f-lacos').value = p.inputs.lacos;
+  document.getElementById('f-cvr').value = p.inputs.cvr;
+  document.getElementById('f-surcharge').checked = p.inputs.surcharge;
+  document.getElementById('f-notes').value = p.notes;
+  document.getElementById('product-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('product-modal').classList.remove('open');
+}
+
+function saveProduct() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Product name is required.'); return; }
+  const inputs = {
+    category: document.getElementById('f-category').value,
+    sizetier: document.getElementById('f-sizetier').value,
+    weight: parseFloat(document.getElementById('f-weight').value) || 8,
+    cogs: parseFloat(document.getElementById('f-cogs').value) || 6,
+    margin: parseFloat(document.getElementById('f-margin').value) || 30,
+    inbound: parseFloat(document.getElementById('f-inbound').value) || 0,
+    placement: parseFloat(document.getElementById('f-placement').value) || 0,
+    prep: parseFloat(document.getElementById('f-prep').value) || 0,
+    storage: parseFloat(document.getElementById('f-storage').value) || 0,
+    q4storage: parseFloat(document.getElementById('f-q4storage').value) || 0,
+    ppc: parseFloat(document.getElementById('f-ppc').value) || 0,
+    returns: parseFloat(document.getElementById('f-returns').value) || 0,
+    other: parseFloat(document.getElementById('f-other').value) || 0,
+    vine: document.getElementById('f-vine').checked,
+    vineUnits: parseInt(document.getElementById('f-vine-units').value) || 20,
+    annualUnits: parseInt(document.getElementById('f-annual-units').value) || 500,
+    tacos: parseFloat(document.getElementById('f-tacos').value) || 25,
+    lacos: parseFloat(document.getElementById('f-lacos').value) || 60,
+    cvr: parseFloat(document.getElementById('f-cvr').value) || 12,
+    surcharge: document.getElementById('f-surcharge').checked
+  };
+  const editId = document.getElementById('modal-product-id').value;
+  if (editId) {
+    const p = state.products.find(x => x.id === editId);
+    if (p) { p.name = name; p.asin = document.getElementById('f-asin').value.trim(); p.inputs = inputs; p.notes = document.getElementById('f-notes').value.trim(); }
+  } else {
+    const p = createDefaultProduct();
+    p.name = name;
+    p.asin = document.getElementById('f-asin').value.trim();
+    p.inputs = inputs;
+    p.notes = document.getElementById('f-notes').value.trim();
+    state.products.push(p);
+    state.activeProductId = p.id;
+    state.appMode = 'seller';
+  }
+  closeModal();
+  saveToStorage();
+  renderAll();
+}
+
+function deleteProduct() {
+  if (!state.activeProductId || !confirm('Delete this product and all its data?')) return;
+  state.products = state.products.filter(p => p.id !== state.activeProductId);
+  state.activeProductId = state.products[0]?.id || null;
+  saveToStorage();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function mainTab(el, panelId) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.main-panel').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById(panelId).classList.add('on');
+}
+
+function subTab(el, panelId) {
+  el.closest('.main-panel, .card, [id^="tab-"]').querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.closest('.main-panel, .card, [id^="tab-"]').querySelectorAll('.sub-panel').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById(panelId).classList.add('on');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MASTER RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function renderAll() {
+  renderSidebar();
+  const hasActive = state.activeProductId && state.products.find(x => x.id === state.activeProductId);
+  const isMfg = state.appMode === 'mfg';
+  document.getElementById('empty-state').style.display    = (!hasActive && !isMfg) ? '' : 'none';
+  document.getElementById('product-view').style.display   = (hasActive && !isMfg) ? '' : 'none';
+  document.getElementById('mfg-view').style.display       = isMfg ? '' : 'none';
+  if (hasActive && !isMfg) renderProductView();
+  if (isMfg) calcMfg();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+loadFromStorage();
+renderAll();
+// Close modal on overlay click
+document.getElementById('product-modal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('product-modal')) closeModal();
+});
+</script>
+</body>
+</html>
