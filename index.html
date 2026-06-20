@@ -283,6 +283,9 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 /* Warn box */
 .warn-box{background:#1a1410;border:1px solid #854d0e;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:0.77rem;color:#fbbf24;line-height:1.5;}
 
+/* Import guide toggle */
+.hidden-guide{display:none;}
+
 /* Rule list */
 .rule{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #1e2130;}
 .rule:last-child{border-bottom:none;}
@@ -336,6 +339,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
       <h2 data-en="No product selected" data-zh="未选择产品">No product selected</h2>
       <p data-en="Add a product using the + button in the sidebar, or import a CSV file to get started." data-zh="使用侧边栏中的+按钮添加产品，或导入CSV文件开始使用。">Add a product using the + button in the sidebar, or import a CSV file to get started.</p>
       <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
+      <button class="empty-btn" style="background:#1a2a1a;border:1px solid #166534;color:#4ade80;margin-top:0;" onclick="loadExampleProduct()">Load example — Cast Net 5ft</button>
     </div>
 
     <!-- Product view (shown when product selected) -->
@@ -384,6 +388,43 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 
       <!-- TAB: CHECK-INS -->
       <div id="tab-checkin" class="main-panel">
+
+        <!-- Amazon report import card -->
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="card-title" style="margin:0;">Import from Amazon Seller Central</div>
+            <button class="topbar-btn" onclick="this.closest('.card').querySelector('#import-guide').classList.toggle('hidden-guide')">How to export ▾</button>
+          </div>
+          <div id="import-guide" class="hidden-guide" style="margin-top:12px;">
+            <div class="g2" style="gap:16px;">
+              <div>
+                <div style="font-size:0.7rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Business Report → Revenue &amp; CVR</div>
+                <div class="tl" style="padding-left:14px;">
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Seller Central → Reports → Business Reports</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">"Detail Page Sales and Traffic by ASIN" tab</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Set date range to last 30 days → Download</div></div>
+                </div>
+                <div class="pill" style="margin-top:6px;"><span>Fills:</span><strong> Total Revenue, CVR</strong></div>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Advertising Report → ACoS &amp; Spend</div>
+                <div class="tl" style="padding-left:14px;">
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Advertising Console → Reports → Create Report</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Sponsored Products → "Advertised Product" type</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;">Set date range → Request → Download</div></div>
+                </div>
+                <div class="pill" style="margin-top:6px;"><span>Fills:</span><strong> ACoS, Ad Spend, Ad Sales</strong></div>
+              </div>
+            </div>
+            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in.</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+            <button class="btn primary" onclick="document.getElementById('amz-report-file').click()">Import Amazon Report CSV</button>
+            <input type="file" id="amz-report-file" accept=".csv,.txt" style="display:none" onchange="importAmazonReport(event)">
+            <span style="font-size:0.72rem;color:#555870;">Auto-detects Business Report or Advertising Report · matches by ASIN</span>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title" data-en="Record New Check-in" data-zh="记录新检查">Record New Check-in</div>
           <div class="g3">
@@ -1837,6 +1878,164 @@ function renderAll() {
   document.getElementById('mfg-view').style.display       = isMfg ? '' : 'none';
   if (hasActive && !isMfg) renderProductView();
   if (isMfg) calcMfg();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXAMPLE PRODUCT — Cast Net 5ft (0.75lb Sinkers)
+// ═══════════════════════════════════════════════════════════════════════════
+function loadExampleProduct() {
+  if (state.products.some(p => p.asin === 'B0EX4MP1E01')) {
+    if (!confirm('Example product is already loaded. Load a fresh copy?')) return;
+  }
+  const ago = d => new Date(Date.now() - d * 86400000).toISOString();
+  const p = createDefaultProduct();
+  p.name    = 'Cast Net 5ft (0.75lb Sinkers)';
+  p.asin    = 'B0EX4MP1E01';
+  p.notes   = 'Example product. Replace ASIN and adjust inputs to match your actual product.';
+  p.lifecycle = 'STAGE_3';
+  p.createdAt = ago(100);
+  p.stageStartDates = { STAGE_1: ago(98), STAGE_2: ago(89), STAGE_3: ago(38) };
+  p.inputs  = {
+    category:'15', sizetier:'ls', weight:36,
+    cogs:8.00, margin:28,
+    inbound:0.65, placement:0.30, prep:0.25, storage:0.12, q4storage:0,
+    ppc:1.75, returns:0.40, other:0.25,
+    vine:false, vineUnits:20, annualUnits:600,
+    tacos:28, lacos:65, cvr:10,
+    couponAmt:0, couponVol:0,
+    surcharge:true
+  };
+  // Pre-populated check-ins showing a full TACoS journey from launch → near-stable
+  p.checkins = [
+    { id:'ex1', date:ago(85), currentPrice:28.90, currentAcos:92, adSales:8,  totalRevenue:231.20, totalAdSpend:213.00, organicGrowing:'no',     notes:'Launch week. Running sale price ($28.90). Very high ACoS expected — AI is in data-collection mode.' },
+    { id:'ex2', date:ago(60), currentPrice:29.95, currentAcos:64, adSales:23, totalRevenue:459.23, totalAdSpend:181.00, organicGrowing:'stable', notes:'Returned to Your Price ($29.95). Moved to Stage 2. ACoS improving as algorithm learns keywords.' },
+    { id:'ex3', date:ago(40), currentPrice:29.95, currentAcos:48, adSales:35, totalRevenue:680.65, totalAdSpend:178.00, organicGrowing:'yes',    notes:'Met Stage 2 graduation criteria. Graduated to Stage 3. Organic rank starting to contribute.' },
+    { id:'ex4', date:ago(22), currentPrice:29.95, currentAcos:37, adSales:42, totalRevenue:820.35, totalAdSpend:188.00, organicGrowing:'yes',    notes:'Stepping ACoS target down 3pp per week. Organic growing. Product ranking on page 2 for main keyword.' },
+    { id:'ex5', date:ago(5),  currentPrice:29.95, currentAcos:28, adSales:47, totalRevenue:938.65, totalAdSpend:196.00, organicGrowing:'yes',    notes:'ACoS at 28% — approaching break-even. TACoS now 20.9%. Approaching Stable status.' }
+  ];
+  state.products.push(p);
+  state.activeProductId = p.id;
+  state.appMode = 'seller';
+  saveToStorage();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AMAZON REPORT IMPORT — Business Report + Advertising Advertised Product
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Handles quoted fields correctly (Amazon CSVs use "$1,234.56" formatting)
+function parseCSVRow(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  cols.push(cur);
+  return cols;
+}
+
+function importAmazonReport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { alert('File appears empty or has only one row.'); event.target.value=''; return; }
+
+    const rawHdrs = parseCSVRow(lines[0]);
+    const hdrs = rawHdrs.map(h => h.trim().toLowerCase().replace(/[()]/g, '').replace(/\s+/g,' '));
+
+    // Fuzzy column finder — returns first index where any term is a substring of header
+    const fc = (...terms) => hdrs.findIndex(h => terms.some(t => h.includes(t)));
+
+    const asinCol    = fc('child asin', 'advertised asin', ' asin');  // ' asin' catches bare "ASIN" without matching e.g. "Parent ASIN" first
+    const revenueCol = fc('ordered product sales');                    // Business Report
+    const spendCol   = fc('spend');                                    // Ad Report
+    const acosCol    = fc('acos', 'advertising cost of sale');         // Ad Report
+    const adRevCol   = fc('7 day total sales', '7-day total sales');   // Ad Report
+    const adUnitCol  = fc('7 day total units', '7 day total orders');  // Ad Report
+    const cvrCol     = fc('unit session percentage', '7 day conversion rate'); // Either
+
+    // Fall back to any column containing "asin" if specific ones not found
+    const resolvedAsinCol = asinCol !== -1 ? asinCol : hdrs.findIndex(h => h.includes('asin'));
+
+    if (resolvedAsinCol === -1) {
+      alert('Could not find an ASIN column.\n\nPlease upload:\n• Business Reports → Detail Page Sales and Traffic by ASIN\n• Advertising Console → Reports → Sponsored Products → Advertised Product');
+      event.target.value = ''; return;
+    }
+
+    const isBizReport = revenueCol !== -1;
+    const isAdReport  = spendCol !== -1 && (acosCol !== -1 || adRevCol !== -1);
+
+    if (!isBizReport && !isAdReport) {
+      alert('Report type not recognised. The file must be either:\n• Business Report (must have "Ordered Product Sales" column)\n• Advertising Report (must have "Spend" and "ACoS" columns)\n\nCheck you downloaded the correct report and are using the CSV export.');
+      event.target.value = ''; return;
+    }
+
+    const parseNum = s => parseFloat((s || '').replace(/[$,%\s]/g, '').replace(/,/g, '')) || 0;
+
+    // Aggregate rows by ASIN (advertising reports have one row per campaign per ASIN)
+    const byAsin = {};
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVRow(lines[i]);
+      const asin = (cols[resolvedAsinCol] || '').trim().replace(/^"|"$/g, '').toUpperCase();
+      if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+
+      if (!byAsin[asin]) byAsin[asin] = { revenue:0, spend:0, acosSum:0, acosN:0, adRev:0, adUnits:0, cvrSum:0, cvrN:0 };
+      const d = byAsin[asin];
+
+      if (revenueCol  !== -1) d.revenue  += parseNum(cols[revenueCol]);
+      if (spendCol    !== -1) d.spend    += parseNum(cols[spendCol]);
+      if (adRevCol    !== -1) d.adRev    += parseNum(cols[adRevCol]);
+      if (adUnitCol   !== -1) d.adUnits  += parseNum(cols[adUnitCol]);
+      if (acosCol !== -1) { const v = parseNum(cols[acosCol]); if (v > 0) { d.acosSum += v; d.acosN++; } }
+      if (cvrCol  !== -1) { const v = parseNum(cols[cvrCol]);  if (v > 0) { d.cvrSum  += v; d.cvrN++;  } }
+    }
+
+    let imported = 0, skipped = Object.keys(byAsin).length;
+    for (const [asin, data] of Object.entries(byAsin)) {
+      const product = state.products.find(p => p.asin && p.asin.trim().toUpperCase() === asin);
+      if (!product) continue;
+
+      // Update product CVR from report if available
+      if (data.cvrN > 0) product.inputs.cvr = +(data.cvrSum / data.cvrN).toFixed(1);
+
+      const acos = data.acosN > 0 ? +(data.acosSum / data.acosN).toFixed(1) : undefined;
+      const ci = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        date: new Date().toISOString(),
+        organicGrowing: 'stable',
+        notes: `Auto-imported from ${isBizReport ? 'Business Report' : 'Advertising Report'}. Fill in missing fields below.`
+      };
+      if (data.revenue  > 0)       ci.totalRevenue = +data.revenue.toFixed(2);
+      if (data.spend    > 0)       ci.totalAdSpend = +data.spend.toFixed(2);
+      if (acos !== undefined)      ci.currentAcos  = acos;
+      if (data.adUnits  > 0)       ci.adSales      = Math.round(data.adUnits);
+
+      product.checkins.push(ci);
+      imported++;
+      skipped--;
+    }
+
+    saveToStorage();
+    renderAll();
+
+    if (imported === 0) {
+      const sample = Object.keys(byAsin).slice(0, 3).join(', ');
+      alert(`No products matched.\n\nASINs found in report: ${sample}${Object.keys(byAsin).length > 3 ? '…' : ''}\n\nMake sure each product has its ASIN entered (Edit product → ASIN field). ASINs must match exactly.`);
+    } else {
+      const type = isBizReport ? 'Business Report' : 'Advertising Report';
+      const filled = isBizReport ? 'Total Revenue, CVR' : 'ACoS, Ad Spend, Ad Sales';
+      const miss = isBizReport ? 'ACoS + Ad Spend → import Advertising Report next' : 'Total Revenue → import Business Report next';
+      alert(`✓ Imported check-ins for ${imported} product${imported > 1 ? 's' : ''}.\n\nSource: ${type}\nFilled: ${filled}\nStill needed: ${miss}\n\nCurrent Price is never in any export — enter it manually.`);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
