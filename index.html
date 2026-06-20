@@ -348,6 +348,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         <div style="flex:1;"></div>
         <div id="pv-stage-badge"></div>
         <button class="topbar-btn" onclick="openEditModal()" data-en="Edit" data-zh="编辑">Edit</button>
+        <button class="topbar-btn" onclick="shareProduct()" data-en="Share" data-zh="分享">Share</button>
         <button class="topbar-btn danger" onclick="deleteProduct()" data-en="Delete" data-zh="删除">Delete</button>
       </div>
 
@@ -373,6 +374,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
             <div id="calc-outputs-html"></div>
           </div>
         </div>
+        <div id="coupon-calc-section" style="margin-top:0;"></div>
       </div>
 
       <!-- TAB: AD STAGES -->
@@ -632,6 +634,12 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 
     <label class="check-row"><input type="checkbox" id="f-surcharge" checked> Include 3.5% FBA fuel surcharge (from Apr 17 2026)</label>
 
+    <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Coupon (optional)</div>
+    <div class="g2">
+      <div class="inp"><label>Coupon Discount ($ off) <span class="opt">typical: $2–$5</span></label><input type="number" id="f-coupon-amt" value="0" min="0" step="0.01"><div class="hint">Amount the customer saves. 0 = not using coupons.</div></div>
+      <div class="inp"><label>Expected Monthly Redemptions <span class="opt">typical: 30–100</span></label><input type="number" id="f-coupon-vol" value="0" min="0" step="1"><div class="hint">Units sold via coupon per month.</div></div>
+    </div>
+
     <div class="inp" style="margin-top:10px;"><label>Notes <span class="opt">optional</span></label><textarea id="f-notes" rows="2" placeholder="Product notes, launch date, any context..."></textarea></div>
 
     <div class="modal-footer">
@@ -851,6 +859,7 @@ function createDefaultProduct(overrides = {}) {
       ppc: 1.50, returns: 0.30, other: 0.20,
       vine: false, vineUnits: 20, annualUnits: 500,
       tacos: 25, lacos: 60, cvr: 12,
+      couponAmt: 0, couponVol: 0,
       surcharge: true
     },
     ...overrides
@@ -1317,6 +1326,19 @@ function renderCalcTab(p) {
     ${saleF.profit<0?`<div class="alert bad">⚠ Sale Price below break-even. Reduce costs before using as launch discount.</div>`:''}
     ${discF.profit<0?`<div class="alert bad">⚠ Clearance Price below break-even. Selling at a loss.</div>`:''}
     ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit</div>`:''}
+    ${(()=>{
+      const sur = p.inputs.surcharge ? 1.035 : 1;
+      const cliffs = [];
+      if (yp >= 10 && yp < 10.50) {
+        const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,9.95)*sur).toFixed(2);
+        cliffs.push(`⚡ Price band cliff: ${fmtC(yp)} is just above the $10 FBA tier. Pricing at $9.95 saves $${saving}/unit in FBA fees.`);
+      }
+      if (yp >= 50 && yp < 50.50) {
+        const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,49.95)*sur).toFixed(2);
+        cliffs.push(`⚡ Price band cliff: ${fmtC(yp)} is just above the $50 FBA tier. Pricing at $49.95 saves $${saving}/unit in FBA fees.`);
+      }
+      return cliffs.map(c=>`<div class="alert warn">${c}</div>`).join('');
+    })()}
     <div class="bar-wrap">
       <div class="bar-top"><span>Revenue breakdown at Your Price</span><span>Profit: ${ypF.pct.toFixed(1)}%</span></div>
       <div class="bar">
@@ -1335,6 +1357,7 @@ function renderCalcTab(p) {
       </div>
     </div>
   `;
+  renderCouponCalc(p);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1457,7 +1480,40 @@ function renderStagesTab(p) {
     </div>`;
   }
 
-  document.getElementById('stages-html').innerHTML = trackHtml + guideHtml;
+  // Stage timeline — shows dates and durations per stage
+  const stageKeys = ['PRE_LAUNCH','STAGE_1','STAGE_2','STAGE_3','STABLE'];
+  const stageLabels = {'PRE_LAUNCH':'Pre-Launch','STAGE_1':'Stage 1','STAGE_2':'Stage 2','STAGE_3':'Stage 3','STABLE':'Stable'};
+  const relevantStages = stageKeys.filter(s => s === 'PRE_LAUNCH' || product.stageStartDates[s]);
+  let timelineHtml = '';
+  if (relevantStages.length > 1 || (relevantStages.length === 1 && lc !== 'PRE_LAUNCH')) {
+    const rows = relevantStages.map((s, i) => {
+      const startIso = s === 'PRE_LAUNCH' ? product.createdAt : product.stageStartDates[s];
+      const nextS = relevantStages[i+1];
+      const endIso = nextS ? (nextS === 'PRE_LAUNCH' ? product.createdAt : product.stageStartDates[nextS]) : null;
+      const startDate = new Date(startIso);
+      const days = endIso
+        ? Math.floor((new Date(endIso) - startDate)/86400000)
+        : (s === lc ? Math.floor((Date.now() - startDate.getTime())/86400000) : 0);
+      const isCurrent = s === lc;
+      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #1e2130;">
+        <div style="width:80px;font-size:0.7rem;font-weight:700;color:${isCurrent?'#818cf8':'#555870'};flex-shrink:0;">${stageLabels[s]}</div>
+        <div style="font-size:0.7rem;color:#6b6f8a;flex-shrink:0;width:72px;">${startDate.toLocaleDateString()}</div>
+        <div style="font-size:0.7rem;color:${isCurrent?'#e8eaf0':'#6b6f8a'};">${endIso ? `${days}d` : isCurrent ? `${days}d (ongoing)` : '—'}</div>
+        ${isCurrent ? '<div style="font-size:0.65rem;background:#1a1d3a;border:1px solid #3a3d6e;border-radius:4px;padding:1px 7px;color:#818cf8;margin-left:4px;">current</div>' : ''}
+      </div>`;
+    });
+    timelineHtml = `<div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Stage History</div>
+      <div style="display:flex;gap:12px;padding:3px 0 6px;border-bottom:2px solid #252836;">
+        <div style="width:80px;font-size:0.62rem;color:#555870;font-weight:700;">STAGE</div>
+        <div style="font-size:0.62rem;color:#555870;font-weight:700;width:72px;">STARTED</div>
+        <div style="font-size:0.62rem;color:#555870;font-weight:700;">DURATION</div>
+      </div>
+      ${rows.join('')}
+    </div>`;
+  }
+
+  document.getElementById('stages-html').innerHTML = trackHtml + timelineHtml + guideHtml;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1469,9 +1525,45 @@ function renderCheckinsTab(p) {
     document.getElementById('checkin-history').innerHTML = '<div style="font-size:0.78rem;color:#555870;text-align:center;padding:20px;">No check-ins yet. Record your first one above.</div>';
     return;
   }
+
+  // TACoS trend — last 5 check-ins with spend+revenue data
+  const tacosPoints = p.checkins
+    .filter(c => c.totalRevenue > 0 && c.totalAdSpend > 0)
+    .map(c => ({ t: c.totalAdSpend/c.totalRevenue*100, d: new Date(c.date).toLocaleDateString() }))
+    .slice(-5);
+  let trendHtml = '';
+  if (tacosPoints.length >= 2) {
+    const first = tacosPoints[0].t, last = tacosPoints[tacosPoints.length-1].t;
+    const delta = last - first;
+    const trend = delta < -2 ? 'improving' : delta > 2 ? 'worsening' : 'stable';
+    const col = trend==='improving'?'#4ade80':trend==='worsening'?'#f87171':'#f59e0b';
+    const icon = trend==='improving'?'↓':trend==='worsening'?'↑':'→';
+    const maxT = Math.max(...tacosPoints.map(x=>x.t), 1);
+    const bars = tacosPoints.map((pt,i) => {
+      const h = Math.max(8, Math.round(pt.t/maxT*50));
+      const bc = pt.t<10?'#14532d':pt.t<20?'#78350f':'#7a0020';
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+        <div style="font-size:0.62rem;color:#8b8fa8;">${pt.t.toFixed(0)}%</div>
+        <div style="width:28px;height:${h}px;border-radius:3px 3px 0 0;background:${bc};"></div>
+        ${i<tacosPoints.length-1?'<div style="display:none;"></div>':''}
+      </div>`;
+    }).join(`<div style="flex:1;height:1px;background:#252836;align-self:flex-end;margin-bottom:0;"></div>`);
+    trendHtml = `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title" style="margin:0;">TACoS Trend</div>
+        <div style="font-size:0.82rem;font-weight:700;color:${col};">${icon} ${trend} &nbsp;<span style="font-size:0.7rem;color:#6b6f8a;font-weight:400;">${first.toFixed(1)}% → ${last.toFixed(1)}%</span></div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:70px;">${bars}</div>
+      <div style="font-size:0.67rem;color:#555870;margin-top:4px;">Last ${tacosPoints.length} check-ins. Target: &lt;10% for healthy organic ratio.</div>
+    </div>`;
+  }
+
   const sorted = [...p.checkins].reverse();
-  document.getElementById('checkin-history').innerHTML = `
-    <div class="card-title" style="margin-top:4px;">Check-in History (${p.checkins.length})</div>
+  document.getElementById('checkin-history').innerHTML = trendHtml + `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="card-title" style="margin:0;">Check-in History (${p.checkins.length})</div>
+      <button class="topbar-btn" onclick="exportCheckinsCSV('${p.id}')" style="font-size:0.72rem;">Export CSV</button>
+    </div>
     <div class="checkin-list">${sorted.map((ci, i) => {
       const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
       const tacos = ci.totalRevenue && ci.totalAdSpend ? (ci.totalAdSpend/ci.totalRevenue*100) : null;
@@ -1618,6 +1710,8 @@ function openAddModal() {
   document.getElementById('f-lacos').value = d.lacos;
   document.getElementById('f-cvr').value = d.cvr;
   document.getElementById('f-surcharge').checked = d.surcharge;
+  document.getElementById('f-coupon-amt').value = d.couponAmt;
+  document.getElementById('f-coupon-vol').value = d.couponVol;
   document.getElementById('f-notes').value = '';
   document.getElementById('product-modal').classList.add('open');
 }
@@ -1650,6 +1744,8 @@ function openEditModal() {
   document.getElementById('f-lacos').value = p.inputs.lacos;
   document.getElementById('f-cvr').value = p.inputs.cvr;
   document.getElementById('f-surcharge').checked = p.inputs.surcharge;
+  document.getElementById('f-coupon-amt').value = p.inputs.couponAmt || 0;
+  document.getElementById('f-coupon-vol').value = p.inputs.couponVol || 0;
   document.getElementById('f-notes').value = p.notes;
   document.getElementById('product-modal').classList.add('open');
 }
@@ -1681,7 +1777,9 @@ function saveProduct() {
     tacos: parseFloat(document.getElementById('f-tacos').value) || 25,
     lacos: parseFloat(document.getElementById('f-lacos').value) || 60,
     cvr: parseFloat(document.getElementById('f-cvr').value) || 12,
-    surcharge: document.getElementById('f-surcharge').checked
+    surcharge: document.getElementById('f-surcharge').checked,
+    couponAmt: parseFloat(document.getElementById('f-coupon-amt').value) || 0,
+    couponVol: parseInt(document.getElementById('f-coupon-vol').value) || 0
   };
   const editId = document.getElementById('modal-product-id').value;
   if (editId) {
@@ -1742,10 +1840,151 @@ function renderAll() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// COUPON CALCULATOR
+// ═══════════════════════════════════════════════════════════════════════════
+function renderCouponCalc(p) {
+  const el = document.getElementById('coupon-calc-section');
+  if (!el) return;
+  const prices = calcPrices(p.inputs);
+  const { yp, ypF } = prices;
+  const couponAmt = p.inputs.couponAmt || 0;
+  const couponVol = p.inputs.couponVol || 0;
+  const effectivePrice = Math.max(0, yp - couponAmt);
+  const monthlyCouponFee = couponAmt > 0 && couponVol > 0 ? 5 + 0.025 * effectivePrice * couponVol : 0;
+  const couponCostPerUnit = couponVol > 0 ? monthlyCouponFee / couponVol : 0;
+  const couponProfitPerUnit = couponAmt > 0 ? ypF.profit - couponAmt - couponCostPerUnit : null;
+  el.innerHTML = `<div class="card" style="margin-top:14px;">
+    <div class="card-title">Coupon Calculator</div>
+    <div class="g2">
+      <div>
+        <div class="g2" style="gap:8px;">
+          <div class="inp">
+            <label>Coupon Discount ($ off)</label>
+            <input type="number" id="coupon-amt" value="${couponAmt||''}" min="0" step="0.01" placeholder="e.g. 3.00" oninput="saveCouponInput()">
+            <div class="hint">Customer saves this amount. Green badge requires ≥5% of price.</div>
+          </div>
+          <div class="inp">
+            <label>Expected Monthly Redemptions</label>
+            <input type="number" id="coupon-vol" value="${couponVol||''}" min="0" step="1" placeholder="e.g. 50" oninput="saveCouponInput()">
+          </div>
+        </div>
+        <div class="alert info" style="font-size:0.73rem;">Coupon keeps listed price intact — "Was" anchor and Typical Price baseline are unaffected. Safer for the May 2026 Typical Price rule than a price discount.</div>
+      </div>
+      <div>
+        ${couponAmt > 0 ? `
+        <div class="mfg-out" style="margin-top:0;">
+          <div class="mfg-out-title">Coupon Economics</div>
+          <div class="mfg-row"><div class="mfg-row-l">Customer pays</div><div class="mfg-row-r">${fmtC(effectivePrice)}</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">Discount given</div><div class="mfg-row-r white">${fmtC(couponAmt)} (${(couponAmt/yp*100).toFixed(1)}% off)</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">Monthly fee ($5 flat + 2.5% of sales)</div><div class="mfg-row-r ${monthlyCouponFee>100?'amber':'white'}">${couponVol>0?fmtC(monthlyCouponFee):'set redemptions'}</div></div>
+          <div class="mfg-row"><div class="mfg-row-l">Extra cost per unit redeemed</div><div class="mfg-row-r white">${couponVol>0?fmtC(couponCostPerUnit):'—'}</div></div>
+          <div class="mfg-row" style="border-top:2px solid #252836;margin-top:4px;padding-top:6px;">
+            <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">Profit/unit with coupon</div>
+            <div class="mfg-row-r ${couponProfitPerUnit!==null&&couponProfitPerUnit>=0?'':'red'}">${couponVol>0&&couponProfitPerUnit!==null?fmtC(couponProfitPerUnit):'set redemptions'}</div>
+          </div>
+        </div>
+        ` : '<div style="font-size:0.78rem;color:#555870;padding:8px 0;">Enter a discount amount to model coupon economics.</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+function saveCouponInput() {
+  const p = getActiveProduct();
+  if (!p) return;
+  p.inputs.couponAmt = parseFloat(document.getElementById('coupon-amt').value) || 0;
+  p.inputs.couponVol = parseInt(document.getElementById('coupon-vol').value) || 0;
+  saveToStorage();
+  renderCouponCalc(p);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CSV EXPORT — CHECK-INS
+// ═══════════════════════════════════════════════════════════════════════════
+function exportCheckinsCSV(productId) {
+  const p = state.products.find(x => x.id === productId);
+  if (!p || !p.checkins.length) return;
+  const prices = calcPrices(p.inputs);
+  const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','notes'];
+  const rows = p.checkins.map(c => {
+    const tacos = c.totalRevenue && c.totalAdSpend ? (c.totalAdSpend/c.totalRevenue*100).toFixed(1) : '';
+    const pc = c.currentPrice ? classifyPrice(c.currentPrice, prices) : null;
+    return [
+      new Date(c.date).toISOString().slice(0,10),
+      c.currentPrice || '',
+      pc ? `"${pc.label}"` : '',
+      c.currentAcos !== undefined ? c.currentAcos : '',
+      c.adSales !== undefined ? c.adSales : '',
+      c.totalRevenue || '',
+      c.totalAdSpend || '',
+      tacos,
+      c.organicGrowing || '',
+      `"${(c.notes||'').replace(/"/g,'""')}"`
+    ].join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${p.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()}-checkins-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// URL SHARING
+// ═══════════════════════════════════════════════════════════════════════════
+function shareProduct() {
+  const p = getActiveProduct();
+  if (!p) return;
+  const payload = { name: p.name, asin: p.asin, inputs: p.inputs };
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const url = location.origin + location.pathname + '?s=' + encodeURIComponent(b64);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Share link copied to clipboard!\n\nAnyone who opens this link gets a pre-filled product with your cost inputs (no check-in history is shared).');
+    }).catch(() => { prompt('Copy this share link:', url); });
+  } else {
+    prompt('Copy this share link:', url);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════
+
+// Check for shared product in URL before loading storage
+let _pendingShare = null;
+try {
+  const sp = new URLSearchParams(location.search).get('s');
+  if (sp) {
+    const decoded = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(sp)))));
+    if (decoded.inputs && decoded.name) _pendingShare = decoded;
+  }
+} catch(e) { /* invalid share param — ignore */ }
+
 loadFromStorage();
 renderAll();
+
+if (_pendingShare) {
+  const share = _pendingShare;
+  if (confirm(`Import shared product "${share.name}"?\n\nThis will add it to your product list alongside any existing products.`)) {
+    const p = createDefaultProduct();
+    p.name = share.name;
+    p.asin = share.asin || '';
+    p.inputs = { ...createDefaultProduct().inputs, ...share.inputs };
+    state.products.push(p);
+    state.activeProductId = p.id;
+    state.appMode = 'seller';
+    saveToStorage();
+    history.replaceState({}, '', location.pathname);
+    renderAll();
+  } else {
+    history.replaceState({}, '', location.pathname);
+  }
+}
+
 // Close modal on overlay click
 document.getElementById('product-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('product-modal')) closeModal();
