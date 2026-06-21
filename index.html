@@ -1189,7 +1189,9 @@ function calcPrices(inputs) {
   // RULE: Derive other price tiers from Your Price using discount multipliers
   const listP = roundEnd(yp * LIST_PREMIUM - (1 - PRICE_LIST_END), PRICE_LIST_END);
   const saleP = roundEnd(yp * SALE_DISCOUNT - (1 - PRICE_SALE_END), PRICE_SALE_END);
-  const discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1 - PRICE_DISC_END), PRICE_DISC_END);
+  // Guard: for cheap products (<~$8), rounding can push discP above saleP — step down one dollar
+  let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1 - PRICE_DISC_END), PRICE_DISC_END);
+  if (discP >= saleP) discP -= 1;
 
   const ypF    = getAll(yp);
   const listF  = getAll(listP);

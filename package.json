@@ -1,0 +1,11 @@
+{
+  "name": "bg-amazon-pricing-tool",
+  "version": "1.0.0",
+  "description": "Amazon FBA pricing and advertising stage tool",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

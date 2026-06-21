@@ -119,5 +119,5 @@ Items within each section are roughly prioritised top-to-bottom.
 - All state is `localStorage` only — clearing browser storage loses all data
 - No input validation on CSV import (malformed rows silently skipped)
 - FBA fee tables are hardcoded — need a mechanism to update when Amazon changes rates
-- No unit tests; business logic (fee solver, stage graduation) should be tested
+- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals (180 tests — run with `npm test`)
 - Single `index.html` file — split into modules when adding build step
