@@ -325,6 +325,9 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
   <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
   <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(event)">
   <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
+  <div class="topbar-divider"></div>
+  <button class="topbar-btn" style="background:#1a2a1a;border-color:#166534;color:#4ade80;" onclick="document.getElementById('fba-preview-file').click()" data-en="⬆ Import Inventory" data-zh="⬆ 导入库存">⬆ Import Inventory</button>
+  <input type="file" id="fba-preview-file" accept=".csv,.txt,.tsv" style="display:none" onchange="importFBAFeePreview(event)">
 </div>
 
 <!-- ════════════════════ APP BODY ════════════════════ -->
@@ -693,8 +696,45 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         <span data-en="Record ACoS, ad sales, total revenue and ad spend once per week. The tool tracks TACoS trend and fires kill signals if the product is failing (no sales, ACoS never improving, etc.)." data-zh="每周记录一次ACoS、广告销售量、总收入和广告支出。工具将追踪TACoS趋势，并在产品表现不佳时触发终止信号（无销售、ACoS持续不改善等）。">Record ACoS, ad sales, total revenue and ad spend once per week. The tool tracks TACoS trend and fires kill signals if the product is failing (no sales, ACoS never improving, etc.).</span>
       </div>
       <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
-        <strong style="color:#e8eaf0;" data-en="④ Import Amazon Reports" data-zh="④ 导入亚马逊报告">④ Import Amazon Reports</strong><br>
+        <strong style="color:#4ade80;" data-en="⬆ Import Inventory — Create Products from Amazon" data-zh="⬆ 导入库存 — 从亚马逊创建产品">⬆ Import Inventory — Create Products from Amazon</strong><br>
+        <span data-en="Export the FBA Fee Preview report (Reports → Fulfillment → Fee Preview) and click &quot;Import Inventory&quot; in the top bar. The tool reads ASIN, product name, size tier and weight — then creates product stubs. Add COGS and costs in Edit to complete setup. Products show a yellow dot in the sidebar until done." data-zh="导出FBA费用预览报告（报告 → 配送 → 费用预览），然后点击顶栏的"导入库存"。工具读取ASIN、产品名称、尺寸等级和重量，自动创建产品模板。在编辑中添加货物成本和成本完成设置。产品在侧边栏显示黄点直至完成。">Export the FBA Fee Preview report (Reports → Fulfillment → Fee Preview) and click "Import Inventory" in the top bar. The tool reads ASIN, product name, size tier and weight — then creates product stubs. Add COGS and costs in Edit to complete setup. Products show a yellow dot in the sidebar until done.</span>
+        <div style="margin-top:8px;background:#1a1d27;border-radius:6px;padding:8px 10px;font-size:0.72rem;color:#6b6f8a;line-height:1.6;">
+          <strong style="color:#8b8fa8;" data-en="How to export:" data-zh="如何导出：">How to export:</strong><br>
+          <span data-en="Seller Central → Reports → Fulfillment → (left sidebar) Fee Preview → Download" data-zh="卖家中心 → 报告 → 配送 → （左侧边栏）费用预览 → 下载">Seller Central → Reports → Fulfillment → (left sidebar) Fee Preview → Download</span><br>
+          <span style="color:#555870;" data-en="Also accepts: Manage Inventory → Download Inventory File (tab-delimited)" data-zh="同样支持：管理库存 → 下载库存文件（制表符分隔）">Also accepts: Manage Inventory → Download Inventory File (tab-delimited)</span>
+        </div>
+      </div>
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="④ Import Weekly Check-in Data" data-zh="④ 导入每周签到数据">④ Import Weekly Check-in Data</strong><br>
         <span data-en="In the Check-ins tab, import a Business Report (revenue + CVR) or Advertising Advertised Product Report (ACoS + spend) from Seller Central. The tool auto-detects the report type and matches by ASIN." data-zh="在签到标签中，从卖家中心导入业务报告（收入+转化率）或广告推广商品报告（ACoS+支出）。工具自动识别报告类型并通过ASIN匹配。">In the Check-ins tab, import a Business Report (revenue + CVR) or Advertising Advertised Product Report (ACoS + spend) from Seller Central. The tool auto-detects the report type and matches by ASIN.</span>
+      </div>
+      <div style="background:#13151f;border-radius:10px;padding:12px 14px;font-size:0.78rem;color:#8b8fa8;line-height:1.6;">
+        <strong style="color:#e8eaf0;" data-en="💲 Price Ending Quick Reference" data-zh="💲 价格尾数快速参考">💲 Price Ending Quick Reference</strong>
+        <div style="margin-top:8px;display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 12px;font-size:0.75rem;">
+          <div style="font-weight:700;color:#6b6f8a;padding-bottom:4px;" data-en="Ending" data-zh="尾数">Ending</div>
+          <div style="font-weight:700;color:#6b6f8a;padding-bottom:4px;" data-en="Price type" data-zh="价格类型">Price type</div>
+          <div style="font-weight:700;color:#6b6f8a;padding-bottom:4px;" data-en="Rule / constraint" data-zh="规则/限制">Rule / constraint</div>
+
+          <div style="color:#c5c8e0;font-weight:800;">.99</div>
+          <div style="color:#a78bfa;" data-en="List Price (MSRP)" data-zh="挂牌价（MSRP）">List Price (MSRP)</div>
+          <div style="color:#6b6f8a;" data-en="Must be verifiable at another retailer (Apr 23 2026 rule)" data-zh="须在其他零售商处核实（2026年4月23日规则）">Must be verifiable at another retailer (Apr 23 2026 rule)</div>
+
+          <div style="color:#c5c8e0;font-weight:800;">.95</div>
+          <div style="color:#4ade80;" data-en="Your Price (primary)" data-zh="您的售价（主要）">Your Price (primary)</div>
+          <div style="color:#6b6f8a;" data-en="Hold ≥30 days between promotions to protect &quot;Typical Price&quot;" data-zh="促销间隔≥30天以保护"典型价格"">Hold ≥30 days between promotions to protect "Typical Price"</div>
+
+          <div style="color:#c5c8e0;font-weight:800;">.90</div>
+          <div style="color:#f59e0b;" data-en="Sale / Price Discount" data-zh="促销价/价格折扣">Sale / Price Discount</div>
+          <div style="color:#6b6f8a;" data-en="Free Price Discount tool. ≥5% off triggers Was/Now badge. Max 30 days." data-zh="免费价格折扣工具。折扣≥5%触发原价/现价标签。最长30天。">Free Price Discount tool. ≥5% off triggers Was/Now badge. Max 30 days.</div>
+
+          <div style="color:#c5c8e0;font-weight:800;">.97 .88 .77</div>
+          <div style="color:#f87171;" data-en="Clearance / one-off" data-zh="清仓/一次性">Clearance / one-off</div>
+          <div style="color:#6b6f8a;" data-en="Signals a one-time price cut. Use sparingly — repeated use erodes &quot;Was&quot; anchor." data-zh="表示一次性降价。谨慎使用 — 频繁使用会损害"原价"锚点。">Signals a one-time price cut. Use sparingly — repeated use erodes "Was" anchor.</div>
+        </div>
+        <div style="margin-top:10px;background:#1a1d27;border-radius:6px;padding:8px 10px;font-size:0.72rem;color:#6b6f8a;line-height:1.6;">
+          <strong style="color:#8b8fa8;" data-en="How to read a listing price at a glance:" data-zh="如何快速判断价格类型：">How to read a listing price at a glance:</strong><br>
+          <span data-en="$X.99 = MSRP anchor · $X.95 = normal · $X.90 = sale · $X.97/$X.88/$X.77 = clearance · Any other ending = custom or competitor-matched price" data-zh="$X.99 = MSRP锚点 · $X.95 = 正常价格 · $X.90 = 促销价 · $X.97/$X.88/$X.77 = 清仓价 · 其他尾数 = 自定义或跟价">$X.99 = MSRP anchor · $X.95 = normal · $X.90 = sale · $X.97/$X.88/$X.77 = clearance · Any other ending = custom or competitor-matched price</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1350,7 +1390,8 @@ function renderSidebar() {
   list.innerHTML = state.products.map(p => {
     const meta = STAGE_META[p.lifecycle] || STAGE_META.PRE_LAUNCH;
     const { signals } = checkKillSignals(p);
-    const health = signals.length > 0 ? '#f87171' : meta.health;
+    const incomplete = !p.inputs.cogs || p.inputs.cogs === 0;
+    const health = signals.length > 0 ? '#f87171' : incomplete ? '#f59e0b' : meta.health;
     const isActive = p.id === state.activeProductId;
     return `<div class="sidebar-item${isActive?' active':''}" onclick="selectProduct('${p.id}')">
       <div class="sidebar-item-health" style="background:${health}"></div>
@@ -1389,6 +1430,13 @@ function renderProductView() {
 function renderKillSignals(p) {
   const { signals, warnings } = checkKillSignals(p);
   let html = '';
+  if (!p.inputs.cogs || p.inputs.cogs === 0) {
+    html += `<div class="warn-panel" style="border-color:#854d0e;margin-bottom:12px;">
+      <div class="warn-panel-title">${t('⚠ Setup incomplete — COGS not set','⚠ 设置未完成 — 未填写货物成本')}</div>
+      <div style="font-size:0.77rem;color:#f59e0b;padding:4px 0 8px;">${t('This product was imported from an Amazon report. Add your COGS, target margin, and ad costs to get accurate price calculations.','此产品从亚马逊报告导入。请添加货物成本、目标利润率和广告成本以获得准确的价格计算。')}</div>
+      <button class="topbar-btn" onclick="openEditModal()" style="font-size:0.8rem;">${t('Complete Setup →','完成设置 →')}</button>
+    </div>`;
+  }
   if (signals.length) {
     html += `<div class="kill-panel"><div class="kill-panel-title">⚠ Kill Signals Active — Review Required</div>`;
     signals.forEach(s => html += `<div class="kill-signal"><div class="kill-dot"></div>${s}</div>`);
@@ -2042,6 +2090,114 @@ function loadExampleProduct() {
 // ═══════════════════════════════════════════════════════════════════════════
 // AMAZON REPORT IMPORT — Business Report + Advertising Advertised Product
 // ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FBA FEE PREVIEW / INVENTORY IMPORT — creates product stubs from Amazon CSV
+// ═══════════════════════════════════════════════════════════════════════════
+
+function importFBAFeePreview(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Support tab-delimited (Manage Inventory download) and comma-delimited
+    const raw = e.target.result;
+    const delimiter = raw.indexOf('\t') !== -1 && raw.indexOf('\t') < raw.indexOf(',\n') ? '\t' : ',';
+    const lines = raw.split('\n').filter(l => l.trim());
+    if (lines.length < 2) { alert('File appears empty.'); event.target.value = ''; return; }
+
+    const splitRow = line => delimiter === '\t'
+      ? line.split('\t').map(c => c.trim().replace(/^"|"$/g, ''))
+      : parseCSVRow(line);
+
+    const rawHdrs = splitRow(lines[0]);
+    const hdrs = rawHdrs.map(h => h.trim().toLowerCase().replace(/[-_]+/g, ' '));
+
+    // Fuzzy column finder
+    const fc = (...terms) => hdrs.findIndex(h => terms.some(t => h.includes(t)));
+
+    const asinCol    = fc('asin');
+    const nameCol    = fc('product name', 'item name', 'title');
+    const tierCol    = fc('product size tier', 'size tier', 'size-tier', 'product-size');
+    const weightCol  = fc('unit weight', 'item weight', 'package weight', 'weight');
+
+    if (asinCol === -1) {
+      alert(t(
+        'Could not find an ASIN column.\n\nPlease upload the FBA Fee Preview report:\nReports → Fulfillment → Fee Preview\n\nOr the Manage Inventory download:\nInventory → Manage Inventory → Download Inventory File',
+        '找不到ASIN列。\n\n请上传FBA费用预览报告：\n报告 → 配送 → 费用预览\n\n或库存管理下载文件：\n库存 → 管理库存 → 下载库存文件'
+      ));
+      event.target.value = ''; return;
+    }
+
+    // Map Amazon size tier strings to our ls/ss/lb/xl codes
+    const sizeTierMap = raw => {
+      const s = (raw || '').toLowerCase().replace(/[-_]+/g, ' ');
+      if (/small.+standard|standard.+small/.test(s)) return 'ss';
+      if (/large.+standard|standard.+large/.test(s)) return 'ls';
+      if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
+      if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
+      if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
+      if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
+      return null; // unknown → use default
+    };
+
+    // Weight: detect units from column header; default to lbs (US Amazon standard)
+    const wHdr = weightCol !== -1 ? hdrs[weightCol] : '';
+    const parseWeightToOz = val => {
+      const num = parseFloat((val || '').replace(/[^\d.]/g, ''));
+      if (!num) return null;
+      if (wHdr.includes('gram') || / g$/.test(wHdr) || /\(g\)/.test(wHdr)) return +(num * 0.035274).toFixed(1);
+      if (wHdr.includes('oz') || wHdr.includes('ounce')) return +num.toFixed(1);
+      return +(num * 16).toFixed(1); // assume lbs
+    };
+
+    let created = 0, skipped = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = splitRow(lines[i]);
+      if (!cols.length) continue;
+      const asin = (cols[asinCol] || '').trim().toUpperCase();
+      if (!asin || asin.length < 5) { skipped++; continue; }
+      if (state.products.some(p => p.asin === asin)) { skipped++; continue; }
+
+      const name     = nameCol   !== -1 ? (cols[nameCol]   || '').trim() : '';
+      const tierRaw  = tierCol   !== -1 ? (cols[tierCol]   || '').trim() : '';
+      const weightRaw= weightCol !== -1 ? (cols[weightCol] || '').trim() : '';
+
+      const p = createDefaultProduct();
+      p.name   = name || `Product ${asin}`;
+      p.asin   = asin;
+      p.inputs.cogs = 0;  // explicitly mark as incomplete — triggers setup banner
+      const tier = sizeTierMap(tierRaw);
+      if (tier) p.inputs.sizetier = tier;
+      const oz = parseWeightToOz(weightRaw);
+      if (oz) p.inputs.weight = oz;
+      p.notes = t(
+        'Imported from Amazon report. Open Edit to add COGS, target margin and ad costs.',
+        '从亚马逊报告导入。请打开编辑添加货物成本、目标利润率和广告成本。'
+      );
+      state.products.push(p);
+      created++;
+    }
+
+    if (created === 0) {
+      alert(t(
+        `No new products found. ${skipped > 0 ? skipped + ' rows skipped (already exist or invalid ASIN).' : 'Check the file is the correct Amazon report.'}`,
+        `未找到新产品。${skipped > 0 ? skipped + ' 行已跳过（已存在或ASIN无效）。' : '请检查文件是否为正确的亚马逊报告。'}`
+      ));
+    } else {
+      if (!state.activeProductId && state.products.length > 0) state.activeProductId = state.products[state.products.length - created].id;
+      saveToStorage();
+      renderAll();
+      alert(t(
+        `${created} product${created !== 1 ? 's' : ''} created${skipped > 0 ? ` (${skipped} skipped — already exist)` : ''}.\n\nEach product has a yellow dot in the sidebar until you add COGS and costs in Edit.`,
+        `已创建${created}个产品${skipped > 0 ? `（${skipped}个已跳过 — 已存在）` : ''}。\n\n每个产品在侧边栏显示黄点，直到您在编辑中添加货物成本和成本。`
+      ));
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
 
 // Handles quoted fields correctly (Amazon CSVs use "$1,234.56" formatting)
 function parseCSVRow(line) {
