@@ -79,6 +79,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .empty-state p{font-size:0.8rem;max-width:340px;line-height:1.5;}
 .empty-btn{padding:9px 20px;border-radius:8px;background:#5b63f7;border:none;color:#fff;font-size:0.82rem;font-weight:600;cursor:pointer;margin-top:4px;}
 .flow-guide{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin:8px 0;}
+/* ─── HOVER TOOLTIPS ─── */
+#tt{display:none;position:fixed;background:#1e2130;border:1px solid #3a3d6e;border-radius:10px;padding:10px 14px;font-size:0.73rem;color:#c5c8e0;line-height:1.55;max-width:300px;z-index:500;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.55);}
+#tt strong{color:#e8eaf0;display:block;margin-bottom:3px;}
+#tt a{color:#818cf8;text-decoration:underline;}
+#tt table{border-collapse:collapse;width:100%;margin-top:6px;}
+#tt td{padding:2px 6px;font-size:0.68rem;border-bottom:1px solid #252836;}
+#tt td:first-child{color:#8b8fa8;white-space:nowrap;padding-right:10px;}
+[data-tip]{cursor:help;}
 .flow-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;}
 .flow-modal-overlay.open{display:flex;}
 .flow-modal{background:#1a1d27;border:1px solid #252836;border-radius:16px;padding:24px 26px;max-width:680px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;}
@@ -485,21 +493,21 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
               <div class="hint" data-en="The price currently showing on your Amazon listing" data-zh="当前在亚马逊列表上显示的价格">Current price showing on your listing</div>
             </div>
             <div class="inp">
-              <label><span data-en="Current ACoS (%)" data-zh="当前ACoS (%)">Current ACoS (%)</span></label>
+              <label data-tip='<strong>Advertising Cost of Sales (%)</strong>ACoS = Ad spend ÷ Ad-attributed revenue × 100<br>Where to find: Advertising Console → Campaign Manager → ACoS column.<br>Or: Ad Reports → Advertised Product Report → "Advertising Cost of Sales".<br>Your break-even ACoS is shown in the Calculator tab.'><span data-en="Current ACoS (%)" data-zh="当前ACoS (%)">Current ACoS (%)</span> ⓘ</label>
               <input type="number" id="ci-acos" step="0.1" min="0" placeholder="e.g. 38.5">
             </div>
             <div class="inp">
-              <label><span data-en="Ad Sales (last 30 days)" data-zh="广告销售（近30天）">Ad Sales (last 30 days)</span></label>
+              <label data-tip='<strong>Orders attributed to advertising — last 30 days</strong>Where to find: Advertising Console → Advertised Product Report → "7 Day Total Orders" column.<br>Use a 30-day date range for consistency with other metrics.'><span data-en="Ad Sales (last 30 days)" data-zh="广告销售（近30天）">Ad Sales (last 30 days)</span> ⓘ</label>
               <input type="number" id="ci-adsales" step="1" min="0" placeholder="e.g. 32">
             </div>
           </div>
           <div class="g3">
             <div class="inp">
-              <label><span data-en="Total Revenue — last 30d ($)" data-zh="总收入—近30天($)">Total Revenue — last 30d ($)</span></label>
+              <label data-tip='<strong>Total ordered product sales — organic + paid — last 30 days</strong>Where to find: Seller Central → Business Reports → Detail Page Sales &amp; Traffic by ASIN → "Ordered Product Sales" column.<br>Or use the Import button above to auto-fill from a Business Report CSV.'><span data-en="Total Revenue — last 30d ($)" data-zh="总收入—近30天($)">Total Revenue — last 30d ($)</span> ⓘ</label>
               <input type="number" id="ci-rev" step="0.01" min="0" placeholder="e.g. 850.00">
             </div>
             <div class="inp">
-              <label><span data-en="Total Ad Spend — last 30d ($)" data-zh="广告总支出—近30天($)">Total Ad Spend — last 30d ($)</span></label>
+              <label data-tip='<strong>Total ad spend across all campaigns — last 30 days</strong>Where to find: Advertising Console → Campaign Manager → Spend column.<br>Or: Advertising Console → Reports → Advertised Product Report.<br>Include all campaign types: Sponsored Products, Brands, Display.'><span data-en="Total Ad Spend — last 30d ($)" data-zh="广告总支出—近30天($)">Total Ad Spend — last 30d ($)</span> ⓘ</label>
               <input type="number" id="ci-spend" step="0.01" min="0" placeholder="e.g. 120.00">
             </div>
             <div class="inp">
@@ -752,7 +760,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
     </div>
 
     <div class="g2">
-      <div class="inp"><label>Amazon Category <span class="req">REQUIRED</span></label>
+      <div class="inp"><label data-tip='<strong>Amazon Referral Fee by Category</strong><table><tr><td>Home / Kitchen / Sports</td><td>15%</td></tr><tr><td>Electronics / Computers</td><td>8%</td></tr><tr><td>Apparel</td><td>5–17%</td></tr><tr><td>Jewelry</td><td>20% (5% over $250)</td></tr><tr><td>Watches</td><td>16% (3% over $1,500)</td></tr></table>Fee is % of total selling price incl. shipping.'>Amazon Category ⓘ <span class="req">REQUIRED</span></label>
         <select id="f-category">
           <option value="15">Home / Kitchen / Sports / Office / Toys — 15%</option>
           <option value="15b">Beauty &amp; Personal Care — 8–15%</option>
@@ -772,7 +780,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         </select>
       </div>
       <div class="g2" style="gap:8px;">
-        <div class="inp"><label>Size Tier <span class="req">REQUIRED</span></label>
+        <div class="inp"><label data-tip='<strong>FBA Size Tiers (2026)</strong><table><tr><td>Small Std (ss)</td><td>≤15"×12"×0.75" · ≤1 lb</td></tr><tr><td>Large Std (ls)</td><td>≤18"×14"×8" · ≤20 lbs</td></tr><tr><td>Large Bulky (lb)</td><td>≤59"×33"×33" · girth ≤130" · ≤50 lbs</td></tr><tr><td>Extra-Large (xl)</td><td>Exceeds Large Bulky limits</td></tr></table>Use the dimension calculator ↓ to auto-select.'>Size Tier ⓘ <span class="req">REQUIRED</span></label>
           <select id="f-sizetier">
             <option value="ss">Small Standard</option>
             <option value="ls">Large Standard</option>
@@ -780,28 +788,40 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
             <option value="xl">Extra-Large</option>
           </select>
         </div>
-        <div class="inp"><label>Weight (oz) <span class="req">REQUIRED</span></label><input type="number" id="f-weight" value="8" min="0.1" step="0.1"></div>
+        <div class="inp"><label data-tip='<strong>Packaged weight in ounces</strong>Use whichever is greater:<br>• Actual weight of packaged unit<br>• Dimensional weight: (L×W×H in inches) ÷ 139<br>Amazon charges the higher of the two values.'>Weight (oz) ⓘ <span class="req">REQUIRED</span></label><input type="number" id="f-weight" value="8" min="0.1" step="0.1" oninput="calcDimTier()"></div>
+      </div>
+      <div style="grid-column:1/-1;margin-top:2px;">
+        <div style="font-size:0.68rem;color:#555870;cursor:pointer;user-select:none;" onclick="toggleDimCalc(this)">📐 <span>Calculate from dimensions...</span></div>
+        <div id="dim-calc" style="display:none;background:#13151f;border-radius:8px;padding:10px 12px;margin-top:6px;border:1px solid #1e2130;">
+          <div style="font-size:0.68rem;color:#6b6f8a;margin-bottom:8px;">Enter packaged dimensions → auto-selects size tier &amp; checks dimensional weight</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+            <div class="inp" style="margin:0;"><label style="font-size:0.7rem;">Length (in)</label><input type="number" id="dim-l" step="0.1" min="0" placeholder="e.g. 12.0" oninput="calcDimTier()"></div>
+            <div class="inp" style="margin:0;"><label style="font-size:0.7rem;">Width (in)</label><input type="number" id="dim-w" step="0.1" min="0" placeholder="e.g. 8.0" oninput="calcDimTier()"></div>
+            <div class="inp" style="margin:0;"><label style="font-size:0.7rem;">Height (in)</label><input type="number" id="dim-h" step="0.1" min="0" placeholder="e.g. 2.0" oninput="calcDimTier()"></div>
+          </div>
+          <div id="dim-result" style="font-size:0.72rem;color:#4ade80;margin-top:6px;min-height:1.2em;"></div>
+        </div>
       </div>
     </div>
 
     <div class="g2">
-      <div class="inp"><label>COGS per unit ($) <span class="req">REQUIRED</span></label><input type="number" id="f-cogs" value="6.00" step="0.01" min="0"><div class="hint">Manufacturing cost only</div></div>
-      <div class="inp"><label>Target Net Margin (%) <span class="req">REQUIRED</span> <span class="typ">typical: 25–35%</span></label><input type="number" id="f-margin" value="30" step="1" min="1" max="90"></div>
+      <div class="inp"><label data-tip='<strong>Cost of Goods Sold per unit</strong>Manufacturing / ex-works cost per unit.<br>Do NOT include: freight, duties, Amazon fees.<br>Those go in the Additional Costs section below.'>COGS per unit ($) ⓘ <span class="req">REQUIRED</span></label><input type="number" id="f-cogs" value="6.00" step="0.01" min="0"><div class="hint">Manufacturing cost only</div></div>
+      <div class="inp"><label data-tip='<strong>Target net margin after ALL costs</strong>Formula: (Price − COGS − FBA − referral − all other costs) ÷ Price × 100<br>Typical: 25–35%<br>Below 20% = thin buffer for returns &amp; spikes.<br>This drives your minimum viable listing price.'>Target Net Margin (%) ⓘ <span class="req">REQUIRED</span> <span class="typ">typical: 25–35%</span></label><input type="number" id="f-margin" value="30" step="1" min="1" max="90"></div>
     </div>
 
     <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Additional Costs</div>
     <div class="g3">
-      <div class="inp"><label>Inbound Shipping ($/unit) <span class="typ">typical: $0.50</span></label><input type="number" id="f-inbound" value="0.50" step="0.01" min="0"><div class="hint">China→FBA freight ÷ units</div></div>
-      <div class="inp"><label>Inbound Placement ($/unit) <span class="typ">typical: $0.00</span></label><input type="number" id="f-placement" value="0.00" step="0.01" min="0"><div class="hint">0 if using Amazon-optimised splits (5+ cartons)</div></div>
-      <div class="inp"><label>Prep &amp; Labelling ($/unit) <span class="typ">typical: $0.25</span></label><input type="number" id="f-prep" value="0.25" step="0.01" min="0"><div class="hint">FNSKU label + polybag if needed</div></div>
+      <div class="inp"><label data-tip='<strong>China→FBA freight cost per unit</strong>Total shipment cost ÷ units in shipment.<br>Typical: $0.40–$1.20/unit (sea freight).<br>Includes: freight, customs, drayage to FBA.<br>Exclude Inbound Placement fee (next field).'>Inbound Shipping ($/unit) ⓘ <span class="typ">typical: $0.50</span></label><input type="number" id="f-inbound" value="0.50" step="0.01" min="0"><div class="hint">China→FBA freight ÷ units</div></div>
+      <div class="inp"><label data-tip='<strong>FBA Inbound Placement Service fee</strong>Amazon charges this when splitting inventory across multiple FCs.<br>Typical: $0.20–$0.50/unit for standard items.<br>Can be $0 with Amazon-Optimised plan (5+ cartons).<br><a href="https://sellercentral.amazon.com/help/hub/reference/GC3Q44PBK8LHATE9" target="_blank">Amazon policy →</a>'>Inbound Placement ($/unit) ⓘ <span class="typ">typical: $0.00</span></label><input type="number" id="f-placement" value="0.00" step="0.01" min="0"><div class="hint">0 if using Amazon-optimised splits (5+ cartons)</div></div>
+      <div class="inp"><label data-tip='<strong>FBA prep and labelling cost per unit</strong>Covers: FNSKU label, polybag, bubble wrap, box insert.<br>Amazon prep service: $0.30–$2.00/unit.<br>3PL prep: typically $0.50–$1.50/unit.<br>Polybag requirement adds ~$0.30/unit.'>Prep &amp; Labelling ($/unit) ⓘ <span class="typ">typical: $0.25</span></label><input type="number" id="f-prep" value="0.25" step="0.01" min="0"><div class="hint">FNSKU label + polybag if needed</div></div>
     </div>
     <div class="g3">
-      <div class="inp"><label>Storage per unit/mo ($) <span class="typ">typical: $0.10</span></label><input type="number" id="f-storage" value="0.10" step="0.01" min="0"><div class="hint">Avg across ~45-day sell-through</div></div>
-      <div class="inp"><label>Q4 Storage Surcharge ($/unit) <span class="typ">typical: $0.00</span></label><input type="number" id="f-q4storage" value="0.00" step="0.01" min="0"><div class="hint">Oct–Dec only. $2.40/cu ft vs $0.87</div></div>
-      <div class="inp"><label>PPC per unit ($) <span class="typ">typical: $1.50</span></label><input type="number" id="f-ppc" value="1.50" step="0.01" min="0"><div class="hint">Total ad spend ÷ units sold (blended)</div></div>
+      <div class="inp"><label data-tip='<strong>Monthly FBA storage fee per unit</strong>Based on cubic feet of space used:<br>Jan–Sep: $0.78/cu ft · Oct–Dec: $2.40/cu ft<br>Typical per-unit cost: $0.05–$0.25 at 45-day turnover.<br><a href="https://sellercentral.amazon.com/help/hub/reference/G200612770" target="_blank">FBA storage rates →</a>'>Storage per unit/mo ($) ⓘ <span class="typ">typical: $0.10</span></label><input type="number" id="f-storage" value="0.10" step="0.01" min="0"><div class="hint">Avg across ~45-day sell-through</div></div>
+      <div class="inp"><label data-tip='<strong>Q4 storage surcharge (Oct–Dec only)</strong>FBA storage is 3× higher in Q4:<br>Base: $0.78/cu ft → Q4: $2.40/cu ft<br>Especially costly for large or slow-moving items.<br>Set to $0 if your product does not sell in Q4.'>Q4 Storage Surcharge ($/unit) ⓘ <span class="typ">typical: $0.00</span></label><input type="number" id="f-q4storage" value="0.00" step="0.01" min="0"><div class="hint">Oct–Dec only. $2.40/cu ft vs $0.87</div></div>
+      <div class="inp"><label data-tip='<strong>Blended PPC cost per unit</strong>Total monthly ad spend ÷ total units sold.<br>Unlike ACoS (ad spend ÷ ad revenue), this is your true per-unit ad cost.<br>Typical: $0.80–$2.50/unit for standard products.<br>Use actual blended figure from Advertising Console.'>PPC per unit ($) ⓘ <span class="typ">typical: $1.50</span></label><input type="number" id="f-ppc" value="1.50" step="0.01" min="0"><div class="hint">Total ad spend ÷ units sold (blended)</div></div>
     </div>
     <div class="g3">
-      <div class="inp"><label>Returns Allowance ($/unit) <span class="typ">typical: $0.30</span></label><input type="number" id="f-returns" value="0.30" step="0.01" min="0"><div class="hint">~3% return rate × avg $10 loss</div></div>
+      <div class="inp"><label data-tip='<strong>Returns allowance per unit</strong>Typical: return rate × average loss per return.<br>Standard FBA: ~3–5% rate · $8–$15 loss/return.<br>Example: 3% × $10 = $0.30/unit allowance.<br>Add more for fragile, apparel, or electronics.'>Returns Allowance ($/unit) ⓘ <span class="typ">typical: $0.30</span></label><input type="number" id="f-returns" value="0.30" step="0.01" min="0"><div class="hint">~3% return rate × avg $10 loss</div></div>
       <div class="inp"><label>Other / Overhead ($/unit) <span class="typ">typical: $0.20</span></label><input type="number" id="f-other" value="0.20" step="0.01" min="0"><div class="hint">Tools, photography, brand registry amortised</div></div>
       <div></div>
     </div>
@@ -809,21 +829,21 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
     <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Vine Programme</div>
     <div class="g3">
       <div class="inp">
-        <label class="check-row" style="margin:0;"><input type="checkbox" id="f-vine"> <span>Enrolled in Vine ($200/ASIN)</span></label>
+        <label class="check-row" style="margin:0;" data-tip='<strong>Amazon Vine Programme</strong>Cost: $200 flat fee per parent ASIN.<br>Enrol up to 30 units; trusted reviewers receive product free.<br>MUST enrol on launch day — cannot enrol after first review.<br>Enables review-count-based Stage 3 graduation.'><input type="checkbox" id="f-vine"> <span>Enrolled in Vine ($200/ASIN) ⓘ</span></label>
         <div class="hint">Vine: 30-day window, target 20 reviews. Adjusts stage graduation logic.</div>
       </div>
       <div class="inp"><label>Vine Target Reviews <span class="typ">typical: 20</span></label><input type="number" id="f-vine-units" value="20" step="1" min="1"><div class="hint">Amortised into cost: $200 ÷ annual units</div></div>
-      <div class="inp"><label>Expected Annual Units (for Vine cost calc)</label><input type="number" id="f-annual-units" value="500" step="1" min="1"><div class="hint">Used to amortise $200 Vine cost per unit</div></div>
+      <div class="inp"><label data-tip='<strong>Expected annual sales volume</strong>Used to spread the $200 Vine fee across units.<br>Example: $200 ÷ 500 units = $0.40/unit Vine cost.<br>Use a conservative forecast — not launch-week run rate.'>Expected Annual Units ⓘ <span style="font-weight:400;color:#555870;">(for Vine cost calc)</span></label><input type="number" id="f-annual-units" value="500" step="1" min="1"><div class="hint">Used to amortise $200 Vine cost per unit</div></div>
     </div>
 
     <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Advertising Targets</div>
     <div class="g3">
-      <div class="inp"><label>Target ACoS (%) <span class="req">REQUIRED</span> <span class="typ">typical: 25%</span></label><input type="number" id="f-tacos" value="25" step="1" min="1" max="100"></div>
-      <div class="inp"><label>Launch ACoS (%) <span class="typ">typical: 60%</span></label><input type="number" id="f-lacos" value="60" step="1" min="1" max="200"></div>
-      <div class="inp"><label>Conversion Rate CVR (%) <span class="typ">typical: 12%</span></label><input type="number" id="f-cvr" value="12" step="0.1" min="0.1" max="100"></div>
+      <div class="inp"><label data-tip='<strong>Target TACoS — Total Advertising Cost of Sales</strong>TACoS = Total ad spend ÷ Total revenue (organic + paid) × 100<br>Unlike ACoS, TACoS includes organic sales in the denominator.<br><table><tr><td>Stage 1–2 (launch)</td><td>20–40%</td></tr><tr><td>Stage 3 (growth)</td><td>10–20%</td></tr><tr><td>Stable</td><td>&lt;10%</td></tr></table>TACoS falling over time = organic rank building.'>Target ACoS (%) ⓘ <span class="req">REQUIRED</span> <span class="typ">typical: 25%</span></label><input type="number" id="f-tacos" value="25" step="1" min="1" max="100"></div>
+      <div class="inp"><label data-tip='<strong>Acceptable ACoS during Stage 1 launch</strong>During launch, rank &amp; impressions matter more than profitability.<br>Typical range: 50–80%. Exceeding 100% in week 1 is normal.<br>m19 uses this to set initial aggressive bid strategy.<br>Do NOT optimise for ACoS targets until Stage 3.'>Launch ACoS (%) ⓘ <span class="typ">typical: 60%</span></label><input type="number" id="f-lacos" value="60" step="1" min="1" max="200"></div>
+      <div class="inp"><label data-tip='<strong>Conversion Rate — Unit Session Percentage</strong>CVR = Units ordered ÷ Sessions × 100<br>Where to find: Seller Central → Business Reports → Detail Page Sales &amp; Traffic by ASIN → "Unit Session Percentage" column.<br>Typical: 5–20% (varies by category &amp; price).<br>Used to calculate Max CPC bid = Price × ACoS% × CVR%.'>Conversion Rate CVR (%) ⓘ <span class="typ">typical: 12%</span></label><input type="number" id="f-cvr" value="12" step="0.1" min="0.1" max="100"></div>
     </div>
 
-    <label class="check-row"><input type="checkbox" id="f-surcharge" checked> Include 3.5% FBA fuel surcharge (from Apr 17 2026)</label>
+    <label class="check-row" data-tip='<strong>FBA Fuel &amp; Inflation Surcharge</strong>Amazon added a 3.5% surcharge on all FBA fees from April 17 2026.<br>Applied as a multiplier on top of the base FBA fee.<br>Keep enabled unless Amazon officially removes it.'><input type="checkbox" id="f-surcharge" checked> Include 3.5% FBA fuel surcharge (from Apr 17 2026) ⓘ</label>
 
     <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Coupon (optional)</div>
     <div class="g2">
@@ -839,6 +859,8 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
     </div>
   </div>
 </div>
+
+<div id="tt"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2463,6 +2485,77 @@ if (_pendingShare) {
 document.getElementById('product-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('product-modal')) closeModal();
 });
+
+// ─── TOOLTIP SYSTEM ───
+(function() {
+  const tt = document.getElementById('tt');
+  let active = null;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el !== active) {
+      active = el;
+      if (el) { tt.innerHTML = el.getAttribute('data-tip'); tt.style.display = 'block'; }
+      else { tt.style.display = 'none'; }
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (!active) return;
+    const x = e.clientX + 14, y = e.clientY + 18;
+    const w = tt.offsetWidth, h = tt.offsetHeight;
+    tt.style.left = (x + w > innerWidth - 8 ? x - w - 28 : x) + 'px';
+    tt.style.top  = (y + h > innerHeight - 8 ? y - h - 36 : y) + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    if (!e.relatedTarget || !e.relatedTarget.closest('[data-tip]')) {
+      active = null; tt.style.display = 'none';
+    }
+  });
+})();
+
+// ─── DIMENSION AUTO-CALCULATOR ───
+function toggleDimCalc(el) {
+  const panel = document.getElementById('dim-calc');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : '';
+  el.querySelector('span').textContent = open ? 'Calculate from dimensions...' : 'Hide dimension calculator';
+}
+
+function calcDimTier() {
+  const l = parseFloat(document.getElementById('dim-l')?.value);
+  const w = parseFloat(document.getElementById('dim-w')?.value);
+  const h = parseFloat(document.getElementById('dim-h')?.value);
+  const weightOz = parseFloat(document.getElementById('f-weight')?.value) || 0;
+  const resultEl = document.getElementById('dim-result');
+  if (!resultEl) return;
+  if (!l || !w || !h) { resultEl.textContent = ''; return; }
+
+  const dims = [l, w, h].sort((a, b) => b - a);
+  const longest = dims[0], median = dims[1], shortest = dims[2];
+  const weightLbs = weightOz / 16;
+  const girth = 2 * (median + shortest);
+  const dimWeightLbs = (l * w * h) / 139;
+  const billedLbs = Math.max(weightLbs, dimWeightLbs);
+
+  let tier, tierName;
+  if (longest <= 15 && median <= 12 && shortest <= 0.75 && billedLbs <= 1) {
+    tier = 'ss'; tierName = 'Small Standard';
+  } else if (longest <= 18 && median <= 14 && shortest <= 8 && billedLbs <= 20) {
+    tier = 'ls'; tierName = 'Large Standard';
+  } else if (longest <= 59 && median <= 33 && shortest <= 33 && girth <= 130 && billedLbs <= 50) {
+    tier = 'lb'; tierName = 'Large Bulky';
+  } else {
+    tier = 'xl'; tierName = 'Extra-Large';
+  }
+
+  const sel = document.getElementById('f-sizetier');
+  if (sel) sel.value = tier;
+
+  let note = '';
+  if (dimWeightLbs > weightLbs) {
+    note = ` · DIM weight ${dimWeightLbs.toFixed(1)} lbs applies (heavier than actual ${weightLbs.toFixed(1)} lbs)`;
+  }
+  resultEl.innerHTML = `→ <strong>${tierName}</strong>${note}`;
+}
 </script>
 </body>
 </html>
