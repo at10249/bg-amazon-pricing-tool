@@ -306,6 +306,40 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 /* Import guide toggle */
 .hidden-guide{display:none;}
 
+/* Workflow view */
+.wf-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+@media(max-width:860px){.wf-grid{grid-template-columns:1fr;}}
+.wf-card{background:#1a1d27;border:1px solid #252836;border-radius:14px;padding:22px 24px;}
+.wf-title{font-size:0.95rem;font-weight:800;color:#fff;margin-bottom:4px;}
+.wf-sub{font-size:0.75rem;color:#555870;margin-bottom:20px;line-height:1.5;}
+.wf-step{display:flex;gap:14px;margin-bottom:18px;align-items:flex-start;}
+.wf-step:last-child{margin-bottom:0;}
+.wf-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;flex-shrink:0;margin-top:1px;}
+.wf-num.blue{background:#1a1d3a;border:2px solid #5b63f7;color:#818cf8;}
+.wf-num.green{background:#0f1f14;border:2px solid #166534;color:#4ade80;}
+.wf-step-body{flex:1;}
+.wf-step-title{font-size:0.82rem;font-weight:700;color:#e8eaf0;margin-bottom:3px;}
+.wf-step-desc{font-size:0.73rem;color:#6b6f8a;line-height:1.5;margin-bottom:8px;}
+.wf-step-path{font-size:0.68rem;color:#555870;background:#12141c;border:1px solid #1e2130;border-radius:6px;padding:5px 9px;margin-bottom:8px;line-height:1.6;font-family:monospace;}
+.wf-step-path strong{color:#8b8fa8;font-family:inherit;}
+.wf-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.wf-note{font-size:0.71rem;color:#555870;background:#12141c;border-left:3px solid #252836;border-radius:0 6px 6px 0;padding:8px 12px;margin-top:16px;line-height:1.55;}
+.wf-note strong{color:#8b8fa8;}
+.wf-divider{border:none;border-top:1px solid #252836;margin:16px 0;}
+
+/* Portfolio table */
+.ptable{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.ptable th{text-align:left;font-size:0.65rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;padding:8px 10px;border-bottom:1px solid #252836;white-space:nowrap;}
+.ptable td{padding:8px 10px;border-bottom:1px solid #1e2130;vertical-align:middle;white-space:nowrap;}
+.ptable tr:hover td{background:#1a1d27;}
+.ptable td.pt-name{font-weight:600;color:#e8eaf0;cursor:pointer;white-space:normal;min-width:140px;}
+.ptable td.pt-name:hover{color:#818cf8;}
+.ptable td.pt-asin{color:#555870;font-size:0.7rem;}
+.ptable td.pt-num{text-align:right;}
+.ptable td.pt-margin-pct{text-align:right;color:#4ade80;font-weight:700;}
+.ptable input.pt-margin-inp{width:58px;background:#0f1219;border:1px solid #252836;border-radius:5px;color:#fff;padding:4px 6px;font-size:0.8rem;text-align:right;}
+.ptable input.pt-margin-inp:focus{outline:none;border-color:#5b63f7;}
+
 /* Rule list */
 .rule{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #1e2130;}
 .rule:last-child{border-bottom:none;}
@@ -328,11 +362,14 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
   <button class="topbar-btn" id="btn-cny" onclick="setCurr('CNY')">¥ CNY</button>
   <div class="topbar-divider"></div>
   <button class="topbar-btn" onclick="exportJSON()" data-en="Export JSON" data-zh="导出JSON">Export JSON</button>
+  <button class="topbar-btn" onclick="exportCSV()" data-en="Export CSV" data-zh="导出CSV">Export CSV</button>
   <button class="topbar-btn" onclick="document.getElementById('import-file').click()" data-en="Import JSON" data-zh="导入JSON">Import JSON</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
   <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
   <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(event)">
   <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
+  <button class="topbar-btn" id="btn-portfolio" onclick="togglePortfolio()">Portfolio</button>
+  <button class="topbar-btn" id="btn-workflows" onclick="toggleWorkflows()">Workflows</button>
   <div class="topbar-divider"></div>
   <button class="topbar-btn" style="background:#1a2a1a;border-color:#166534;color:#4ade80;" onclick="document.getElementById('fba-preview-file').click()" data-en="⬆ Import Inventory" data-zh="⬆ 导入库存">⬆ Import Inventory</button>
   <input type="file" id="fba-preview-file" accept=".csv,.txt,.tsv" style="display:none" onchange="importFBAFeePreview(event)">
@@ -655,6 +692,167 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         </div>
       </div>
     </div>
+
+    <!-- PORTFOLIO VIEW -->
+    <div id="portfolio-view" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:#fff;">Portfolio Overview</div>
+          <div style="font-size:0.75rem;color:#555870;margin-top:2px;">Edit margin % per product — all four price tiers update instantly</div>
+        </div>
+        <div style="flex:1;"></div>
+        <button class="topbar-btn" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="ptable">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>ASIN</th>
+              <th style="text-align:right">COGS</th>
+              <th style="text-align:right">Margin %</th>
+              <th style="text-align:right">List Price</th>
+              <th style="text-align:right">Your Price</th>
+              <th style="text-align:right">Sale Price</th>
+              <th style="text-align:right">Clearance</th>
+              <th style="text-align:right">Net Margin</th>
+              <th style="text-align:right">FBA Fee</th>
+              <th style="text-align:right">Ref Fee</th>
+            </tr>
+          </thead>
+          <tbody id="portfolio-tbody"></tbody>
+        </table>
+        <div id="portfolio-empty" style="display:none;text-align:center;padding:48px;color:#555870;font-size:0.82rem;">No products yet. Add a product or import a CSV to get started.</div>
+      </div>
+    </div>
+
+    <!-- WORKFLOWS VIEW -->
+    <div id="workflows-view" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:#fff;">Workflows</div>
+          <div style="font-size:0.75rem;color:#555870;margin-top:2px;">Step-by-step processes for setup and routine work</div>
+        </div>
+      </div>
+
+      <div class="wf-grid">
+
+        <!-- CATALOG SETUP -->
+        <div class="wf-card">
+          <div class="wf-title">Catalog Setup</div>
+          <div class="wf-sub">One-time process to get your full product catalog into the tool with costs and pricing. Run this whenever you add new products to Amazon.</div>
+
+          <div class="wf-step">
+            <div class="wf-num blue">1</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Export your inventory from Amazon</div>
+              <div class="wf-step-desc">Download the FBA Fee Preview report — it contains every ASIN, product name, size tier and weight for your whole catalog.</div>
+              <div class="wf-step-path"><strong>Seller Central →</strong> Reports → Fulfillment → Fee Preview → Download</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" style="background:#1a2a1a;border-color:#166534;color:#4ade80;" onclick="document.getElementById('wf-inv-file').click()">⬆ Import Inventory</button>
+                <input type="file" id="wf-inv-file" accept=".csv,.txt,.tsv" style="display:none" onchange="importFBAFeePreview(event)">
+                <span style="font-size:0.71rem;color:#555870;">Creates a stub for each ASIN</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num blue">2</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Add COGS and margins</div>
+              <div class="wf-step-desc">Download the CSV template. Your partner fills in <strong style="color:#e8eaf0;">cogs</strong> and <strong style="color:#e8eaf0;">target_margin</strong> for each ASIN. Import it back — existing products update, new ones are created.</div>
+              <div class="wf-step-path"><strong>Columns needed:</strong> name, asin, cogs, target_margin<br><strong>Optional:</strong> length_in, width_in, height_in, weight_lb, category</div>
+              <div class="wf-actions">
+                <a href="products-template.csv" download class="topbar-btn">⬇ CSV Template</a>
+                <button class="topbar-btn" onclick="document.getElementById('wf-cogs-file').click()">⬆ Import CSV</button>
+                <input type="file" id="wf-cogs-file" accept=".csv" style="display:none" onchange="importCSV(event)">
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num blue">3</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Review and adjust margins</div>
+              <div class="wf-step-desc">Open the Portfolio view to see all products side by side. Edit the margin % per product and watch prices update live.</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="toggleWorkflows();togglePortfolio()">Open Portfolio →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num blue">4</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Export priced catalog</div>
+              <div class="wf-step-desc">Download a CSV with all four price tiers calculated for every product. Share with your partner or use to set listing prices in Seller Central.</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="exportCSV()">⬇ Export CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-note"><strong>Note:</strong> Current price is not in any Amazon export. After setting live prices on Seller Central, record them manually in each product's Check-ins tab.</div>
+        </div>
+
+        <!-- WEEKLY ROUTINE -->
+        <div class="wf-card">
+          <div class="wf-title">Weekly Check-in Routine</div>
+          <div class="wf-sub">Run this every week (or every two weeks at minimum) to keep ACoS, revenue and stage signals up to date across all products.</div>
+
+          <div class="wf-step">
+            <div class="wf-num green">1</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Export Business Report</div>
+              <div class="wf-step-desc">Gets total revenue and conversion rate per ASIN for the last 30 days.</div>
+              <div class="wf-step-path"><strong>Seller Central →</strong> Reports → Business Reports → Detail Page Sales and Traffic by ASIN → set date range → Download</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="wfOpenCheckinImport()">⬆ Import Report</button>
+                <span style="font-size:0.71rem;color:#555870;">Fills: Revenue, CVR</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num green">2</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Export Advertising Report</div>
+              <div class="wf-step-desc">Gets ACoS, ad spend and ad-attributed sales per ASIN. Use the same date range as step 1.</div>
+              <div class="wf-step-path"><strong>Advertising Console →</strong> Reports → Create Report → Sponsored Products → Advertised Product → set date range → Download</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="wfOpenCheckinImport()">⬆ Import Report</button>
+                <span style="font-size:0.71rem;color:#555870;">Fills: ACoS, Ad Spend, Ad Sales</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num green">3</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Enter current listing prices</div>
+              <div class="wf-step-desc">Amazon does not export current prices. Check each listing and enter the live price in the Check-ins tab. This is the only manual step.</div>
+              <div class="wf-actions">
+                <span style="font-size:0.71rem;color:#555870;">Open each product → Check-ins tab → Record New Check-in</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num green">4</div>
+            <div class="wf-step-body">
+              <div class="wf-step-title">Review signals across all products</div>
+              <div class="wf-step-desc">Check the Portfolio for kill signals (red sidebar dots) and products ready to graduate to the next ad stage.</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="toggleWorkflows();togglePortfolio()">Open Portfolio →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-note"><strong>Tip:</strong> Import the Business Report and Advertising Report separately — the tool auto-detects which is which and matches by ASIN. Import both before recording check-ins so the fields are pre-filled.</div>
+        </div>
+
+      </div>
+    </div>
   </div>
 </div>
 
@@ -954,7 +1152,9 @@ let state = {
   currency: 'USD',
   appMode: 'seller',
   activeProductId: null,
-  products: []
+  products: [],
+  showPortfolio: false,
+  showWorkflows: false
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -987,6 +1187,33 @@ function exportJSON() {
   URL.revokeObjectURL(url);
 }
 
+function exportCSV() {
+  if (!state.products.length) { alert('No products to export.'); return; }
+  const cols = ['name','asin','size_tier','weight_oz','cogs','target_margin',
+    'list_price','your_price','sale_price','clearance_price',
+    'net_margin_pct','fba_fee','referral_fee','other_costs_per_unit','break_even_acos_pct'];
+  const q = v => (typeof v === 'string' && v.includes(',')) ? `"${v.replace(/"/g,'""')}"` : v;
+  const rows = [cols.join(',')];
+  state.products.forEach(p => {
+    const r = calcPrices(p.inputs);
+    rows.push([
+      q(p.name), q(p.asin || ''),
+      p.inputs.sizetier, p.inputs.weight.toFixed(1),
+      p.inputs.cogs.toFixed(2), p.inputs.margin,
+      r.listP.toFixed(2), r.yp.toFixed(2), r.saleP.toFixed(2), r.discP.toFixed(2),
+      r.ypF.pct.toFixed(1), r.ypF.fba.toFixed(2), r.ypF.ref.toFixed(2),
+      r.ypF.otherCosts.toFixed(2), r.beAcos.toFixed(1)
+    ].join(','));
+  });
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `amazon-pricing-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function importJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1013,6 +1240,19 @@ const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
   electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
   jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
 
+function sizeTierFromDims(l, w, h, weightOz) {
+  const dims = [l, w, h].sort((a, b) => b - a);
+  const longest = dims[0], median = dims[1], shortest = dims[2];
+  const weightLbs = weightOz / 16;
+  const girth = 2 * (median + shortest);
+  const dimWeightLbs = (l * w * h) / 139;
+  const billedLbs = Math.max(weightLbs, dimWeightLbs);
+  if (longest <= 15 && median <= 12 && shortest <= 0.75 && billedLbs <= 1) return 'ss';
+  if (longest <= 18 && median <= 14 && shortest <= 8 && billedLbs <= 20) return 'ls';
+  if (longest <= 59 && median <= 33 && shortest <= 33 && girth <= 130 && billedLbs <= 50) return 'lb';
+  return 'xl';
+}
+
 function importCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1021,41 +1261,98 @@ function importCSV(event) {
     const lines = e.target.result.split('\n').filter(l => l.trim());
     if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
     const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
-    let imported = 0;
+    const has = col => headers.includes(col);
+    let created = 0, updated = 0, skipped = 0;
+
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
       const row = {};
       headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
-      if (!row.name || !row.cogs) continue;
-      const p = createDefaultProduct();
-      p.name = row.name || 'Unnamed Product';
-      p.asin = row.asin || '';
-      p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
-      p.inputs.sizetier = ['ss','ls','lb','xl'].includes(row.size_tier) ? row.size_tier : 'ss';
-      p.inputs.weight = parseFloat(row.weight_oz) || 8;
-      p.inputs.cogs = parseFloat(row.cogs) || 6;
-      p.inputs.margin = parseFloat(row.target_margin) || 30;
-      p.inputs.inbound = parseFloat(row.inbound_shipping) || 0.50;
-      p.inputs.placement = parseFloat(row.inbound_placement) || 0;
-      p.inputs.prep = parseFloat(row.prep_labelling) || 0.25;
-      p.inputs.storage = parseFloat(row.storage) || 0.10;
-      p.inputs.q4storage = parseFloat(row.q4_storage) || 0;
-      p.inputs.ppc = parseFloat(row.ppc_per_unit) || 1.50;
-      p.inputs.returns = parseFloat(row.returns_allowance) || 0.30;
-      p.inputs.vine = row.vine_enrolled?.toLowerCase() === 'true';
-      p.inputs.vineUnits = parseInt(row.vine_units) || 20;
-      p.inputs.annualUnits = parseInt(row.annual_units) || 500;
-      p.inputs.other = parseFloat(row.other_overhead) || 0.20;
-      p.inputs.tacos = parseFloat(row.target_acos) || 25;
-      p.inputs.lacos = parseFloat(row.launch_acos) || 60;
-      p.inputs.cvr = parseFloat(row.cvr) || 12;
-      p.notes = row.notes || '';
-      state.products.push(p);
-      imported++;
+
+      const asin = row.asin?.trim().toUpperCase() || '';
+      // Match existing product by ASIN first, then by name
+      let existing = asin ? state.products.find(p => p.asin && p.asin.toUpperCase() === asin) : null;
+      if (!existing && row.name) existing = state.products.find(p => p.name === row.name);
+
+      if (existing) {
+        // UPDATE — only overwrite fields that are present as columns in this CSV
+        if (row.name) existing.name = row.name;
+        if (asin) existing.asin = asin;
+        if (has('category') && row.category) existing.inputs.category = CAT_MAP[row.category.toLowerCase()] || existing.inputs.category;
+
+        const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16
+          : (has('weight_oz') && row.weight_oz) ? parseFloat(row.weight_oz) : null;
+        if (weightOz != null) existing.inputs.weight = weightOz;
+        const wOz = weightOz ?? existing.inputs.weight;
+
+        if (has('size_tier') && ['ss','ls','lb','xl'].includes(row.size_tier)) {
+          existing.inputs.sizetier = row.size_tier;
+        } else if (row.length_in && row.width_in && row.height_in) {
+          existing.inputs.sizetier = sizeTierFromDims(parseFloat(row.length_in), parseFloat(row.width_in), parseFloat(row.height_in), wOz);
+        }
+
+        if (has('cogs') && row.cogs)                         existing.inputs.cogs      = parseFloat(row.cogs);
+        if (has('target_margin') && row.target_margin)        existing.inputs.margin    = parseFloat(row.target_margin);
+        if (has('inbound_shipping') && row.inbound_shipping)  existing.inputs.inbound   = parseFloat(row.inbound_shipping);
+        if (has('inbound_placement') && row.inbound_placement)existing.inputs.placement = parseFloat(row.inbound_placement);
+        if (has('prep_labelling') && row.prep_labelling)      existing.inputs.prep      = parseFloat(row.prep_labelling);
+        if (has('storage') && row.storage)                    existing.inputs.storage   = parseFloat(row.storage);
+        if (has('q4_storage') && row.q4_storage)              existing.inputs.q4storage = parseFloat(row.q4_storage);
+        if (has('ppc_per_unit') && row.ppc_per_unit)          existing.inputs.ppc       = parseFloat(row.ppc_per_unit);
+        if (has('returns_allowance') && row.returns_allowance)existing.inputs.returns   = parseFloat(row.returns_allowance);
+        if (has('vine_enrolled') && row.vine_enrolled)        existing.inputs.vine      = row.vine_enrolled.toLowerCase() === 'true';
+        if (has('vine_units') && row.vine_units)              existing.inputs.vineUnits = parseInt(row.vine_units);
+        if (has('annual_units') && row.annual_units)          existing.inputs.annualUnits = parseInt(row.annual_units);
+        if (has('other_overhead') && row.other_overhead)      existing.inputs.other     = parseFloat(row.other_overhead);
+        if (has('target_acos') && row.target_acos)            existing.inputs.tacos     = parseFloat(row.target_acos);
+        if (has('launch_acos') && row.launch_acos)            existing.inputs.lacos     = parseFloat(row.launch_acos);
+        if (has('cvr') && row.cvr)                            existing.inputs.cvr       = parseFloat(row.cvr);
+        if (has('notes') && row.notes)                        existing.notes            = row.notes;
+        updated++;
+      } else {
+        // CREATE — require at minimum a name (or asin) and cogs
+        if ((!row.name && !asin) || !row.cogs) { skipped++; continue; }
+        const p = createDefaultProduct();
+        p.name = row.name || `Product ${asin}`;
+        p.asin = asin;
+        p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
+        const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16 : (parseFloat(row.weight_oz) || 8);
+        p.inputs.weight = weightOz;
+        if (['ss','ls','lb','xl'].includes(row.size_tier)) {
+          p.inputs.sizetier = row.size_tier;
+        } else if (row.length_in && row.width_in && row.height_in) {
+          p.inputs.sizetier = sizeTierFromDims(parseFloat(row.length_in), parseFloat(row.width_in), parseFloat(row.height_in), weightOz);
+        } else {
+          p.inputs.sizetier = 'ss';
+        }
+        p.inputs.cogs        = parseFloat(row.cogs) || 6;
+        p.inputs.margin      = parseFloat(row.target_margin) || 30;
+        p.inputs.inbound     = parseFloat(row.inbound_shipping) || 0.50;
+        p.inputs.placement   = parseFloat(row.inbound_placement) || 0;
+        p.inputs.prep        = parseFloat(row.prep_labelling) || 0.25;
+        p.inputs.storage     = parseFloat(row.storage) || 0.10;
+        p.inputs.q4storage   = parseFloat(row.q4_storage) || 0;
+        p.inputs.ppc         = parseFloat(row.ppc_per_unit) || 1.50;
+        p.inputs.returns     = parseFloat(row.returns_allowance) || 0.30;
+        p.inputs.vine        = row.vine_enrolled?.toLowerCase() === 'true';
+        p.inputs.vineUnits   = parseInt(row.vine_units) || 20;
+        p.inputs.annualUnits = parseInt(row.annual_units) || 500;
+        p.inputs.other       = parseFloat(row.other_overhead) || 0.20;
+        p.inputs.tacos       = parseFloat(row.target_acos) || 25;
+        p.inputs.lacos       = parseFloat(row.launch_acos) || 60;
+        p.inputs.cvr         = parseFloat(row.cvr) || 12;
+        p.notes = row.notes || '';
+        state.products.push(p);
+        created++;
+      }
     }
     saveToStorage();
     renderAll();
-    alert(`Imported ${imported} product${imported !== 1 ? 's' : ''}.`);
+    const parts = [];
+    if (updated) parts.push(`${updated} product${updated !== 1 ? 's' : ''} updated`);
+    if (created) parts.push(`${created} created`);
+    if (skipped) parts.push(`${skipped} skipped (missing name/ASIN or COGS)`);
+    alert(parts.length ? parts.join(', ') + '.' : 'No changes made.');
   };
   reader.readAsText(file);
   event.target.value = '';
@@ -1188,8 +1485,12 @@ function calcPrices(inputs) {
 
   // RULE: Derive other price tiers from Your Price using discount multipliers
   const listP = roundEnd(yp * LIST_PREMIUM - (1 - PRICE_LIST_END), PRICE_LIST_END);
-  const saleP = roundEnd(yp * SALE_DISCOUNT - (1 - PRICE_SALE_END), PRICE_SALE_END);
-  // Guard: for cheap products (<~$8), rounding can push discP above saleP — step down one dollar
+  // RULE: Sale price must be ≥5% below Your Price for Amazon badge to show.
+  // roundEnd can overshoot upward by nearly $1, shrinking the discount below 5%.
+  // Step down by $1 until the threshold is met.
+  let saleP = roundEnd(yp * SALE_DISCOUNT - (1 - PRICE_SALE_END), PRICE_SALE_END);
+  while (saleP > 0 && (yp - saleP) / yp < 0.05) saleP -= 1;
+  // Guard: rounding can push discP above saleP — step down one dollar
   let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1 - PRICE_DISC_END), PRICE_DISC_END);
   if (discP >= saleP) discP -= 1;
 
@@ -1385,6 +1686,12 @@ function setCurr(c) {
 
 function setAppMode(m) {
   state.appMode = m;
+  state.showPortfolio = false;
+  state.showWorkflows = false;
+  document.getElementById('btn-portfolio').classList.remove('active');
+  document.getElementById('btn-workflows').classList.remove('active');
+  document.getElementById('portfolio-view').style.display  = 'none';
+  document.getElementById('workflows-view').style.display  = 'none';
   document.getElementById('sb-seller').classList.toggle('active', m==='seller');
   document.getElementById('sb-mfg').classList.toggle('active', m==='mfg');
   document.getElementById('product-view').style.display   = m==='seller' && state.activeProductId ? '' : 'none';
@@ -1885,8 +2192,10 @@ function calcMfg() {
   const ypProfit = yp - mfgPrice - sOther - ypFba - ypRef;
   const ypPct = ypProfit/yp*100;
 
-  const saleP = roundEnd(yp * SALE_DISCOUNT - (1-PRICE_SALE_END), PRICE_SALE_END);
-  const discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1-PRICE_DISC_END), PRICE_DISC_END);
+  let saleP = roundEnd(yp * SALE_DISCOUNT - (1-PRICE_SALE_END), PRICE_SALE_END);
+  while (saleP > 0 && (yp - saleP) / yp < 0.05) saleP -= 1;
+  let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1-PRICE_DISC_END), PRICE_DISC_END);
+  if (discP >= saleP) discP -= 1;
   const listP = roundEnd(yp * LIST_PREMIUM - (1-PRICE_LIST_END), PRICE_LIST_END);
   const getM = (pr) => { const f=getFBAFee(tier,wOz,pr)*(sur?1.035:1); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
   const pctOff = (a,b) => Math.round((1-b/a)*100);
@@ -2073,11 +2382,96 @@ function renderAll() {
   renderSidebar();
   const hasActive = state.activeProductId && state.products.find(x => x.id === state.activeProductId);
   const isMfg = state.appMode === 'mfg';
-  document.getElementById('empty-state').style.display    = (!hasActive && !isMfg) ? '' : 'none';
-  document.getElementById('product-view').style.display   = (hasActive && !isMfg) ? '' : 'none';
-  document.getElementById('mfg-view').style.display       = isMfg ? '' : 'none';
-  if (hasActive && !isMfg) renderProductView();
-  if (isMfg) calcMfg();
+  const isPortfolio = state.showPortfolio;
+  const isWorkflows = state.showWorkflows;
+  document.getElementById('empty-state').style.display     = (!hasActive && !isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
+  document.getElementById('product-view').style.display    = (hasActive && !isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
+  document.getElementById('mfg-view').style.display        = (isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
+  document.getElementById('portfolio-view').style.display  = isPortfolio ? '' : 'none';
+  document.getElementById('workflows-view').style.display  = isWorkflows ? '' : 'none';
+  if (hasActive && !isMfg && !isPortfolio && !isWorkflows) renderProductView();
+  if (isMfg && !isPortfolio && !isWorkflows) calcMfg();
+  if (isPortfolio) renderPortfolio();
+  document.getElementById('btn-portfolio').classList.toggle('active', isPortfolio);
+  document.getElementById('btn-workflows').classList.toggle('active', isWorkflows);
+}
+
+function togglePortfolio() {
+  state.showPortfolio = !state.showPortfolio;
+  if (state.showPortfolio) state.showWorkflows = false;
+  renderAll();
+}
+
+function toggleWorkflows() {
+  state.showWorkflows = !state.showWorkflows;
+  if (state.showWorkflows) state.showPortfolio = false;
+  renderAll();
+}
+
+function wfOpenCheckinImport() {
+  // Navigate to the active product's check-ins tab, or prompt to select one
+  if (!state.activeProductId) {
+    alert('Select a product first, then import the report from its Check-ins tab.');
+    return;
+  }
+  state.showWorkflows = false;
+  renderAll();
+  // Switch to check-ins tab
+  const checkinTab = document.querySelector('.main-tab[onclick*="tab-checkin"]');
+  if (checkinTab) checkinTab.click();
+  document.getElementById('amz-report-file')?.click();
+}
+
+function renderPortfolio() {
+  const tbody = document.getElementById('portfolio-tbody');
+  const empty = document.getElementById('portfolio-empty');
+  if (!state.products.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = state.products.map(p => {
+    const r = calcPrices(p.inputs);
+    return `<tr data-pid="${p.id}">
+      <td class="pt-name" onclick="portfolioSelectProduct('${p.id}')">${p.name}</td>
+      <td class="pt-asin">${p.asin || '—'}</td>
+      <td class="pt-num">${fmtC(p.inputs.cogs)}</td>
+      <td class="pt-num"><input class="pt-margin-inp" type="number" min="1" max="90" step="1" value="${p.inputs.margin}" oninput="updatePortfolioMargin('${p.id}',this.value)"></td>
+      <td class="pt-num">${fmtC(r.listP)}</td>
+      <td class="pt-num">${fmtC(r.yp)}</td>
+      <td class="pt-num">${fmtC(r.saleP)}</td>
+      <td class="pt-num">${fmtC(r.discP)}</td>
+      <td class="pt-margin-pct">${r.ypF.pct.toFixed(1)}%</td>
+      <td class="pt-num">${fmtC(r.ypF.fba)}</td>
+      <td class="pt-num">${fmtC(r.ypF.ref)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updatePortfolioMargin(productId, newMargin) {
+  const p = state.products.find(x => x.id === productId);
+  if (!p) return;
+  const m = parseFloat(newMargin);
+  if (isNaN(m) || m < 1 || m > 90) return;
+  p.inputs.margin = m;
+  saveToStorage();
+  const r = calcPrices(p.inputs);
+  const row = document.querySelector(`#portfolio-tbody tr[data-pid="${productId}"]`);
+  if (!row) return;
+  const td = row.querySelectorAll('td');
+  td[4].textContent = fmtC(r.listP);
+  td[5].textContent = fmtC(r.yp);
+  td[6].textContent = fmtC(r.saleP);
+  td[7].textContent = fmtC(r.discP);
+  td[8].textContent = r.ypF.pct.toFixed(1) + '%';
+  td[9].textContent = fmtC(r.ypF.fba);
+  td[10].textContent = fmtC(r.ypF.ref);
+}
+
+function portfolioSelectProduct(id) {
+  state.showPortfolio = false;
+  selectProduct(id);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
