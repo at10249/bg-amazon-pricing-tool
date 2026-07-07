@@ -362,12 +362,64 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .rdot.r{background:#f87171;}.rdot.a{background:#fbbf24;}.rdot.g{background:#4ade80;}.rdot.p{background:#a78bfa;}
 .rule-txt{font-size:0.76rem;color:#8b8fa8;line-height:1.45;}
 .rule-txt strong{color:#e8eaf0;}
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE (<640px) — hamburger drawer sidebar, stacked grids,
+   full-screen modal, scrollable timeline, 44px tap targets
+═══════════════════════════════════════════════════════════ */
+.hamburger{display:none;}
+.sidebar-scrim{display:none;position:fixed;inset:0;top:52px;background:rgba(0,0,0,0.55);z-index:140;}
+@media(max-width:640px){
+  /* Topbar scrolls horizontally instead of wrapping/overflowing */
+  .topbar{overflow-x:auto;gap:8px;padding:0 10px;scrollbar-width:none;}
+  .topbar::-webkit-scrollbar{display:none;}
+  .topbar-btn{display:inline-flex;align-items:center;min-height:44px;border-radius:8px;flex-shrink:0;}
+  .topbar{height:auto;min-height:52px;}
+  .app-body{height:auto;min-height:calc(100vh - 52px);}
+  .hamburger{display:inline-flex;justify-content:center;font-size:1.1rem;padding:5px 14px;}
+
+  /* Sidebar collapses into an off-canvas drawer */
+  .sidebar{position:fixed;top:0;left:0;bottom:0;z-index:150;width:min(280px,85vw);transform:translateX(-105%);transition:transform 0.2s ease;box-shadow:8px 0 24px rgba(0,0,0,0.45);}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-scrim.open{display:block;top:0;}
+  .sidebar-item{padding:12px 10px;}
+  .sidebar-add{width:44px;height:44px;font-size:1.2rem;}
+  .sidebar-mode-btn{min-height:44px;}
+
+  .main{padding:14px 12px;min-width:0;}
+
+  /* Form grids stack to a single column; let items shrink to viewport */
+  .g2,.g3,.g4{grid-template-columns:1fr;}
+  .g2>*,.g3>*,.g4>*{min-width:0;}
+  .checkin-grid{grid-template-columns:1fr 1fr;}
+
+  /* Stage timeline scrolls horizontally rather than overflowing */
+  .stage-track{overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
+  .stage-step{min-width:80px;flex-shrink:0;}
+  .main-tabs{overflow-x:auto;scrollbar-width:none;}
+  .main-tabs::-webkit-scrollbar{display:none;}
+  .main-tab{white-space:nowrap;flex-shrink:0;}
+
+  /* Product modal goes full-screen with a sticky footer */
+  .modal-overlay{align-items:stretch;justify-content:stretch;}
+  .modal{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;border-radius:0;padding:16px 16px 0;}
+  .modal-footer{position:sticky;bottom:0;background:#1a1d27;padding:12px 0 max(12px,env(safe-area-inset-bottom));margin-top:14px;z-index:5;}
+  .flow-modal{width:100%;max-height:100dvh;border-radius:0;}
+
+  /* Minimum 44px tap targets */
+  .btn,.tab,.main-tab,.grad-btn,.empty-btn,.toast-btn,.sidebar-mode-btn{min-height:44px;}
+  .checkin-del{min-width:44px;min-height:44px;}
+  input[type=number],input[type=text],select,textarea{min-height:44px;font-size:16px;} /* 16px stops iOS auto-zoom */
+  input[type=checkbox]{width:22px;height:22px;}
+  .check-row{min-height:44px;}
+}
 </style>
 </head>
 <body>
 
 <!-- ════════════════════ TOP BAR ════════════════════ -->
 <div class="topbar">
+  <button class="topbar-btn hamburger" id="btn-hamburger" onclick="toggleSidebar()" title="Products" aria-label="Toggle product list">☰</button>
   <div class="topbar-brand">Amazon FBA <span>Pricing Tool</span></div>
   <div class="topbar-spacer"></div>
   <button class="topbar-btn active" id="btn-en" onclick="setLang('en')">🇬🇧 EN</button>
@@ -392,6 +444,9 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 
 <!-- ════════════════════ APP BODY ════════════════════ -->
 <div class="app-body">
+
+  <!-- Scrim behind the mobile sidebar drawer -->
+  <div class="sidebar-scrim" id="sidebar-scrim" onclick="toggleSidebar(false)"></div>
 
   <!-- SIDEBAR -->
   <div class="sidebar">
@@ -1780,8 +1835,21 @@ function setAppMode(m) {
   document.getElementById('product-view').style.display   = m==='seller' && state.activeProductId ? '' : 'none';
   document.getElementById('mfg-view').style.display       = m==='mfg' ? '' : 'none';
   document.getElementById('empty-state').style.display    = m==='seller' && !state.activeProductId ? '' : 'none';
+  toggleSidebar(false);
   if (m==='mfg') calcMfg();
   saveToStorage();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MOBILE SIDEBAR DRAWER (<640px — see mobile CSS block)
+// ═══════════════════════════════════════════════════════════════════════════
+function toggleSidebar(force) {
+  const sb = document.querySelector('.sidebar');
+  const scrim = document.getElementById('sidebar-scrim');
+  if (!sb || !scrim) return;
+  const open = typeof force === 'boolean' ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  scrim.classList.toggle('open', open);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1833,6 +1901,7 @@ function selectProduct(id) {
   state.appMode = 'seller';
   document.getElementById('sb-seller').classList.add('active');
   document.getElementById('sb-mfg').classList.remove('active');
+  toggleSidebar(false);
   saveToStorage();
   renderAll();
 }
@@ -2422,6 +2491,7 @@ function openAddModal() {
   document.getElementById('f-coupon-vol').value = d.couponVol;
   document.getElementById('f-notes').value = '';
   resetLandedCalc();
+  toggleSidebar(false);
   openModalEl('product-modal');
 }
 
@@ -3150,6 +3220,10 @@ document.addEventListener('keydown', (e) => {
       if (e.shiftKey && (active === first || !overlay.contains(active))) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && (active === last || !overlay.contains(active))) { e.preventDefault(); first.focus(); }
     }
+    return;
+  }
+  if (e.key === 'Escape') {
+    toggleSidebar(false); // close the mobile drawer if open
     return;
   }
   if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey && !e.altKey) {
