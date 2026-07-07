@@ -677,6 +677,26 @@ Rules:
 **TO UPDATE:** change `BACKUP_NUDGE_DAYS` (nudge threshold) or
 `BACKUP_SNOOZE_DAYS` (snooze length).
 
+## 17. THEME (DARK / LIGHT)
+
+**CODE LOCATION:** `index.html` → CSS variable blocks `:root` / `html.light` (top of `<style>`), constant `THEME_KEY`, functions `applyTheme()` / `toggleTheme()` / `initTheme()`, toggle button `#btn-theme`
+
+Rules:
+- Every component color reads a CSS variable `var(--c-XXXXXX)`, named after its
+  dark-mode hex value. The dark palette is defined on `:root`, the light palette
+  on `html.light`. Components are NEVER forked per theme — switching themes is a
+  single class toggle on `<html>`.
+- The chosen theme persists in localStorage under `THEME_KEY`
+  (`amazon_pricing_theme`) — separate from app data so Import JSON cannot
+  change the user's theme.
+- **First visit** (no saved choice): follows the OS `prefers-color-scheme`.
+  After the first manual toggle, the explicit choice always wins.
+- `color-scheme: dark|light` is set per theme so native form controls match.
+
+**TO UPDATE a color:** change the variable value in `:root` (dark) and/or
+`html.light` (light). **TO ADD a color:** add it to both blocks and reference
+it as `var(--c-...)` — never hardcode a hex in a component style.
+
 ---
 
 *Last updated: July 2026*
