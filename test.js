@@ -23,6 +23,7 @@ const SALE_DISCOUNT        = 0.94;
 const CLEARANCE_DISCOUNT   = 0.91;
 const LIST_PREMIUM         = 1.10;
 const PRICE_MATCH_TOLERANCE= 0.02;
+const SENSITIVITY_OFFSETS  = [-2, -1, 0, 1, 2];
 
 // ── Functions (mirrored from app) ────────────────────────────────────────────
 function getReferralFee(catKey, price) {
@@ -114,6 +115,33 @@ function calcPrices(inputs) {
     cogs, otherCosts, vinePerUnit, maxCPC, beAcos,
     targetRoas: 100/tacos, launchRoas: 100/lacos,
     maxCPClaunch: yp * (lacos/100) * (cvr/100) };
+}
+
+function priceSensitivity(inputs, basePrice) {
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  return SENSITIVITY_OFFSETS.map(offset => {
+    const price = +(basePrice + offset).toFixed(2);
+    if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? 1.035 : 1.0);
+    const ref = getReferralFee(inputs.category, price);
+    const profit = price - inputs.cogs - fba - ref - otherCosts;
+    return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
+  });
+}
+
+function breakEvenUnits(monthlyOverheads, profitPerUnit) {
+  if (!(monthlyOverheads > 0)) return 0;
+  if (!(profitPerUnit > 0)) return null;
+  return Math.ceil(monthlyOverheads / profitPerUnit);
+}
+
+function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
+  if (!(cnyPrice > 0) || !(rate > 0)) return null;
+  const goodsDuty = (cnyPrice / rate) * (1 + (dutyPct > 0 ? dutyPct : 0) / 100);
+  const freight = freightPerUnit > 0 ? freightPerUnit : 0;
+  return { goodsDuty, freight, total: goodsDuty + freight };
 }
 
 function classifyPrice(currentPrice, prices) {
@@ -562,6 +590,64 @@ const pAt999  = calcPrices({...base, cogs:2, margin:25,
   inbound:0.30, ppc:0.50, prep:0.10, returns:0.10, storage:0.05, other:0.05});
 is(pAt999.ypF.fba < fee_1000 * 1.035 || pAt999.yp > 10,
   `Solver lands product at yp=$${pAt999.yp} — FBA band choice is consistent`);
+
+// ─── 8. priceSensitivity ─────────────────────────────────────────────────────
+describe('priceSensitivity — ±$2 margin table');
+
+const sens = priceSensitivity(base, p.yp);
+eq(sens.length, 5, '5 rows: −$2, −$1, current, +$1, +$2');
+is(sens[2].isCurrent, 'centre row flagged as current');
+is(!sens[0].isCurrent && !sens[4].isCurrent, 'outer rows not flagged as current');
+eq(sens[2].price, p.yp, 'centre row price = Your Price');
+eq(sens[0].price, +(p.yp - 2).toFixed(2), 'first row = yp − $2');
+eq(sens[4].price, +(p.yp + 2).toFixed(2), 'last row = yp + $2');
+eq(+sens[2].profit.toFixed(2), +p.ypF.profit.toFixed(2), 'centre row profit matches calcPrices profit at yp');
+eq(+sens[2].pct.toFixed(4), +p.ypF.pct.toFixed(4), 'centre row margin matches calcPrices margin at yp');
+// Within one FBA band, 15% referral: +$1 price → +$0.85 profit exactly
+eq(+(sens[3].profit - sens[2].profit).toFixed(2), 0.85, '+$1 price → +$0.85 profit (15% ref, same FBA band)');
+is(sens[4].pct > sens[2].pct && sens[2].pct > sens[0].pct, 'margin % increases with price within one band');
+
+// FBA band cliff: rows straddling $10 recompute fees per-row
+const cliff = priceSensitivity(base, 11.95); // rows at 9.95, 10.95, 11.95, 12.95, 13.95
+eq(+cliff[0].fba.toFixed(2), +(2.66 * 1.035).toFixed(2), 'row at $9.95 uses <$10 FBA band ($2.66 base)');
+eq(+cliff[1].fba.toFixed(2), +(3.54 * 1.035).toFixed(2), 'row at $10.95 uses $10–50 FBA band ($3.54 base)');
+is(cliff[1].profit < cliff[0].profit, 'crossing the $10 band: +$1 price yields LOWER profit (cliff visible)');
+
+// Guard: offsets that push price ≤ 0 are marked invalid, no crash
+is(!priceSensitivity(base, 1.50)[0].valid, 'price ≤ 0 row marked invalid (base $1.50, offset −$2)');
+is(priceSensitivity(base, 1.50)[2].valid, 'centre row still valid at base $1.50');
+
+// ─── 9. breakEvenUnits ───────────────────────────────────────────────────────
+describe('breakEvenUnits — fixed overheads ÷ contribution margin');
+
+eq(breakEvenUnits(500, 5),     100, '$500 ÷ $5.00/unit = 100 units');
+eq(breakEvenUnits(500, 6.29),   80, '$500 ÷ $6.29/unit = 79.49 → rounds UP to 80');
+eq(breakEvenUnits(1, 1000),      1, 'Tiny overhead still needs ≥1 whole unit');
+eq(breakEvenUnits(0, 5),         0, 'Zero overheads → 0 units needed');
+eq(breakEvenUnits(-10, 5),       0, 'Negative overheads treated as none');
+eq(breakEvenUnits(500, 0),    null, 'Zero contribution margin → null (never breaks even)');
+eq(breakEvenUnits(500, -2),   null, 'Negative contribution margin → null (never breaks even)');
+
+// ─── 10. landedCostUSD ───────────────────────────────────────────────────────
+describe('landedCostUSD — CNY → USD landed cost');
+
+const lc1 = landedCostUSD(43.5, 7.25, 0, 0);
+eq(+lc1.goodsDuty.toFixed(2), 6.00, '¥43.50 @ 7.25 = $6.00 goods (no duty)');
+eq(lc1.freight, 0,                  'No freight → $0');
+eq(+lc1.total.toFixed(2), 6.00,     'Total = $6.00');
+
+const lc2 = landedCostUSD(72.5, 7.25, 10, 0);
+eq(+lc2.goodsDuty.toFixed(2), 11.00, '¥72.50 @ 7.25 + 10% duty = $11.00');
+
+const lc3 = landedCostUSD(72.5, 7.25, 10, 1);
+eq(+lc3.goodsDuty.toFixed(2), 11.00, 'Duty applies to goods value only…');
+eq(lc3.freight, 1,                   '…freight kept separate ($1.00)');
+eq(+lc3.total.toFixed(2), 12.00,     'Total = goods+duty $11.00 + freight $1.00 = $12.00');
+
+is(landedCostUSD(0, 7.25, 0, 0)  === null, 'Zero CNY price → null');
+is(landedCostUSD(-5, 7.25, 0, 0) === null, 'Negative CNY price → null');
+is(landedCostUSD(10, 0, 0, 0)    === null, 'Zero exchange rate → null (no division by zero)');
+eq(+landedCostUSD(72.5, 7.25, -5, 0).goodsDuty.toFixed(2), 10.00, 'Negative duty treated as 0%');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY

@@ -493,5 +493,47 @@ the Amazon channel.
 
 ---
 
-*Last updated: June 2026*
+## 15. CALCULATOR EXTRAS
+
+### 15.1 Price Sensitivity Table
+**CODE LOCATION:** `index.html` → constant `SENSITIVITY_OFFSETS`, function `priceSensitivity(inputs, basePrice)`, rendered in `renderCalcTab()`
+
+Shows net profit ($/unit) and net margin (%) at Your Price −$2, −$1, current, +$1, +$2.
+- Offsets: `SENSITIVITY_OFFSETS = [-2, -1, 0, 1, 2]` (dollar amounts relative to Your Price)
+- FBA and referral fees are **recomputed at each price point**, so FBA price-band cliffs
+  ($10 and $50 boundaries) are visible in the table — a $1 price increase across the $10
+  boundary can *reduce* profit because the FBA fee jumps ~$0.88.
+- The current-price row is highlighted. Rows where price ≤ 0 are suppressed.
+- Margin colour coding: green ≥ `LOW_MARGIN_WARNING` (20%), amber 0–20%, red < 0%.
+
+**TO UPDATE:** change `SENSITIVITY_OFFSETS` to widen/narrow the range (e.g. `[-5,-2,0,2,5]`).
+
+### 15.2 Break-even Units / Month
+**CODE LOCATION:** `index.html` → function `breakEvenUnits(monthlyOverheads, profitPerUnit)`, UI in `renderBreakevenCalc(p)`, input persisted as `p.inputs.monthlyOverhead`
+
+**Rule:** `units = ceil(fixedMonthlyOverheads ÷ contributionMarginPerUnit)`
+- Contribution margin per unit = net profit at Your Price (from `calcPrices().ypF.profit`),
+  i.e. after COGS, FBA, referral, and all per-unit costs. Overheads must therefore be
+  genuinely *fixed* costs (software, warehousing rent, salaries) — not per-unit costs,
+  which are already inside the margin.
+- Rounded UP to whole units (you cannot sell a fraction of a unit).
+- Returns `null` when contribution margin ≤ $0 (product can never cover overheads) —
+  the UI shows a red alert in that case. Returns `0` when overheads are 0 or unset.
+- The overhead input is stored per product in `inputs.monthlyOverhead` and preserved
+  when the product is edited via the modal (see `saveProduct()`).
+
+### 15.3 Landed Cost Calculator (CNY → USD)
+**CODE LOCATION:** `index.html` → function `landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit)`, UI in the Add/Edit Product modal (`#landed-calc`), functions `calcLanded()` / `applyLandedCost()`
+
+**Rule:** `goodsDuty = (cnyPrice ÷ exchangeRate) × (1 + dutyPct/100)`; `total = goodsDuty + freightPerUnit`
+- Duty is applied to the **goods value only**, not to freight (quick-estimate convention).
+- Default exchange rate = `CNY_RATE` (7.25, see Section 12); editable per calculation.
+- **"Use as COGS" applies the result in two parts** to keep the cost model of Section 3
+  intact: goods + duty fills the COGS field, freight fills the Inbound Shipping field.
+  This avoids double-counting freight, since COGS is defined as manufacturing cost only.
+- Returns `null` for non-positive CNY price or exchange rate; negative duty is treated as 0.
+
+---
+
+*Last updated: July 2026*
 *To update this document after modifying the code, ask an LLM: "Update LOGIC.md to reflect the change I made to [function/constant name]"*

@@ -340,6 +340,16 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .ptable input.pt-margin-inp{width:58px;background:#0f1219;border:1px solid #252836;border-radius:5px;color:#fff;padding:4px 6px;font-size:0.8rem;text-align:right;}
 .ptable input.pt-margin-inp:focus{outline:none;border-color:#5b63f7;}
 
+/* Sensitivity table */
+.sens-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.sens-table th{text-align:right;font-size:0.65rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;padding:6px 10px;border-bottom:1px solid #252836;white-space:nowrap;}
+.sens-table th:first-child{text-align:left;}
+.sens-table td{padding:7px 10px;border-bottom:1px solid #1e2130;text-align:right;white-space:nowrap;color:#c5c8e0;}
+.sens-table td:first-child{text-align:left;font-weight:600;color:#e8eaf0;}
+.sens-table tr:last-child td{border-bottom:none;}
+.sens-table tr.cur td{background:#1e2040;}
+.sens-table tr.cur td:first-child{color:#4ade80;}
+
 /* Rule list */
 .rule{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #1e2130;}
 .rule:last-child{border-bottom:none;}
@@ -475,6 +485,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
           </div>
         </div>
         <div id="coupon-calc-section" style="margin-top:0;"></div>
+        <div id="breakeven-calc-section"></div>
       </div>
 
       <!-- TAB: AD STAGES -->
@@ -1016,6 +1027,23 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
       <div class="inp"><label data-tip='<strong>Target net margin after ALL costs</strong>Formula: (Price − COGS − FBA − referral − all other costs) ÷ Price × 100<br>Typical: 25–35%<br>Below 20% = thin buffer for returns &amp; spikes.<br>This drives your minimum viable listing price.'>Target Net Margin (%) ⓘ <span class="req">REQUIRED</span> <span class="typ">typical: 25–35%</span></label><input type="number" id="f-margin" value="30" step="1" min="1" max="90"></div>
     </div>
 
+    <div style="margin-top:2px;">
+      <div style="font-size:0.68rem;color:#555870;cursor:pointer;user-select:none;padding:4px 0;" onclick="toggleLandedCalc()">💱 <span data-en="Calculate COGS from CNY price..." data-zh="从人民币价格计算货物成本...">Calculate COGS from CNY price...</span></div>
+      <div id="landed-calc" style="display:none;background:#13151f;border-radius:8px;padding:10px 12px;margin-top:6px;border:1px solid #1e2130;">
+        <div style="font-size:0.68rem;color:#6b6f8a;margin-bottom:8px;" data-en="CNY unit price → USD landed cost. Duty applies to goods value; freight is filled into Inbound Shipping so it is not double-counted." data-zh="人民币单价 → 美元到岸成本。关税按货值计算；运费将填入头程运费字段，避免重复计算。">CNY unit price → USD landed cost. Duty applies to goods value; freight is filled into Inbound Shipping so it is not double-counted.</div>
+        <div class="g4" style="gap:6px;">
+          <div class="inp" style="margin:0;"><label style="font-size:0.7rem;"><span data-en="CNY unit price (¥)" data-zh="人民币单价 (¥)">CNY unit price (¥)</span></label><input type="number" id="lc-cny" step="0.01" min="0" placeholder="e.g. 43.50" oninput="calcLanded()"></div>
+          <div class="inp" style="margin:0;"><label style="font-size:0.7rem;"><span data-en="Exchange rate (¥/$)" data-zh="汇率 (¥/$)">Exchange rate (¥/$)</span></label><input type="number" id="lc-rate" step="0.01" min="0" value="7.25" oninput="calcLanded()"></div>
+          <div class="inp" style="margin:0;"><label style="font-size:0.7rem;"><span data-en="Import duty (%)" data-zh="进口关税 (%)">Import duty (%)</span></label><input type="number" id="lc-duty" step="0.1" min="0" placeholder="e.g. 7.5" oninput="calcLanded()"></div>
+          <div class="inp" style="margin:0;"><label style="font-size:0.7rem;"><span data-en="Freight ($/unit)" data-zh="运费 ($/件)">Freight ($/unit)</span></label><input type="number" id="lc-freight" step="0.01" min="0" placeholder="e.g. 0.50" oninput="calcLanded()"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+          <div id="lc-result" style="font-size:0.73rem;color:#4ade80;flex:1;min-width:180px;min-height:1.2em;"></div>
+          <button type="button" class="btn" id="lc-apply" style="display:none;" onclick="applyLandedCost()"><span data-en="Use as COGS →" data-zh="用作货物成本 →">Use as COGS →</span></button>
+        </div>
+      </div>
+    </div>
+
     <div style="font-size:0.72rem;font-weight:700;color:#5b63f7;text-transform:uppercase;letter-spacing:0.08em;margin:12px 0 8px;">Additional Costs</div>
     <div class="g3">
       <div class="inp"><label data-tip='<strong>China→FBA freight cost per unit</strong>Total shipment cost ÷ units in shipment.<br>Typical: $0.40–$1.20/unit (sea freight).<br>Includes: freight, customs, drayage to FBA.<br>Exclude Inbound Placement fee (next field).'>Inbound Shipping ($/unit) ⓘ <span class="typ">typical: $0.50</span></label><input type="number" id="f-inbound" value="0.50" step="0.01" min="0"><div class="hint">China→FBA freight ÷ units</div></div>
@@ -1135,6 +1163,10 @@ const PRICE_MATCH_TOLERANCE = 0.02; // ±2% tolerance for current price vs tier 
 
 // RULE: Seller margin warning threshold
 const LOW_MARGIN_WARNING = 20;   // Warn if Your Price margin drops below this %
+
+// RULE: Sensitivity table price offsets ($ relative to Your Price)
+// LOGIC.md Section 15.1
+const SENSITIVITY_OFFSETS = [-2, -1, 0, 1, 2];
 
 // RULE: Minimum viable seller margin for manufacturer mode warning
 const MFG_MIN_SELLER_MARGIN = 15; // Warn if seller margin < 15% in manufacturer output
@@ -1379,6 +1411,7 @@ function createDefaultProduct(overrides = {}) {
       vine: false, vineUnits: 20, annualUnits: 500,
       tacos: 25, lacos: 60, cvr: 12,
       couponAmt: 0, couponVol: 0,
+      monthlyOverhead: 0,
       surcharge: true
     },
     ...overrides
@@ -1507,6 +1540,47 @@ function calcPrices(inputs) {
     cogs, otherCosts, vinePerUnit, maxCPC, beAcos,
     targetRoas: 100/tacos, launchRoas: 100/lacos,
     maxCPClaunch: yp * (lacos/100) * (cvr/100) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALCULATOR EXTRAS — sensitivity, break-even volume, landed cost
+// LOGIC.md Section 15
+// ═══════════════════════════════════════════════════════════════════════════
+
+// RULE: Price sensitivity — recompute fees + profit at Your Price ± SENSITIVITY_OFFSETS.
+// Fees are re-derived at each price so FBA price-band cliffs ($10 / $50) show up.
+// LOGIC.md Section 15.1
+function priceSensitivity(inputs, basePrice) {
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  return SENSITIVITY_OFFSETS.map(offset => {
+    const price = +(basePrice + offset).toFixed(2);
+    if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? 1.035 : 1.0);
+    const ref = getReferralFee(inputs.category, price);
+    const profit = price - inputs.cogs - fba - ref - otherCosts;
+    return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
+  });
+}
+
+// RULE: Break-even volume = fixed monthly overheads ÷ contribution margin per unit,
+// rounded UP to whole units. Returns null when contribution margin ≤ 0 (never breaks even),
+// 0 when there are no overheads. LOGIC.md Section 15.2
+function breakEvenUnits(monthlyOverheads, profitPerUnit) {
+  if (!(monthlyOverheads > 0)) return 0;
+  if (!(profitPerUnit > 0)) return null;
+  return Math.ceil(monthlyOverheads / profitPerUnit);
+}
+
+// RULE: Landed cost — CNY unit price ÷ exchange rate, duty % applied to goods value only
+// (freight is tracked separately so it can feed the Inbound Shipping field without
+// double-counting). LOGIC.md Section 15.3
+function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
+  if (!(cnyPrice > 0) || !(rate > 0)) return null;
+  const goodsDuty = (cnyPrice / rate) * (1 + (dutyPct > 0 ? dutyPct : 0) / 100);
+  const freight = freightPerUnit > 0 ? freightPerUnit : 0;
+  return { goodsDuty, freight, total: goodsDuty + freight };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1899,8 +1973,35 @@ function renderCalcTab(p) {
         <div class="bl"><div class="bl-dot" style="background:#4ade80"></div>${t('Profit','利润')}</div>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;margin-bottom:0;">
+      <div class="card-title">${t('Price Sensitivity (±$2 around Your Price)','价格敏感度（您的售价 ±$2）')}</div>
+      <div style="overflow-x:auto;">
+        <table class="sens-table">
+          <thead><tr>
+            <th>${t('Price','价格')}</th>
+            <th>${t('FBA Fee','FBA费用')}</th>
+            <th>${t('Profit / unit','单件利润')}</th>
+            <th>${t('Net Margin','净利润率')}</th>
+          </tr></thead>
+          <tbody>${priceSensitivity(p.inputs, yp).map(row => {
+            if (!row.valid) return '';
+            const mCol = row.pct >= LOW_MARGIN_WARNING ? 'green' : row.pct >= 0 ? 'amber' : 'red';
+            const offLabel = row.offset === 0 ? ` <span style="font-size:0.62rem;color:#4ade80;font-weight:700;">${t('CURRENT','当前')}</span>`
+              : ` <span style="font-size:0.62rem;color:#555870;">${row.offset > 0 ? '+' : '−'}$${Math.abs(row.offset)}</span>`;
+            return `<tr class="${row.isCurrent ? 'cur' : ''}">
+              <td>${fmtC(row.price)}${offLabel}</td>
+              <td>${fmtC(row.fba)}</td>
+              <td class="${mCol}">${row.profit < 0 ? '−' : ''}${fmtC(Math.abs(row.profit))}</td>
+              <td class="${mCol}">${row.pct.toFixed(1)}%</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+      <div class="hint" style="margin-top:6px;">${t('Fees recomputed at each price — watch for FBA band cliffs at $10 and $50.','每个价格重新计算费用 — 注意 $10 和 $50 处的 FBA 费率段临界点。')}</div>
+    </div>
   `;
   renderCouponCalc(p);
+  renderBreakevenCalc(p);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2263,6 +2364,7 @@ function openAddModal() {
   document.getElementById('f-coupon-amt').value = d.couponAmt;
   document.getElementById('f-coupon-vol').value = d.couponVol;
   document.getElementById('f-notes').value = '';
+  resetLandedCalc();
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -2297,6 +2399,7 @@ function openEditModal() {
   document.getElementById('f-coupon-amt').value = p.inputs.couponAmt || 0;
   document.getElementById('f-coupon-vol').value = p.inputs.couponVol || 0;
   document.getElementById('f-notes').value = p.notes;
+  resetLandedCalc();
   document.getElementById('product-modal').classList.add('open');
 }
 
@@ -2329,12 +2432,14 @@ function saveProduct() {
     cvr: parseFloat(document.getElementById('f-cvr').value) || 12,
     surcharge: document.getElementById('f-surcharge').checked,
     couponAmt: parseFloat(document.getElementById('f-coupon-amt').value) || 0,
-    couponVol: parseInt(document.getElementById('f-coupon-vol').value) || 0
+    couponVol: parseInt(document.getElementById('f-coupon-vol').value) || 0,
+    monthlyOverhead: 0
   };
   const editId = document.getElementById('modal-product-id').value;
   if (editId) {
     const p = state.products.find(x => x.id === editId);
-    if (p) { p.name = name; p.asin = document.getElementById('f-asin').value.trim(); p.inputs = inputs; p.notes = document.getElementById('f-notes').value.trim(); }
+    // Preserve fields managed outside the modal form (e.g. break-even overhead)
+    if (p) { p.name = name; p.asin = document.getElementById('f-asin').value.trim(); p.inputs = { ...inputs, monthlyOverhead: p.inputs.monthlyOverhead || 0 }; p.notes = document.getElementById('f-notes').value.trim(); }
   } else {
     const p = createDefaultProduct();
     p.name = name;
@@ -2800,6 +2905,64 @@ function saveCouponInput() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// BREAK-EVEN VOLUME CALCULATOR
+// LOGIC.md Section 15.2
+// ═══════════════════════════════════════════════════════════════════════════
+function breakevenOutputHtml(p) {
+  const prices = calcPrices(p.inputs);
+  const profitPerUnit = prices.ypF.profit;
+  const overhead = p.inputs.monthlyOverhead || 0;
+  const units = breakEvenUnits(overhead, profitPerUnit);
+  let out;
+  if (overhead <= 0) {
+    out = `<div style="font-size:0.78rem;color:#555870;padding:8px 0;">${t('Enter your fixed monthly overheads to see how many units per month cover them.','输入每月固定开支，查看每月需售出多少件才能覆盖成本。')}</div>`;
+  } else if (units === null) {
+    out = `<div class="alert bad">${t('Contribution margin per unit is ≤ $0 at Your Price — this product can never cover fixed overheads. Review costs or raise the price.','您的售价下单件边际利润 ≤ $0 — 该产品无法覆盖固定开支。请检查成本或提高价格。')}</div>`;
+  } else {
+    out = `<div class="mfg-out" style="margin-top:0;background:#0f1520;border-color:#1e3a5f;">
+      <div class="mfg-out-title" style="color:#7dd3fc;">${t('Break-even Volume','盈亏平衡销量')}</div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Contribution margin / unit (at Your Price)','单件边际利润（您的售价）')}</div><div class="mfg-row-r white">${fmtC(profitPerUnit)}</div></div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Fixed monthly overheads','每月固定开支')}</div><div class="mfg-row-r white">${fmtC(overhead)}</div></div>
+      <div class="mfg-row" style="border-top:2px solid #1e3a5f;margin-top:4px;padding-top:6px;">
+        <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">${t('→ Units needed / month','→ 每月所需销量')}</div>
+        <div class="mfg-row-r" style="font-size:1.05rem;color:#7dd3fc;">${units} ${t('units','件')}</div>
+      </div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('≈ per day (30-day month)','≈ 每天（按30天）')}</div><div class="mfg-row-r white">${(units/30).toFixed(1)} ${t('units','件')}</div></div>
+    </div>`;
+  }
+  return out;
+}
+
+function renderBreakevenCalc(p) {
+  const el = document.getElementById('breakeven-calc-section');
+  if (!el) return;
+  const overhead = p.inputs.monthlyOverhead || 0;
+  el.innerHTML = `<div class="card" style="margin-top:14px;">
+    <div class="card-title">${t('Break-even Units / Month','每月盈亏平衡销量')}</div>
+    <div class="g2">
+      <div>
+        <div class="inp">
+          <label>${t('Fixed Monthly Overheads ($)','每月固定开支 ($)')}</label>
+          <input type="number" id="be-overhead" value="${overhead||''}" min="0" step="1" placeholder="e.g. 500" oninput="saveOverheadInput()">
+          <div class="hint">${t('Software, warehousing, salaries, loan payments — costs you pay even at zero sales. Per-unit costs are already in the margin.','软件、仓储、工资、贷款 — 即使零销量也要支付的成本。单件成本已计入利润率。')}</div>
+        </div>
+      </div>
+      <div id="be-output">${breakevenOutputHtml(p)}</div>
+    </div>
+  </div>`;
+}
+
+function saveOverheadInput() {
+  const p = getActiveProduct();
+  if (!p) return;
+  p.inputs.monthlyOverhead = parseFloat(document.getElementById('be-overhead').value) || 0;
+  saveToStorage();
+  // Update only the output pane so the input keeps focus while typing
+  const out = document.getElementById('be-output');
+  if (out) out.innerHTML = breakevenOutputHtml(p);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CSV EXPORT — CHECK-INS
 // ═══════════════════════════════════════════════════════════════════════════
 function exportCheckinsCSV(productId) {
@@ -3020,6 +3183,59 @@ function calcDimTier() {
     note = ` · DIM weight ${dimWeightLbs.toFixed(1)} lbs applies (heavier than actual ${weightLbs.toFixed(1)} lbs)`;
   }
   resultEl.innerHTML = `→ <strong>${tierName}</strong>${note}`;
+}
+
+// ─── LANDED COST CALCULATOR (CNY → USD COGS) ───
+// LOGIC.md Section 15.3
+function resetLandedCalc() {
+  const panel = document.getElementById('landed-calc');
+  if (!panel) return;
+  panel.style.display = 'none';
+  document.getElementById('lc-cny').value = '';
+  document.getElementById('lc-rate').value = CNY_RATE;
+  document.getElementById('lc-duty').value = '';
+  document.getElementById('lc-freight').value = '';
+  document.getElementById('lc-result').textContent = '';
+  document.getElementById('lc-apply').style.display = 'none';
+}
+
+function toggleLandedCalc() {
+  const panel = document.getElementById('landed-calc');
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : '';
+  if (!open) calcLanded();
+}
+
+function readLandedInputs() {
+  return landedCostUSD(
+    parseFloat(document.getElementById('lc-cny').value),
+    parseFloat(document.getElementById('lc-rate').value),
+    parseFloat(document.getElementById('lc-duty').value) || 0,
+    parseFloat(document.getElementById('lc-freight').value) || 0
+  );
+}
+
+function calcLanded() {
+  const resultEl = document.getElementById('lc-result');
+  const applyBtn = document.getElementById('lc-apply');
+  if (!resultEl) return;
+  const lc = readLandedInputs();
+  if (lc === null) { resultEl.textContent = ''; applyBtn.style.display = 'none'; return; }
+  resultEl.innerHTML = `→ <strong>$${lc.total.toFixed(2)}</strong> ${t('landed / unit','到岸成本/件')} `
+    + `<span style="color:#6b6f8a;">(${t('goods + duty','货值+关税')} $${lc.goodsDuty.toFixed(2)}`
+    + (lc.freight > 0 ? ` + ${t('freight','运费')} $${lc.freight.toFixed(2)}` : '') + `)</span>`;
+  applyBtn.style.display = '';
+}
+
+function applyLandedCost() {
+  const lc = readLandedInputs();
+  if (lc === null) return;
+  // Goods + duty → COGS; freight → Inbound Shipping (keeps the cost model clean — see LOGIC.md §3)
+  document.getElementById('f-cogs').value = lc.goodsDuty.toFixed(2);
+  if (lc.freight > 0) document.getElementById('f-inbound').value = lc.freight.toFixed(2);
+  const resultEl = document.getElementById('lc-result');
+  resultEl.innerHTML = `✓ ${t('Applied: COGS','已应用：货物成本')} $${lc.goodsDuty.toFixed(2)}`
+    + (lc.freight > 0 ? ` · ${t('Inbound Shipping','头程运费')} $${lc.freight.toFixed(2)}` : '');
 }
 </script>
 </body>
