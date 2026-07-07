@@ -53,6 +53,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .badge-kill{background:#7a0020;color:#fca5a5;}
 .badge-killed{background:#1e2130;color:#555870;}
 .sidebar-item-health{width:6px;height:6px;border-radius:50%;position:absolute;left:8px;top:50%;transform:translateY(-50%);}
+.sample-chip{display:inline-block;font-size:0.56rem;font-weight:800;letter-spacing:0.06em;color:#4ade80;background:#14532d;border:1px solid #166534;border-radius:3px;padding:1px 4px;vertical-align:1px;}
 /* Push name over to make room for health dot */
 .sidebar-item-name{margin-left:10px;}
 .sidebar-bottom{padding:10px;border-top:1px solid #1e2130;}
@@ -512,7 +513,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
         <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
-        <button class="empty-btn" style="background:#1a2a1a;border:1px solid #166534;color:#4ade80;" onclick="loadExampleProduct()" data-en="Load example — Cast Net 5ft" data-zh="加载示例 — 5英尺撒网">Load example — Cast Net 5ft</button>
+        <button class="empty-btn" style="background:#1a2a1a;border:1px solid #166534;color:#4ade80;" onclick="loadExampleProduct()" data-en="Load sample product — Cast Net 5ft" data-zh="加载示例产品 — 5英尺撒网">Load sample product — Cast Net 5ft</button>
       </div>
     </div>
 
@@ -2112,7 +2113,7 @@ function renderSidebar() {
     const isActive = p.id === state.activeProductId;
     return `<div class="sidebar-item${isActive?' active':''}" onclick="selectProduct('${p.id}')">
       <div class="sidebar-item-health" style="background:${health}"></div>
-      <div class="sidebar-item-name">${p.name}</div>
+      <div class="sidebar-item-name">${p.isSample ? `<span class="sample-chip">${t('SAMPLE','示例')}</span> ` : ''}${p.name}</div>
       ${p.asin ? `<div class="sidebar-item-asin">${p.asin}</div>` : ''}
       <span class="sidebar-item-badge ${meta.cls}">${meta.label}</span>
     </div>`;
@@ -2148,6 +2149,13 @@ function renderProductView() {
 function renderKillSignals(p) {
   const { signals, warnings } = checkKillSignals(p);
   let html = '';
+  if (p.isSample) {
+    html += `<div class="alert good" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <span class="sample-chip" style="font-size:0.68rem;">${t('SAMPLE','示例')}</span>
+      <span style="flex:1;min-width:200px;">${t('This is sample data so you can explore a working calculation. Remove it any time — your own products are unaffected.','这是示例数据，供您体验完整的计算流程。可随时移除 — 不影响您自己的产品。')}</span>
+      <button class="topbar-btn" style="border-color:#166534;color:#4ade80;" onclick="deleteSampleProduct('${p.id}')">${t('✕ Remove sample','✕ 移除示例')}</button>
+    </div>`;
+  }
   if (!p.inputs.cogs || p.inputs.cogs === 0) {
     html += `<div class="warn-panel" style="border-color:#854d0e;margin-bottom:12px;">
       <div class="warn-panel-title">${t('⚠ Setup incomplete — COGS not set','⚠ 设置未完成 — 未填写货物成本')}</div>
@@ -3001,6 +3009,7 @@ function loadExampleProduct() {
   const p = createDefaultProduct();
   p.name    = 'Cast Net 5ft (0.75lb Sinkers)';
   p.asin    = 'B0EX4MP1E01';
+  p.isSample = true; // RULE: sample data is badged everywhere and one-click removable
   p.notes   = 'Example product. Replace ASIN and adjust inputs to match your actual product.';
   p.lifecycle = 'STAGE_3';
   p.createdAt = ago(100);
@@ -3028,6 +3037,24 @@ function loadExampleProduct() {
   state.appMode = 'seller';
   saveToStorage();
   renderAll();
+}
+
+// RULE: Sample product removal is ONE CLICK — no confirm dialog. Reversible via
+// the standard Undo toast (UNDO_WINDOW_MS) instead.
+function deleteSampleProduct(id) {
+  const idx = state.products.findIndex(p => p.id === id);
+  if (idx === -1) return;
+  const removed = state.products[idx];
+  state.products.splice(idx, 1);
+  if (state.activeProductId === id) state.activeProductId = state.products[0]?.id || null;
+  saveToStorage();
+  renderAll();
+  showUndoToast(t('Sample product removed','示例产品已移除'), () => {
+    state.products.splice(Math.min(idx, state.products.length), 0, removed);
+    state.activeProductId = removed.id;
+    saveToStorage();
+    renderAll();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
