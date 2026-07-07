@@ -350,6 +350,11 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .sens-table tr.cur td{background:#1e2040;}
 .sens-table tr.cur td:first-child{color:#4ade80;}
 
+/* Undo toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e2130;border:1px solid #3a3d6e;border-radius:10px;padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px;z-index:1200;font-size:0.8rem;color:#e8eaf0;box-shadow:0 8px 24px rgba(0,0,0,.55);max-width:calc(100vw - 32px);}
+.toast-btn{background:#5b63f7;border:none;color:#fff;border-radius:7px;padding:8px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
+.toast-btn:hover{background:#4a52e6;}
+
 /* Rule list */
 .rule{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #1e2130;}
 .rule:last-child{border-bottom:none;}
@@ -456,7 +461,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
         </div>
         <div style="flex:1;"></div>
         <div id="pv-stage-badge"></div>
-        <button class="topbar-btn" onclick="document.getElementById('flow-modal').classList.add('open')" title="How to use this tool" data-en="? Guide" data-zh="? 指南">? Guide</button>
+        <button class="topbar-btn" onclick="openModalEl('flow-modal')" title="How to use this tool" data-en="? Guide" data-zh="? 指南">? Guide</button>
         <button class="topbar-btn" onclick="openEditModal()" data-en="Edit" data-zh="编辑">Edit</button>
         <button class="topbar-btn" onclick="shareProduct()" data-en="Share" data-zh="分享">Share</button>
         <button class="topbar-btn danger" onclick="deleteProduct()" data-en="Delete" data-zh="删除">Delete</button>
@@ -868,14 +873,14 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 </div>
 
 <!-- ════════════════════ FLOW GUIDE MODAL ════════════════════ -->
-<div class="flow-modal-overlay" id="flow-modal" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="flow-modal-overlay" id="flow-modal" onclick="if(event.target===this)closeModalEl('flow-modal')">
   <div class="flow-modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
       <div>
         <div class="flow-modal-title" data-en="How to use this tool" data-zh="如何使用本工具">How to use this tool</div>
         <div class="flow-modal-sub" data-en="Amazon Pricing &amp; Ad Stage Tracker — m19 methodology" data-zh="亚马逊定价与广告阶段追踪器 — m19方法论">Amazon Pricing &amp; Ad Stage Tracker — m19 methodology</div>
       </div>
-      <button class="topbar-btn" onclick="document.getElementById('flow-modal').classList.remove('open')">✕</button>
+      <button class="topbar-btn" onclick="closeModalEl('flow-modal')">✕</button>
     </div>
     <div class="flow-guide" style="margin-bottom:18px;">
       <div class="flow-step">
@@ -1167,6 +1172,10 @@ const LOW_MARGIN_WARNING = 20;   // Warn if Your Price margin drops below this %
 // RULE: Sensitivity table price offsets ($ relative to Your Price)
 // LOGIC.md Section 15.1
 const SENSITIVITY_OFFSETS = [-2, -1, 0, 1, 2];
+
+// RULE: Undo window for check-in add/delete (soft delete) — milliseconds
+// LOGIC.md Section 8
+const UNDO_WINDOW_MS = 8000;
 
 // RULE: Minimum viable seller margin for manufacturer mode warning
 const MFG_MIN_SELLER_MARGIN = 15; // Warn if seller margin < 15% in manufacturer output
@@ -2255,14 +2264,62 @@ function recordCheckin() {
   ['ci-price','ci-acos','ci-adsales','ci-rev','ci-spend','ci-notes'].forEach(id => { document.getElementById(id).value = ''; });
   saveToStorage();
   renderAll();
+  const productId = p.id;
+  showUndoToast(t('Check-in saved','检查记录已保存'), () => {
+    const prod = state.products.find(x => x.id === productId);
+    if (!prod) return;
+    prod.checkins = prod.checkins.filter(c => c.id !== ci.id);
+    saveToStorage();
+    renderAll();
+  });
 }
 
+// RULE: Check-in delete is a soft delete — no confirm dialog; an Undo toast
+// (UNDO_WINDOW_MS) restores the check-in at its original position instead.
 function deleteCheckin(productId, checkinId) {
   const p = state.products.find(x => x.id === productId);
-  if (!p || !confirm('Delete this check-in?')) return;
-  p.checkins = p.checkins.filter(c => c.id !== checkinId);
+  if (!p) return;
+  const idx = p.checkins.findIndex(c => c.id === checkinId);
+  if (idx === -1) return;
+  const removed = p.checkins[idx];
+  p.checkins.splice(idx, 1);
   saveToStorage();
   renderAll();
+  showUndoToast(t('Check-in deleted','检查记录已删除'), () => {
+    const prod = state.products.find(x => x.id === productId);
+    if (!prod) return;
+    prod.checkins.splice(Math.min(idx, prod.checkins.length), 0, removed);
+    saveToStorage();
+    renderAll();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UNDO TOAST
+// ═══════════════════════════════════════════════════════════════════════════
+let _toastTimer = null;
+function showUndoToast(message, undoFn) {
+  dismissToast();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.id = 'undo-toast';
+  el.setAttribute('role', 'status');
+  const span = document.createElement('span');
+  span.textContent = message;
+  const btn = document.createElement('button');
+  btn.className = 'toast-btn';
+  btn.textContent = t('Undo','撤销');
+  btn.onclick = () => { dismissToast(); undoFn(); };
+  el.append(span, btn);
+  document.body.appendChild(el);
+  _toastTimer = setTimeout(dismissToast, UNDO_WINDOW_MS);
+}
+
+function dismissToast() {
+  clearTimeout(_toastTimer);
+  _toastTimer = null;
+  const el = document.getElementById('undo-toast');
+  if (el) el.remove();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2365,7 +2422,7 @@ function openAddModal() {
   document.getElementById('f-coupon-vol').value = d.couponVol;
   document.getElementById('f-notes').value = '';
   resetLandedCalc();
-  document.getElementById('product-modal').classList.add('open');
+  openModalEl('product-modal');
 }
 
 function openEditModal() {
@@ -2400,11 +2457,11 @@ function openEditModal() {
   document.getElementById('f-coupon-vol').value = p.inputs.couponVol || 0;
   document.getElementById('f-notes').value = p.notes;
   resetLandedCalc();
-  document.getElementById('product-modal').classList.add('open');
+  openModalEl('product-modal');
 }
 
 function closeModal() {
-  document.getElementById('product-modal').classList.remove('open');
+  closeModalEl('product-modal');
 }
 
 function saveProduct() {
@@ -3052,6 +3109,55 @@ if (_pendingShare) {
 // Close modal on overlay click
 document.getElementById('product-modal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('product-modal')) closeModal();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODAL FOCUS MANAGEMENT + KEYBOARD SHORTCUTS
+// - Focus moves into a modal on open, Tab is trapped inside, Escape closes,
+//   and focus returns to the trigger element on close.
+// - RULE: 'N' opens the Add Product modal (ignored while typing in an
+//   input/textarea/select, with modifier keys, or while any modal is open).
+// ═══════════════════════════════════════════════════════════════════════════
+let _modalTrigger = null;
+const FOCUSABLE_SEL = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+function openModalEl(id) {
+  _modalTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const overlay = document.getElementById(id);
+  overlay.classList.add('open');
+  const first = [...overlay.querySelectorAll(FOCUSABLE_SEL)].find(el => el.offsetParent !== null);
+  if (first) first.focus();
+}
+
+function closeModalEl(id) {
+  document.getElementById(id).classList.remove('open');
+  if (_modalTrigger && document.contains(_modalTrigger)) _modalTrigger.focus();
+  _modalTrigger = null;
+}
+
+document.addEventListener('keydown', (e) => {
+  const overlay = document.querySelector('.modal-overlay.open, .flow-modal-overlay.open');
+  if (overlay) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModalEl(overlay.id);
+    } else if (e.key === 'Tab') {
+      // Trap Tab focus inside the open modal
+      const items = [...overlay.querySelectorAll(FOCUSABLE_SEL)].filter(el => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !overlay.contains(active))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (active === last || !overlay.contains(active))) { e.preventDefault(); first.focus(); }
+    }
+    return;
+  }
+  if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const tgt = e.target;
+    if (tgt instanceof HTMLElement && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
+    e.preventDefault();
+    openAddModal();
+  }
 });
 
 // ─── ROADMAP RENDERER ───

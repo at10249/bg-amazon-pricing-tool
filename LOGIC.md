@@ -370,6 +370,13 @@ Compare currentPrice to calculated tiers with a tolerance of ±2%:
 TACoS = totalAdSpendLast30 / totalRevenueLast30 × 100
 Target: below 10% for healthy organic-to-paid ratio.
 
+**Undo / soft delete (CODE: `deleteCheckin()`, `recordCheckin()`, `showUndoToast()`):**
+Deleting a check-in shows no confirm dialog — it is a soft delete. A toast with an
+Undo button appears for `UNDO_WINDOW_MS` (8,000 ms; CODE: `UNDO_WINDOW_MS = 8000`).
+Undo restores the check-in at its original position in the `checkins` array.
+Saving a new check-in shows the same toast; Undo removes the just-added record.
+**TO UPDATE the undo window:** change the `UNDO_WINDOW_MS` constant.
+
 ---
 
 ## 9. ADVERTISING BUDGET RECOMMENDATIONS
