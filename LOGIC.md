@@ -656,6 +656,27 @@ the raw price back from that COGS, returns the original price within $0.01
 (and vice versa). This holds because both directions solve the same equation
 `price × (1 − m) = COGS + fees(price) + otherCosts`.
 
+## 16. AUTO-BACKUP NUDGE
+
+**CODE LOCATION:** `index.html` → constants `BACKUP_NUDGE_DAYS` / `BACKUP_SNOOZE_DAYS`, pure function `shouldShowBackupNudge()`, UI in `renderBackupNudge()` / `snoozeBackupNudge()`, banner container `#backup-nudge`
+
+All data lives in browser localStorage (Section 10) — clearing browser data
+erases it. The nudge reminds users to export a JSON backup.
+
+Rules:
+- Show a dismissible amber banner when there is at least one product AND no
+  JSON export for more than `BACKUP_NUDGE_DAYS` (30) days.
+- Reference date = `state.lastExportAt` (stamped by `exportJSON()`), falling
+  back to the **oldest product's `createdAt`** when the user has never exported.
+- The comparison is strictly greater-than: exactly 30 days does not fire.
+- Dismissing ("Later") sets `state.backupSnoozedUntil` = now + `BACKUP_SNOOZE_DAYS`
+  (7) days; the banner stays hidden until then.
+- `state.lastExportAt` is written BEFORE serialising the export, so the backup
+  file itself records when it was made.
+
+**TO UPDATE:** change `BACKUP_NUDGE_DAYS` (nudge threshold) or
+`BACKUP_SNOOZE_DAYS` (snooze length).
+
 ---
 
 *Last updated: July 2026*

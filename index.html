@@ -480,6 +480,8 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 
   <!-- MAIN -->
   <div class="main" id="main-area">
+    <!-- Auto-backup nudge banner (LOGIC.md Section 16) -->
+    <div id="backup-nudge"></div>
     <!-- Empty state shown when no product selected -->
     <div id="empty-state" class="empty-state">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
@@ -1264,6 +1266,12 @@ const UNDO_WINDOW_MS = 8000;
 // RULE: Minimum viable seller margin for manufacturer mode warning
 const MFG_MIN_SELLER_MARGIN = 15; // Warn if seller margin < 15% in manufacturer output
 
+// RULE: Auto-backup nudge — if there are products and no JSON export for
+// BACKUP_NUDGE_DAYS, show a dismissible banner suggesting Export JSON.
+// Dismissing snoozes the banner for BACKUP_SNOOZE_DAYS. LOGIC.md Section 16.
+const BACKUP_NUDGE_DAYS  = 30; // Days without an export before the nudge appears
+const BACKUP_SNOOZE_DAYS = 7;  // Days the nudge stays hidden after dismissal
+
 // RULE: localStorage data key. Increment version suffix if schema changes.
 // LOGIC.md Section 10
 const STORAGE_KEY = 'amazon_pricing_tool_v1';
@@ -1302,7 +1310,50 @@ function loadFromStorage() {
   } catch(e) { console.warn('Storage load failed:', e); }
 }
 
+// RULE: shouldShowBackupNudge — pure decision function (tested in test.js).
+// Reference date = last export, falling back to the oldest product's createdAt
+// when the user has never exported. Strictly more than BACKUP_NUDGE_DAYS old
+// → nudge, unless snoozed.
+function shouldShowBackupNudge(lastExportIso, snoozedUntilIso, oldestProductIso, nowMs) {
+  if (!oldestProductIso) return false; // no products — nothing to lose
+  if (snoozedUntilIso && nowMs < new Date(snoozedUntilIso).getTime()) return false;
+  const ref = lastExportIso || oldestProductIso;
+  return (nowMs - new Date(ref).getTime()) / 86400000 > BACKUP_NUDGE_DAYS;
+}
+
+function renderBackupNudge() {
+  const el = document.getElementById('backup-nudge');
+  if (!el) return;
+  const oldest = state.products.length
+    ? state.products.reduce((a, p) => (p.createdAt < a ? p.createdAt : a), state.products[0].createdAt)
+    : null;
+  if (!shouldShowBackupNudge(state.lastExportAt, state.backupSnoozedUntil, oldest, Date.now())) {
+    el.innerHTML = '';
+    return;
+  }
+  const days = state.lastExportAt ? Math.floor((Date.now() - new Date(state.lastExportAt).getTime()) / 86400000) : null;
+  const lead = days !== null
+    ? t(`Last JSON backup was ${days} days ago.`, `上次JSON备份已是${days}天前。`)
+    : t(`Your ${state.products.length} product${state.products.length !== 1 ? 's have' : ' has'} never been backed up.`, `您的${state.products.length}个产品从未备份过。`);
+  el.innerHTML = `<div class="alert warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+    <span style="flex:1;min-width:220px;">💾 ${lead} ${t('This tool stores everything in browser localStorage — clearing browser data erases it. Export a JSON backup.','本工具的所有数据保存在浏览器localStorage中 — 清除浏览器数据会将其删除。请导出JSON备份。')}</span>
+    <button class="topbar-btn" style="border-color:#7a5c00;color:#f59e0b;" onclick="exportJSON()">${t('Export JSON now','立即导出JSON')}</button>
+    <button class="topbar-btn" onclick="snoozeBackupNudge()" title="${t('Remind me in 7 days','7天后再提醒')}">${t('✕ Later','✕ 稍后')}</button>
+  </div>`;
+}
+
+function snoozeBackupNudge() {
+  state.backupSnoozedUntil = new Date(Date.now() + BACKUP_SNOOZE_DAYS * 86400000).toISOString();
+  saveToStorage();
+  renderBackupNudge();
+}
+
 function exportJSON() {
+  // RULE: Exporting counts as a backup — record the timestamp (inside the export
+  // itself too, so a restored file carries its own backup history).
+  state.lastExportAt = new Date().toISOString();
+  saveToStorage();
+  renderBackupNudge();
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2979,6 +3030,7 @@ function subTab(el, panelId) {
 // ═══════════════════════════════════════════════════════════════════════════
 function renderAll() {
   renderSidebar();
+  renderBackupNudge();
   const hasActive = state.activeProductId && state.products.find(x => x.id === state.activeProductId);
   const isMfg = state.appMode === 'mfg';
   const isPortfolio = state.showPortfolio;

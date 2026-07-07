@@ -278,6 +278,16 @@ function checkKillSignals(product) {
   return { signals, warnings };
 }
 
+const BACKUP_NUDGE_DAYS  = 30;
+const BACKUP_SNOOZE_DAYS = 7;
+
+function shouldShowBackupNudge(lastExportIso, snoozedUntilIso, oldestProductIso, nowMs) {
+  if (!oldestProductIso) return false;
+  if (snoozedUntilIso && nowMs < new Date(snoozedUntilIso).getTime()) return false;
+  const ref = lastExportIso || oldestProductIso;
+  return (nowMs - new Date(ref).getTime()) / 86400000 > BACKUP_NUDGE_DAYS;
+}
+
 function explainSignal(sig, lang = 'en') {
   const pick = (en, zh) => lang === 'zh' ? zh : en;
   const p = sig.params || {};
@@ -941,6 +951,20 @@ is(exK3zh.text.includes('42%') && exK3zh.text.includes('31%'), 'zh explanation k
 
 // Unknown code degrades gracefully
 eq(explainSignal({ code: 'K9', params: {} }).title, 'K9', 'unknown code → code as title, no crash');
+
+// ─── 15. shouldShowBackupNudge ───────────────────────────────────────────────
+describe('shouldShowBackupNudge — export reminder decision');
+
+const NOW = Date.now();
+is(!shouldShowBackupNudge(null, null, null, NOW), 'no products → no nudge');
+is( shouldShowBackupNudge(null, null, daysAgo(40), NOW), 'never exported, oldest product 40d old → nudge');
+is(!shouldShowBackupNudge(null, null, daysAgo(10), NOW), 'never exported, oldest product 10d old → no nudge yet');
+is(!shouldShowBackupNudge(null, null, daysAgo(30), NOW), 'exactly 30 days → no nudge (strictly greater)');
+is(!shouldShowBackupNudge(daysAgo(5),  null, daysAgo(100), NOW), 'exported 5d ago → no nudge');
+is( shouldShowBackupNudge(daysAgo(31), null, daysAgo(100), NOW), 'exported 31d ago → nudge');
+is(!shouldShowBackupNudge(daysAgo(31), daysAgo(-3), daysAgo(100), NOW), 'snoozed until 3d from now → no nudge');
+is( shouldShowBackupNudge(daysAgo(31), daysAgo(1),  daysAgo(100), NOW), 'snooze expired yesterday → nudge again');
+is( shouldShowBackupNudge(null, daysAgo(1), daysAgo(40), NOW), 'expired snooze does not suppress never-exported nudge');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY
