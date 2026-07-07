@@ -211,6 +211,27 @@ function classifyPrice(currentPrice, prices) {
   return { label: 'Custom price', cls: '' };
 }
 
+const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
+  electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
+  jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
+const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
+
+function validateCSVRow(row, isUpdate) {
+  const errors = [];
+  const v = f => (row[f] ?? '').toString().trim();
+  const badNum = f => v(f) !== '' && isNaN(Number(v(f)));
+  if (!isUpdate && !v('name') && !v('asin')) errors.push({ field: 'name/asin', code: 'missing_required' });
+  if (!isUpdate && !v('cogs'))               errors.push({ field: 'cogs', code: 'missing_required' });
+  if (badNum('cogs'))          errors.push({ field: 'cogs', code: 'not_numeric', value: v('cogs') });
+  if (badNum('target_margin')) errors.push({ field: 'target_margin', code: 'not_numeric', value: v('target_margin') });
+  if (badNum('weight_oz'))     errors.push({ field: 'weight_oz', code: 'not_numeric', value: v('weight_oz') });
+  if (v('category') && !CAT_MAP[v('category').toLowerCase()])
+    errors.push({ field: 'category', code: 'unknown_category', value: v('category') });
+  if (v('size_tier') && !VALID_SIZE_TIERS.includes(v('size_tier').toLowerCase()))
+    errors.push({ field: 'size_tier', code: 'bad_size_tier', value: v('size_tier') });
+  return errors;
+}
+
 function checkKillSignals(product) {
   const signals = [];
   const warnings = [];
@@ -795,6 +816,45 @@ for (const [c, m] of [[4.00, 30], [9.50, 25], [1.25, 40]]) {
   const back = solveMaxCOGS({ ...base, cogs: c }, P, m).maxCogs;
   is(Math.abs(back - c) < 0.01, `cogs=$${c} m=${m}% → P=$${P.toFixed(2)} → back to $${back.toFixed(4)} (Δ<$0.01)`);
 }
+
+// ─── 13. validateCSVRow ──────────────────────────────────────────────────────
+describe('validateCSVRow — CSV import row validation');
+
+const goodRow = { name: 'Widget', asin: 'B01ABCDE01', category: 'home', size_tier: 'ss', weight_oz: '8', cogs: '6.00', target_margin: '30' };
+eq(validateCSVRow(goodRow, false).length, 0, 'fully valid create row → no errors');
+eq(validateCSVRow({ name: 'Widget', cogs: '6' }, false).length, 0, 'minimal create row (name + cogs) → no errors');
+eq(validateCSVRow({ asin: 'B01ABCDE01', cogs: '6' }, false).length, 0, 'ASIN-only identity accepted');
+
+// Missing required fields (create rows)
+const eNoId = validateCSVRow({ cogs: '6' }, false);
+is(eNoId.some(e => e.code === 'missing_required' && e.field === 'name/asin'), 'no name and no ASIN → missing_required(name/asin)');
+const eNoCogs = validateCSVRow({ name: 'Widget' }, false);
+is(eNoCogs.some(e => e.code === 'missing_required' && e.field === 'cogs'), 'no COGS → missing_required(cogs)');
+
+// Update rows may omit required create fields
+eq(validateCSVRow({ name: 'Widget' }, true).length, 0, 'update row without COGS → no errors');
+eq(validateCSVRow({ asin: 'B01ABCDE01', target_margin: '25' }, true).length, 0, 'update row with only margin → no errors');
+
+// Non-numeric values
+is(validateCSVRow({ ...goodRow, cogs: 'abc' }, false).some(e => e.code === 'not_numeric' && e.field === 'cogs'), 'cogs "abc" → not_numeric');
+is(validateCSVRow({ ...goodRow, cogs: '12x' }, false).some(e => e.code === 'not_numeric' && e.field === 'cogs'), 'cogs "12x" → not_numeric (strict Number parse)');
+is(validateCSVRow({ ...goodRow, target_margin: 'high' }, false).some(e => e.code === 'not_numeric' && e.field === 'target_margin'), 'target_margin "high" → not_numeric');
+is(validateCSVRow({ ...goodRow, weight_oz: 'heavy' }, false).some(e => e.code === 'not_numeric' && e.field === 'weight_oz'), 'weight_oz "heavy" → not_numeric');
+eq(validateCSVRow({ ...goodRow, cogs: '  6.50 ' }, false).length, 0, 'whitespace-padded number accepted');
+
+// Unknown category / bad size tier
+is(validateCSVRow({ ...goodRow, category: 'gadgets' }, false).some(e => e.code === 'unknown_category'), 'category "gadgets" → unknown_category');
+eq(validateCSVRow({ ...goodRow, category: 'ELECTRONICS' }, false).length, 0, 'category is case-insensitive');
+is(validateCSVRow({ ...goodRow, size_tier: 'xxl' }, false).some(e => e.code === 'bad_size_tier'), 'size_tier "xxl" → bad_size_tier');
+eq(validateCSVRow({ ...goodRow, size_tier: 'LS' }, false).length, 0, 'size_tier is case-insensitive');
+eq(validateCSVRow({ ...goodRow, category: '', size_tier: '' }, false).length, 0, 'empty optional fields → no errors (defaults apply)');
+
+// Multiple errors accumulate on one row
+const multi = validateCSVRow({ cogs: 'abc', category: 'gadgets', size_tier: 'huge' }, false);
+eq(multi.length, 4, 'bad row collects all errors (identity + numeric + category + tier)');
+
+// Error objects carry the offending value for reporting
+eq(validateCSVRow({ ...goodRow, category: 'gadgets' }, false).find(e => e.code === 'unknown_category').value, 'gadgets', 'error carries the bad value');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY

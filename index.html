@@ -1164,6 +1164,17 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
   </div>
 </div>
 
+<!-- ════════════════════ CSV IMPORT REPORT MODAL ════════════════════ -->
+<div class="modal-overlay" id="import-report-modal" onclick="if(event.target===this)closeModalEl('import-report-modal')">
+  <div class="modal" style="width:480px;">
+    <h2 data-en="CSV Import Report" data-zh="CSV导入报告">CSV Import Report</h2>
+    <div id="ir-body"></div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="closeModalEl('import-report-modal')" data-en="Close" data-zh="关闭">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="tt"></div>
 
 <script>
@@ -1345,6 +1356,67 @@ const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
   electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
   jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
 
+// RULE: CSV row validation — rows with any error are SKIPPED (not silently
+// coerced) and reported per-row in the post-import summary. Error codes:
+//   missing_required  — create rows need a name or ASIN, and a COGS value
+//   not_numeric       — cogs / target_margin / weight_oz present but not a number
+//   unknown_category  — category not in CAT_MAP (see LOGIC.md Section 11)
+//   bad_size_tier     — size_tier not one of ss / ls / lb / xl
+// Update rows (matched to an existing product) skip the missing-field checks —
+// they may legitimately carry only the columns being updated.
+const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
+function validateCSVRow(row, isUpdate) {
+  const errors = [];
+  const v = f => (row[f] ?? '').toString().trim();
+  const badNum = f => v(f) !== '' && isNaN(Number(v(f)));
+  if (!isUpdate && !v('name') && !v('asin')) errors.push({ field: 'name/asin', code: 'missing_required' });
+  if (!isUpdate && !v('cogs'))               errors.push({ field: 'cogs', code: 'missing_required' });
+  if (badNum('cogs'))          errors.push({ field: 'cogs', code: 'not_numeric', value: v('cogs') });
+  if (badNum('target_margin')) errors.push({ field: 'target_margin', code: 'not_numeric', value: v('target_margin') });
+  if (badNum('weight_oz'))     errors.push({ field: 'weight_oz', code: 'not_numeric', value: v('weight_oz') });
+  if (v('category') && !CAT_MAP[v('category').toLowerCase()])
+    errors.push({ field: 'category', code: 'unknown_category', value: v('category') });
+  if (v('size_tier') && !VALID_SIZE_TIERS.includes(v('size_tier').toLowerCase()))
+    errors.push({ field: 'size_tier', code: 'bad_size_tier', value: v('size_tier') });
+  return errors;
+}
+
+// Human-readable reason per validation code (EN/ZH)
+function csvErrorText(code) {
+  switch (code) {
+    case 'missing_required': return t('missing required field', '缺少必填字段');
+    case 'not_numeric':      return t('not a number', '不是数字');
+    case 'unknown_category': return t('unknown category', '未知类别');
+    case 'bad_size_tier':    return t('invalid size tier (use ss / ls / lb / xl)', '无效尺寸等级（应为 ss / ls / lb / xl）');
+    default:                 return code;
+  }
+}
+
+// Post-import summary modal: "Imported X · Updated Y · Skipped Z" + expandable errors
+function showImportReport(created, updated, skippedRows) {
+  const parts = [];
+  parts.push(`${t('Imported', '已导入')} ${created}`);
+  if (updated) parts.push(`${t('Updated', '已更新')} ${updated}`);
+  parts.push(`${t('Skipped', '已跳过')} ${skippedRows.length}`);
+  let body = `<div style="font-size:0.95rem;font-weight:700;color:#e8eaf0;margin-bottom:10px;">${parts.join(' · ')}</div>`;
+  if (skippedRows.length) {
+    const items = skippedRows.map(r =>
+      `<div style="padding:6px 0;border-bottom:1px solid #1e2130;font-size:0.75rem;color:#fca5a5;">
+        <strong style="color:#e8eaf0;">${t('Row', '第')} ${r.line}${t('', '行')}</strong> — ${
+          r.errors.map(e => `${e.field}: ${csvErrorText(e.code)}${e.value ? ` ("${e.value}")` : ''}`).join(' · ')
+        }</div>`).join('');
+    body += `<button class="topbar-btn" onclick="const l=document.getElementById('ir-errors');const open=l.style.display!=='none';l.style.display=open?'none':'';this.textContent=(open?'▸ ':'▾ ')+this.dataset.label;"
+      data-label="${t(`${skippedRows.length} skipped row${skippedRows.length !== 1 ? 's' : ''}`, `${skippedRows.length} 个已跳过的行`)}">▸ ${t(`${skippedRows.length} skipped row${skippedRows.length !== 1 ? 's' : ''}`, `${skippedRows.length} 个已跳过的行`)}</button>
+      <div id="ir-errors" style="display:none;margin-top:8px;max-height:40vh;overflow-y:auto;">${items}</div>`;
+  } else if (created + updated > 0) {
+    body += `<div class="alert good" style="margin:0;">${t('All rows imported cleanly.', '所有行均已成功导入。')}</div>`;
+  } else {
+    body += `<div class="alert warn" style="margin:0;">${t('No changes were made.', '未进行任何更改。')}</div>`;
+  }
+  document.getElementById('ir-body').innerHTML = body;
+  openModalEl('import-report-modal');
+}
+
 function sizeTierFromDims(l, w, h, weightOz) {
   const dims = [l, w, h].sort((a, b) => b - a);
   const longest = dims[0], median = dims[1], shortest = dims[2];
@@ -1367,7 +1439,8 @@ function importCSV(event) {
     if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
     const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
     const has = col => headers.includes(col);
-    let created = 0, updated = 0, skipped = 0;
+    let created = 0, updated = 0;
+    const skippedRows = []; // { line, errors: [{field, code, value?}] } — see validateCSVRow
 
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
@@ -1378,6 +1451,10 @@ function importCSV(event) {
       // Match existing product by ASIN first, then by name
       let existing = asin ? state.products.find(p => p.asin && p.asin.toUpperCase() === asin) : null;
       if (!existing && row.name) existing = state.products.find(p => p.name === row.name);
+
+      // RULE: Validate before importing — rows with errors are skipped and reported
+      const rowErrors = validateCSVRow(row, !!existing);
+      if (rowErrors.length) { skippedRows.push({ line: i + 1, errors: rowErrors }); continue; }
 
       if (existing) {
         // UPDATE — only overwrite fields that are present as columns in this CSV
@@ -1415,8 +1492,7 @@ function importCSV(event) {
         if (has('notes') && row.notes)                        existing.notes            = row.notes;
         updated++;
       } else {
-        // CREATE — require at minimum a name (or asin) and cogs
-        if ((!row.name && !asin) || !row.cogs) { skipped++; continue; }
+        // CREATE — identity + COGS already guaranteed by validateCSVRow above
         const p = createDefaultProduct();
         p.name = row.name || `Product ${asin}`;
         p.asin = asin;
@@ -1453,11 +1529,8 @@ function importCSV(event) {
     }
     saveToStorage();
     renderAll();
-    const parts = [];
-    if (updated) parts.push(`${updated} product${updated !== 1 ? 's' : ''} updated`);
-    if (created) parts.push(`${created} created`);
-    if (skipped) parts.push(`${skipped} skipped (missing name/ASIN or COGS)`);
-    alert(parts.length ? parts.join(', ') + '.' : 'No changes made.');
+    // RULE: Always show the import validation report — never skip rows silently
+    showImportReport(created, updated, skippedRows);
   };
   reader.readAsText(file);
   event.target.value = '';

@@ -492,6 +492,28 @@ Size tier values: `ss` (small standard), `ls` (large standard), `lb` (large bulk
 
 **Template file:** `products-template.csv` (included in repo)
 
+### 11.1 Row Validation & Import Report
+**CODE LOCATION:** `index.html` → function `validateCSVRow(row, isUpdate)`, report UI in `showImportReport()` / `csvErrorText()`, modal `#import-report-modal`
+
+Rows are validated BEFORE import; a row with any error is **skipped entirely**
+(never partially imported or silently coerced) and listed in the post-import
+report ("Imported X · Updated Y · Skipped Z" with an expandable per-row error
+list showing row number, field, and reason).
+
+Validation rules (error codes):
+- `missing_required` — create rows must have a `name` or `asin`, and a `cogs` value.
+  Update rows (matched to an existing product by ASIN or name) are exempt — they
+  may carry only the columns being updated.
+- `not_numeric` — `cogs`, `target_margin`, `weight_oz` present but not parseable
+  as a number (strict `Number()` parse: `"12x"` is rejected).
+- `unknown_category` — `category` present but not a key of `CAT_MAP`.
+- `bad_size_tier` — `size_tier` present but not `ss`/`ls`/`lb`/`xl` (case-insensitive).
+
+Empty optional fields are NOT errors — defaults from Section 3 apply.
+
+**TO UPDATE validation rules:** edit `validateCSVRow()` and add a matching
+entry to `csvErrorText()` for any new error code.
+
 ---
 
 ## 12. CURRENCY CONVERSION
