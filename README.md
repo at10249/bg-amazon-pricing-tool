@@ -6,9 +6,39 @@ kill or continue products.
 
 No server required. No build step. No dependencies. Open `index.html` in any browser.
 
+Release history: see **[CHANGELOG.md](CHANGELOG.md)**.
+
 ---
 
 ## Fable Edit — 2026-07-07
+
+### Round 2 (Fable Edit 1.1)
+
+Ten improvements shipped in a second round (still a single dependency-free `index.html`):
+
+- **Fee waterfall** — cascading cost bars from Your Price down to net profit,
+  every segment labelled in dollars (referral, FBA, fuel surcharge, COGS,
+  logistics, PPC, returns/overhead); net margin green/red
+- **What-if solver** — lock price + margin to solve the max allowable COGS
+  (with gap vs your current COGS), or lock COGS + margin to solve the min price
+- **CSV import validation report** — malformed rows are no longer skipped
+  silently: "Imported X · Skipped Z" summary with an expandable per-row error
+  list (row number, field, reason)
+- **Kill signals in plain language** — full reason sentences with the actual
+  numbers and the RULE threshold that fired, not just a badge
+- **Sample product badging** — the empty-state sample is clearly marked SAMPLE
+  with one-click removal
+- **Tier comparison table** — List / Your Price / Sale / Clearance side by side
+  with per-tier net profit $ and margin %
+- **Sidebar search** — filter products by name/ASIN (appears at 6+ products)
+- **Dark/light theme toggle** — persisted, follows your OS setting on first visit
+- **Auto-backup nudge** — reminds you to Export JSON after 30 days without a backup
+- **Versioned fee schedule** — all FBA fee numbers in one dated `FEE_SCHEDULE`
+  block; future Amazon rate changes are a single block swap (LOGIC.md §1.4)
+
+Tests: 213 → 302 (`npm test`).
+
+### Round 1 (Fable Edit 1.0)
 
 Seven Near-Term roadmap items shipped (still a single dependency-free `index.html`):
 

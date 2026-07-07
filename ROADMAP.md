@@ -24,6 +24,16 @@ Items within each section are roughly prioritised top-to-bottom.
 - [x] Sensitivity table: margin across ±$2 price range with per-row fee recompute *(shipped 2026-07-07)*
 - [x] Break-even units/month calculator (fixed overheads ÷ contribution margin) *(shipped 2026-07-07)*
 - [x] Landed cost calculator: CNY unit price → USD landed cost with duty rate input, feeds COGS *(shipped 2026-07-07)*
+- [x] Dark/light mode toggle (CSS variable palette swap, persisted, follows OS on first visit) *(shipped 2026-07-07, round 2)*
+- [x] "What-if" mode: lock target margin, solve for required COGS to hit a given price (and the reverse: min price from COGS) *(shipped 2026-07-07, round 2)*
+- [x] Side-by-side tier comparison view: List / Your Price / Sale / Clearance with per-tier profit $ and margin % *(shipped 2026-07-07, round 2)*
+- [x] Fee waterfall breakdown: price → fees → net margin as labelled CSS bars *(shipped 2026-07-07, round 2)*
+- [x] CSV import validation report: per-row errors (field + reason) instead of silent skips *(shipped 2026-07-07, round 2)*
+- [x] Plain-language kill-signal explanations with actual numbers + RULE thresholds *(shipped 2026-07-07, round 2)*
+- [x] Sidebar product search/filter by name or ASIN *(shipped 2026-07-07, round 2)*
+- [x] Sample product badged + one-click removable in the empty state *(shipped 2026-07-07, round 2)*
+- [x] Auto-backup nudge: Export JSON reminder after 30 days without a backup *(shipped 2026-07-07, round 2)*
+- [x] Versioned FBA fee schedule: dated `FEE_SCHEDULE` block, rate updates are one block swap *(shipped 2026-07-07, round 2)*
 
 ---
 
@@ -32,11 +42,9 @@ Items within each section are roughly prioritised top-to-bottom.
 ### UX / Polish
 - Drag-to-reorder products in sidebar
 - Bulk-select and bulk-archive products
-- Dark/light mode toggle
 
 ### Calculator Improvements
-- Show all three price points (Your Price / Sale / Coupon) side-by-side in one view
-- "What-if" mode: lock target margin, solve for required COGS to hit a given price
+- Coupon price point shown inside the tier comparison table
 
 ---
 
@@ -111,7 +119,14 @@ Items within each section are roughly prioritised top-to-bottom.
 ## Known Issues / Tech Debt
 
 - All state is `localStorage` only — clearing browser storage loses all data
-- No input validation on CSV import (malformed rows silently skipped)
-- FBA fee tables are hardcoded — need a mechanism to update when Amazon changes rates
-- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals, sensitivity/break-even/landed-cost calculators (213 tests — run with `npm test`)
+  *(mitigated 2026-07-07: auto-backup nudge prompts a JSON export after 30 days)*
+- ~~No input validation on CSV import (malformed rows silently skipped)~~
+  Fixed 2026-07-07: rows are validated (`validateCSVRow`) and skipped rows are
+  reported per-row with field + reason
+- ~~FBA fee tables are hardcoded — need a mechanism to update when Amazon changes rates~~
+  Fixed 2026-07-07: all fee numbers live in one dated `FEE_SCHEDULE` block —
+  updates are a single block swap (LOGIC.md §1.4)
+- ~~No unit tests~~ `test.js` covers fee tables, price solver, inverse solver,
+  kill signals + explanations, CSV validation, waterfall, backup nudge,
+  sensitivity/break-even/landed-cost calculators (302 tests — run with `npm test`)
 - Single `index.html` file — split into modules when adding build step
