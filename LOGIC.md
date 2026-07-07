@@ -590,6 +590,32 @@ Shows net profit ($/unit) and net margin (%) at Your Price −$2, −$1, current
 - The UI draws cascading bars: each cost bar starts where the previous one ended,
   and the remainder is the net margin. Pure CSS, no canvas or libraries.
 
+### 15.5 What-if Solver (inverse pricing)
+**CODE LOCATION:** `index.html` → functions `solveMaxCOGS(inputs, targetPrice, targetMarginPct)` and `solveMinPriceRaw(inputs)`, UI in `renderWhatIf()` / `calcWhatIf()` (Calculator tab, "What-if Solver" card)
+
+Two inversion modes, selectable via tabs:
+
+**Mode A — lock price + margin, solve max COGS:**
+`maxCogs = price × (1 − margin/100) − FBA(price) − referral(price) − otherPerUnitCosts`
+- Direct formula, no iteration — the fees depend only on the price, which is locked.
+- All other per-unit costs (inbound, prep, storage, PPC, returns, overhead, Vine
+  amortisation) are taken from the product's current inputs.
+- Output includes `gap = maxCogs − current COGS` (positive = sourcing headroom,
+  negative = current supplier is too expensive for this price/margin combo).
+- Returns `null` for non-positive price or margin ≥ 100%. `maxCogs` can be
+  negative (impossible target) — the UI shows a red alert in that case.
+
+**Mode B — lock COGS + margin, solve min price:**
+Reuses the main iterative solver, exposed as `solveMinPriceRaw()` — identical
+fixed-point iteration to `calcPrices()` but WITHOUT the .95 rounding, run for
+40 iterations. The UI shows both the exact break-point price and the rounded
+Your Price (via `calcPrices`), with the margin achieved at the rounded price.
+
+**Round-trip property (tested):** solving max COGS from a price, then solving
+the raw price back from that COGS, returns the original price within $0.01
+(and vice versa). This holds because both directions solve the same equation
+`price × (1 − m) = COGS + fees(price) + otherCosts`.
+
 ---
 
 *Last updated: July 2026*

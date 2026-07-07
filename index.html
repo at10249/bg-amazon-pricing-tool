@@ -552,6 +552,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
             <div id="calc-outputs-html"></div>
           </div>
         </div>
+        <div id="whatif-section"></div>
         <div id="coupon-calc-section" style="margin-top:0;"></div>
         <div id="breakeven-calc-section"></div>
       </div>
@@ -1687,6 +1688,42 @@ function feeWaterfall(inputs, price) {
   };
 }
 
+// RULE: What-if inverse solver — lock a desired selling price and a target margin %,
+// solve the maximum allowable COGS: maxCogs = price × (1 − margin/100) − FBA(price)
+// − referral(price) − other per-unit costs. Direct formula (no iteration) because
+// fees depend only on the price, which is fixed here. Returns null for non-positive
+// price or margin ≥ 100. `gap` = maxCogs − current COGS (positive = headroom).
+// LOGIC.md Section 15.5
+function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
+  if (!(targetPrice > 0) || !(targetMarginPct < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const fba = getFBAFee(inputs.sizetier, inputs.weight, targetPrice) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+  const ref = getReferralFee(inputs.category, targetPrice);
+  const maxCogs = targetPrice * (1 - targetMarginPct / 100) - fba - ref - otherCosts;
+  return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
+}
+
+// RULE: Unrounded minimum-price solver — the same fixed-point iteration as
+// calcPrices() but WITHOUT the .95 psychological rounding. Used by What-if mode
+// (and by tests for the COGS↔price round-trip property). 40 iterations for tight
+// convergence. Returns null when margin ≥ 100. LOGIC.md Section 15.5
+function solveMinPriceRaw(inputs) {
+  if (!(inputs.margin < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const totalFixed = inputs.cogs + otherCosts;
+  let yp = totalFixed / (1 - inputs.margin / 100);
+  for (let i = 0; i < 40; i++) {
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, yp) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+    const ref = getReferralFee(inputs.category, yp);
+    yp = (totalFixed + fba + ref) / (1 - inputs.margin / 100);
+  }
+  return yp;
+}
+
 // RULE: Break-even volume = fixed monthly overheads ÷ contribution margin per unit,
 // rounded UP to whole units. Returns null when contribution margin ≤ 0 (never breaks even),
 // 0 when there are no overheads. LOGIC.md Section 15.2
@@ -2184,6 +2221,7 @@ function renderCalcTab(p) {
       <div class="hint" style="margin-top:6px;">${t('Fees recomputed at each price — watch for FBA band cliffs at $10 and $50.','每个价格重新计算费用 — 注意 $10 和 $50 处的 FBA 费率段临界点。')}</div>
     </div>
   `;
+  renderWhatIf(p);
   renderCouponCalc(p);
   renderBreakevenCalc(p);
 }
@@ -3076,6 +3114,96 @@ function importAmazonReport(event) {
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WHAT-IF SOLVER PANEL
+// LOGIC.md Section 15.5
+// ═══════════════════════════════════════════════════════════════════════════
+let _whatIfMode = 'cogs'; // 'cogs' = lock margin+price, solve max COGS · 'price' = lock margin+COGS, solve min price
+
+function renderWhatIf(p) {
+  const el = document.getElementById('whatif-section');
+  if (!el) return;
+  const prices = calcPrices(p.inputs);
+  const isCogs = _whatIfMode === 'cogs';
+  el.innerHTML = `<div class="card" style="margin-top:14px;">
+    <div class="card-title">${t('What-if Solver','假设求解器')}</div>
+    <div class="tabs" style="margin-bottom:10px;">
+      <button class="tab ${isCogs ? 'on' : ''}" onclick="setWhatIfMode('cogs')">${t('Lock price + margin → max COGS','锁定售价+利润率 → 最高货物成本')}</button>
+      <button class="tab ${isCogs ? '' : 'on'}" onclick="setWhatIfMode('price')">${t('Lock COGS + margin → min price','锁定货物成本+利润率 → 最低售价')}</button>
+    </div>
+    <div class="g2">
+      <div>
+        <div class="g2" style="gap:8px;">
+          ${isCogs
+            ? `<div class="inp"><label>${t('Desired selling price ($)','期望售价($)')}</label><input type="number" id="wi-price" step="0.01" min="0.01" value="${prices.yp.toFixed(2)}" oninput="calcWhatIf()"></div>`
+            : `<div class="inp"><label>${t('COGS ($)','货物成本($)')}</label><input type="number" id="wi-cogs" step="0.01" min="0" value="${p.inputs.cogs.toFixed(2)}" oninput="calcWhatIf()"></div>`}
+          <div class="inp"><label>${t('Target margin (%)','目标利润率(%)')}</label><input type="number" id="wi-margin" step="0.5" min="0" max="99" value="${p.inputs.margin}" oninput="calcWhatIf()"></div>
+        </div>
+        <div class="hint">${isCogs
+          ? t('Locks the price and margin, then solves the most you can pay for the product. Fees are computed at the target price; all other per-unit costs stay as configured.','锁定售价和利润率，求解您最多能接受的货物成本。费用按目标价格计算；其他单件成本保持当前设置。')
+          : t('Locks margin and COGS, then solves the minimum viable selling price — the same solver that powers Your Price.','锁定利润率和货物成本，求解最低可行售价 — 与"您的售价"使用同一求解器。')}</div>
+      </div>
+      <div id="wi-out"></div>
+    </div>
+  </div>`;
+  calcWhatIf();
+}
+
+function setWhatIfMode(m) {
+  _whatIfMode = m;
+  const p = getActiveProduct();
+  if (p) renderWhatIf(p);
+}
+
+function calcWhatIf() {
+  const p = getActiveProduct();
+  const out = document.getElementById('wi-out');
+  if (!p || !out) return;
+  const margin = parseFloat(document.getElementById('wi-margin')?.value);
+  if (_whatIfMode === 'cogs') {
+    const price = parseFloat(document.getElementById('wi-price')?.value);
+    const r = (price > 0 && margin >= 0 && margin < 100) ? solveMaxCOGS(p.inputs, price, margin) : null;
+    if (!r) {
+      out.innerHTML = `<div style="font-size:0.78rem;color:#555870;padding:8px 0;">${t('Enter a price and a margin below 100%.','请输入价格和低于100%的利润率。')}</div>`;
+      return;
+    }
+    const ok = r.maxCogs > 0;
+    const gapPos = r.gap >= 0;
+    out.innerHTML = `<div class="mfg-out" style="margin-top:0;background:#0f1020;border-color:#2a2a5e;">
+      <div class="mfg-out-title" style="color:#818cf8;">${t('Max Allowable COGS','最高可接受货物成本')}</div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Referral fee at','佣金 @')} ${fmtC(price)}</div><div class="mfg-row-r white">${fmtC(r.ref)}</div></div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('FBA fee (incl. surcharge)','FBA费用（含附加费）')}</div><div class="mfg-row-r white">${fmtC(r.fba)}</div></div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Other per-unit costs','其他单件成本')}</div><div class="mfg-row-r white">${fmtC(r.otherCosts)}</div></div>
+      <div class="mfg-row" style="border-top:2px solid #2a2a5e;margin-top:4px;padding-top:6px;">
+        <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">${t('→ Max COGS','→ 最高货物成本')}</div>
+        <div class="mfg-row-r ${ok ? '' : 'red'}" style="font-size:1.05rem;">${r.maxCogs < 0 ? '−' : ''}${fmtC(Math.abs(r.maxCogs))}</div>
+      </div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Current COGS','当前货物成本')}</div><div class="mfg-row-r white">${fmtC(p.inputs.cogs)}</div></div>
+      <div class="mfg-row"><div class="mfg-row-l">${gapPos ? t('Headroom vs current COGS','相对当前成本的余量') : t('Over current COGS by','超出当前成本')}</div><div class="mfg-row-r ${gapPos ? '' : 'red'}">${gapPos ? '+' : '−'}${fmtC(Math.abs(r.gap))}</div></div>
+    </div>
+    ${!ok ? `<div class="alert bad" style="margin-top:8px;">${t('No COGS can hit this margin at this price — fees and other costs alone exceed the target. Raise the price or lower the margin.','在该价格下任何货物成本都无法达到该利润率 — 仅费用和其他成本就已超标。请提高价格或降低利润率。')}</div>` : ''}`;
+  } else {
+    const cogs = parseFloat(document.getElementById('wi-cogs')?.value);
+    if (!(cogs >= 0) || !(margin >= 0) || margin >= 100) {
+      out.innerHTML = `<div style="font-size:0.78rem;color:#555870;padding:8px 0;">${t('Enter a COGS and a margin below 100%.','请输入货物成本和低于100%的利润率。')}</div>`;
+      return;
+    }
+    const inputs = { ...p.inputs, cogs, margin };
+    const raw = solveMinPriceRaw(inputs);
+    const r = calcPrices(inputs);
+    out.innerHTML = `<div class="mfg-out" style="margin-top:0;background:#0f1020;border-color:#2a2a5e;">
+      <div class="mfg-out-title" style="color:#818cf8;">${t('Minimum Viable Price','最低可行售价')}</div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Exact break-point price','精确临界价格')}</div><div class="mfg-row-r white">${fmtC(raw)}</div></div>
+      <div class="mfg-row" style="border-top:2px solid #2a2a5e;margin-top:4px;padding-top:6px;">
+        <div class="mfg-row-l" style="font-weight:700;color:#e8eaf0;">${t('→ Your Price (rounded to .95)','→ 您的售价（取整至.95）')}</div>
+        <div class="mfg-row-r" style="font-size:1.05rem;">${fmtC(r.yp)}</div>
+      </div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Margin at rounded price','取整价格下的利润率')}</div><div class="mfg-row-r ${r.ypF.pct >= margin ? '' : 'amber'}">${r.ypF.pct.toFixed(1)}%</div></div>
+      <div class="mfg-row"><div class="mfg-row-l">${t('Profit / unit at rounded price','取整价格下单件利润')}</div><div class="mfg-row-r ${r.ypF.profit >= 0 ? 'white' : 'red'}">${fmtC(r.ypF.profit)}</div></div>
+    </div>`;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

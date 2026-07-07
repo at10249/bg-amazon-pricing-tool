@@ -172,6 +172,32 @@ function feeWaterfall(inputs, price) {
   };
 }
 
+function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
+  if (!(targetPrice > 0) || !(targetMarginPct < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const fba = getFBAFee(inputs.sizetier, inputs.weight, targetPrice) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+  const ref = getReferralFee(inputs.category, targetPrice);
+  const maxCogs = targetPrice * (1 - targetMarginPct / 100) - fba - ref - otherCosts;
+  return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
+}
+
+function solveMinPriceRaw(inputs) {
+  if (!(inputs.margin < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const totalFixed = inputs.cogs + otherCosts;
+  let yp = totalFixed / (1 - inputs.margin / 100);
+  for (let i = 0; i < 40; i++) {
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, yp) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+    const ref = getReferralFee(inputs.category, yp);
+    yp = (totalFixed + fba + ref) / (1 - inputs.margin / 100);
+  }
+  return yp;
+}
+
 function classifyPrice(currentPrice, prices) {
   if (!currentPrice || currentPrice <= 0) return null;
   const tol = PRICE_MATCH_TOLERANCE;
@@ -716,6 +742,59 @@ eq(+wfLoss.segments.reduce((s, x) => s + x.amount, 0).toFixed(6), 5, 'sum invari
 // Guards
 is(feeWaterfall(base, 0)  === null, 'price 0 → null');
 is(feeWaterfall(base, -3) === null, 'negative price → null');
+
+// ─── 12. What-if inverse solver ──────────────────────────────────────────────
+describe('solveMaxCOGS — lock price + margin, solve max COGS');
+
+// Hand-verified: base inputs, otherCosts = $2.85
+// P=$20, m=30%: FBA = 3.54×1.035 = $3.6639, ref = 20×15% = $3.00
+// maxCogs = 20×0.70 − 3.6639 − 3.00 − 2.85 = $4.4861
+const mc = solveMaxCOGS(base, 20, 30);
+eq(+mc.maxCogs.toFixed(4), 4.4861, 'P=$20 m=30% → maxCogs = $4.4861');
+eq(+mc.ref.toFixed(2), 3.00,       'referral computed at target price');
+eq(+mc.fba.toFixed(4), 3.6639,     'FBA (incl. surcharge) computed at target price');
+eq(+mc.otherCosts.toFixed(2), 2.85,'other per-unit costs unchanged');
+eq(+mc.gap.toFixed(4), +(4.4861 - base.cogs).toFixed(4), 'gap = maxCogs − current COGS');
+
+// Impossible target: fees alone exceed price × (1−margin)
+const mcNeg = solveMaxCOGS(base, 8, 50);
+is(mcNeg.maxCogs < 0, `impossible target → negative maxCogs ($${mcNeg.maxCogs.toFixed(2)})`);
+
+// Guards
+is(solveMaxCOGS(base, 0, 30)    === null, 'price 0 → null');
+is(solveMaxCOGS(base, -5, 30)   === null, 'negative price → null');
+is(solveMaxCOGS(base, 20, 100)  === null, 'margin 100% → null');
+is(solveMaxCOGS(base, 20, 150)  === null, 'margin >100% → null');
+
+describe('solveMinPriceRaw — unrounded fixed-point solver');
+
+const rawP = solveMinPriceRaw(base);
+is(rawP > 0, `raw price positive ($${rawP.toFixed(2)})`);
+is(rawP <= p.yp, `raw price ($${rawP.toFixed(2)}) ≤ rounded Your Price ($${p.yp})`);
+is(p.yp - rawP < 1, 'rounded price is within $1 above the raw solution (.95 round-up)');
+// At the fixed point, margin is exactly the target
+{
+  const fba = getFBAFee(base.sizetier, base.weight, rawP) * FUEL_SURCHARGE;
+  const ref = getReferralFee(base.category, rawP);
+  const profit = rawP - base.cogs - 2.85 - fba - ref;
+  eq(+(profit / rawP * 100).toFixed(3), 30, 'margin at raw price = exactly 30%');
+}
+is(solveMinPriceRaw({ ...base, margin: 100 }) === null, 'margin 100% → null');
+
+describe('What-if round-trip property — COGS↔price invert within $0.01');
+
+// solveMaxCOGS(P, m) → cogs, then solveMinPriceRaw(cogs, m) must return P
+for (const [P, m] of [[24.95, 30], [12.95, 35], [45.50, 25], [72.95, 40], [19.95, 20]]) {
+  const cogs = solveMaxCOGS(base, P, m).maxCogs;
+  const back = solveMinPriceRaw({ ...base, cogs, margin: m });
+  is(Math.abs(back - P) < 0.01, `P=$${P} m=${m}% → cogs=$${cogs.toFixed(2)} → back to $${back.toFixed(4)} (Δ<$0.01)`);
+}
+// Reverse direction: price from COGS, then max COGS at that price returns the COGS
+for (const [c, m] of [[4.00, 30], [9.50, 25], [1.25, 40]]) {
+  const P = solveMinPriceRaw({ ...base, cogs: c, margin: m });
+  const back = solveMaxCOGS({ ...base, cogs: c }, P, m).maxCogs;
+  is(Math.abs(back - c) < 0.01, `cogs=$${c} m=${m}% → P=$${P.toFixed(2)} → back to $${back.toFixed(4)} (Δ<$0.01)`);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY
