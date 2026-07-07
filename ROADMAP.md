@@ -17,32 +17,26 @@ Items within each section are roughly prioritised top-to-bottom.
 - [x] Flow guide modal + pricing rules quick reference
 - [x] Coupon cost calculator (flat fee + % of attributed sales)
 - [x] Kill signal alerts (ACoS runaway, stale stage, no sales)
+- [x] Mobile responsiveness (< 640px): hamburger drawer sidebar, single-column form grids, full-screen product modal with sticky footer, horizontally scrollable stage timeline, 44px tap targets *(shipped 2026-07-07)*
+- [x] Keyboard shortcut `N` to open Add Product modal *(shipped 2026-07-07)*
+- [x] Modal focus management: focus trap, close on Escape, focus returns to trigger *(shipped 2026-07-07)*
+- [x] Undo last check-in action (soft delete with 8s Undo toast, also on add) *(shipped 2026-07-07)*
+- [x] Sensitivity table: margin across ±$2 price range with per-row fee recompute *(shipped 2026-07-07)*
+- [x] Break-even units/month calculator (fixed overheads ÷ contribution margin) *(shipped 2026-07-07)*
+- [x] Landed cost calculator: CNY unit price → USD landed cost with duty rate input, feeds COGS *(shipped 2026-07-07)*
 
 ---
 
 ## Near-Term (next 1–3 sprints)
 
-### Mobile Responsiveness
-- Responsive layout: collapse sidebar to a bottom nav or hamburger drawer on screens < 640px
-- Stack `.g2` / `.g3` form grids to single column on mobile
-- Make the product modal full-screen on mobile with sticky footer buttons
-- Ensure the stage timeline scrolls horizontally rather than overflowing
-- Minimum 44px tap targets throughout
-
 ### UX / Polish
-- Keyboard shortcut to open Add Product modal (`N`)
-- Tab focus management in modals (trap focus, close on Escape)
-- Undo last check-in action (soft delete with restore)
 - Drag-to-reorder products in sidebar
 - Bulk-select and bulk-archive products
 - Dark/light mode toggle
 
 ### Calculator Improvements
 - Show all three price points (Your Price / Sale / Coupon) side-by-side in one view
-- Sensitivity table: how margin changes across ±$2 price range
 - "What-if" mode: lock target margin, solve for required COGS to hit a given price
-- Break-even units/month calculator (fixed overheads ÷ contribution margin)
-- Landed cost calculator: CNY unit price → USD landed cost with duty rate input
 
 ---
 
@@ -119,5 +113,5 @@ Items within each section are roughly prioritised top-to-bottom.
 - All state is `localStorage` only — clearing browser storage loses all data
 - No input validation on CSV import (malformed rows silently skipped)
 - FBA fee tables are hardcoded — need a mechanism to update when Amazon changes rates
-- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals (180 tests — run with `npm test`)
+- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals, sensitivity/break-even/landed-cost calculators (213 tests — run with `npm test`)
 - Single `index.html` file — split into modules when adding build step

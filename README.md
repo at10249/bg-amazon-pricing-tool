@@ -8,6 +8,31 @@ No server required. No build step. No dependencies. Open `index.html` in any bro
 
 ---
 
+## Fable Edit — 2026-07-07
+
+Seven Near-Term roadmap items shipped (still a single dependency-free `index.html`):
+
+- **Mobile responsiveness (< 640px)** — sidebar becomes a hamburger drawer, form grids
+  stack to one column, the product modal goes full-screen with sticky footer buttons,
+  the stage timeline scrolls horizontally, and all tap targets are ≥ 44px
+- **Keyboard shortcut `N`** — opens the Add Product modal (ignored while typing or
+  when a modal is already open)
+- **Modal focus management** — Tab is trapped inside open modals, Escape closes them,
+  and focus returns to the triggering element
+- **Undo for check-ins** — deleting (or adding) a check-in shows an 8-second Undo
+  toast instead of a confirm dialog; undo restores the record at its original position
+- **Price sensitivity table** — profit $ and margin % at Your Price −$2…+$2, with fees
+  recomputed per row so the $10/$50 FBA band cliffs are visible; current row highlighted
+- **Break-even units/month** — fixed monthly overheads ÷ contribution margin per unit
+- **Landed cost calculator** — CNY unit price + exchange rate + duty % + freight →
+  USD landed cost inside the product modal; "Use as COGS" fills goods+duty into COGS
+  and freight into Inbound Shipping
+
+All new logic is documented in LOGIC.md (Sections 8 and 15) with `// RULE:` comments,
+covered by tests (`npm test` — 213 tests), and fully bilingual (EN/ZH).
+
+---
+
 ## Quick Start
 
 1. Download or clone this repo
