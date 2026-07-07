@@ -278,6 +278,49 @@ function checkKillSignals(product) {
   return { signals, warnings };
 }
 
+function explainSignal(sig, lang = 'en') {
+  const pick = (en, zh) => lang === 'zh' ? zh : en;
+  const p = sig.params || {};
+  switch (sig.code) {
+    case 'K1': return {
+      title: pick('Kill Signal 1 — Stage 1 zero sales', '终止信号1 — 阶段1零销售'),
+      text: pick(
+        `No ad-attributed sales after ${p.daysInS1} days in Stage 1 — past the ${p.thresholdDays}-day threshold${p.vineEnrolled ? ', and the Vine window has closed' : ''}. The product may have fundamental discoverability issues.`,
+        `阶段1已进行${p.daysInS1}天仍无广告归因销售 — 已超过${p.thresholdDays}天阈值${p.vineEnrolled ? '，且Vine窗口已关闭' : ''}。产品可能存在根本性的曝光问题。`),
+      rule: `K1_DAYS = ${p.thresholdDays}`
+    };
+    case 'K2': return {
+      title: pick('Kill Signal 2 — Stage 2 insufficient velocity', '终止信号2 — 阶段2销售速度不足'),
+      text: pick(
+        `Only ${p.postVineSales} post-Vine ad sales after ${p.daysInS2} days in Stage 2 — the target is ${p.target} sales within ${p.thresholdDays} days. Demand may be too weak to support the advertising investment.`,
+        `阶段2已进行${p.daysInS2}天，Vine后广告销售仅${p.postVineSales}笔 — 目标是${p.thresholdDays}天内达到${p.target}笔。需求可能不足以支撑广告投入。`),
+      rule: `S2_AD_SALES_TARGET = ${p.target} · S2_KILL_DAYS = ${p.thresholdDays}`
+    };
+    case 'K3': return {
+      title: pick('Kill Signal 3 — persistent unprofitability', '终止信号3 — 持续不盈利'),
+      text: pick(
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}% has exceeded break-even ACoS ${p.beAcos}%` : `ACoS has never dropped below break-even ACoS ${p.beAcos}%`} for ${p.daysInS3} days in Stage 3 (threshold: ${p.thresholdDays} days), and organic sales are not growing. The unit economics may be structurally broken — price too low, competition too high, or wrong keywords.`,
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}%持续高于盈亏平衡ACoS ${p.beAcos}%` : `ACoS从未低于盈亏平衡ACoS ${p.beAcos}%`}，阶段3已进行${p.daysInS3}天（阈值：${p.thresholdDays}天），且自然销售没有增长。单位经济模型可能存在结构性问题 — 价格过低、竞争过强或关键词不对。`),
+      rule: `S3_KILL_DAYS = ${p.thresholdDays} · beAcos = ${p.beAcos}%`
+    };
+    case 'K4': return {
+      title: pick('Kill Signal 4 — ad spend money pit', '终止信号4 — 广告支出无底洞'),
+      text: pick(
+        `Cumulative ad spend $${p.totalSpend} is ${p.ratioPct}% of cumulative revenue $${p.totalRev} — above the ${p.thresholdPct}% danger threshold. The product could still recover if organic sales start, but review it now.`,
+        `累计广告支出$${p.totalSpend}已达累计收入$${p.totalRev}的${p.ratioPct}% — 超过${p.thresholdPct}%的危险阈值。若自然销售启动仍有机会恢复，但请立即审查。`),
+      rule: `K4_SPEND_RATIO = ${(p.thresholdPct / 100).toFixed(1)}`
+    };
+    case 'STALE': return {
+      title: pick('Stale check-in', '检查记录过期'),
+      text: pick(
+        `No check-in recorded for ${p.staleDays} days — past the ${p.thresholdDays}-day threshold. Last check-in: ${p.lastDate}.`,
+        `已有${p.staleDays}天未记录检查 — 超过${p.thresholdDays}天阈值。最近一次检查：${p.lastDate}。`),
+      rule: `STALE_DAYS = ${p.thresholdDays}`
+    };
+    default: return { title: sig.code, text: '', rule: '' };
+  }
+}
+
 // ── Test harness ─────────────────────────────────────────────────────────────
 let passed = 0, failed = 0, section = '';
 
@@ -855,6 +898,49 @@ eq(multi.length, 4, 'bad row collects all errors (identity + numeric + category 
 
 // Error objects carry the offending value for reporting
 eq(validateCSVRow({ ...goodRow, category: 'gadgets' }, false).find(e => e.code === 'unknown_category').value, 'gadgets', 'error carries the bad value');
+
+// ─── 14. explainSignal ───────────────────────────────────────────────────────
+describe('explainSignal — plain-language kill-signal explanations');
+
+const exK1 = explainSignal({ code: 'K1', params: { daysInS1: 16, thresholdDays: 14, vineEnrolled: false } });
+is(exK1.text.includes('16 days'), 'K1 text contains actual days in Stage 1 (16)');
+is(exK1.text.includes('14-day threshold'), 'K1 text names the 14-day threshold');
+is(!exK1.text.includes('Vine'), 'K1 without Vine does not mention the Vine window');
+eq(exK1.rule, 'K1_DAYS = 14', 'K1 rule names the RULE constant and value');
+
+const exK1v = explainSignal({ code: 'K1', params: { daysInS1: 35, thresholdDays: 14, vineEnrolled: true } });
+is(exK1v.text.includes('Vine window has closed'), 'K1 with Vine mentions the closed Vine window');
+
+const exK2 = explainSignal({ code: 'K2', params: { postVineSales: 20, target: 40, daysInS2: 61, thresholdDays: 60 } });
+is(exK2.text.includes('Only 20 post-Vine ad sales'), 'K2 text contains actual sales count');
+is(exK2.text.includes('61 days') && exK2.text.includes('40 sales'), 'K2 text contains days and target');
+is(exK2.rule.includes('S2_AD_SALES_TARGET = 40') && exK2.rule.includes('S2_KILL_DAYS = 60'), 'K2 rule names both thresholds');
+
+// Spec example shape: "ACoS 42% has exceeded break-even ACoS 31% for N days"
+const exK3 = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90, latestAcos: 42 } });
+is(exK3.text.includes('ACoS 42% has exceeded break-even ACoS 31%'), 'K3 leads with actual vs break-even ACoS');
+is(exK3.text.includes('95 days'), 'K3 text contains days in Stage 3');
+is(exK3.rule.includes('S3_KILL_DAYS = 90'), 'K3 rule names S3_KILL_DAYS');
+
+const exK3n = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90 } });
+is(exK3n.text.includes('never dropped below break-even ACoS 31%'), 'K3 without a recorded ACoS falls back to "never dropped below"');
+
+const exK4 = explainSignal({ code: 'K4', params: { totalSpend: 160, totalRev: 100, ratioPct: 160, thresholdPct: 150 } });
+is(exK4.text.includes('$160') && exK4.text.includes('$100'), 'K4 text contains spend and revenue dollars');
+is(exK4.text.includes('160%') && exK4.text.includes('150%'), 'K4 text contains actual ratio and threshold');
+eq(exK4.rule, 'K4_SPEND_RATIO = 1.5', 'K4 rule names the ratio constant');
+
+const exStale = explainSignal({ code: 'STALE', params: { staleDays: 25, thresholdDays: 21, lastDate: '6/1/2026' } });
+is(exStale.text.includes('25 days') && exStale.text.includes('21-day'), 'STALE text contains actual and threshold days');
+is(exStale.text.includes('6/1/2026'), 'STALE text contains last check-in date');
+
+// Bilingual: zh variant is Chinese and carries the same numbers
+const exK3zh = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90, latestAcos: 42 } }, 'zh');
+is(/[一-鿿]/.test(exK3zh.text), 'zh explanation contains Chinese characters');
+is(exK3zh.text.includes('42%') && exK3zh.text.includes('31%'), 'zh explanation keeps the actual numbers');
+
+// Unknown code degrades gracefully
+eq(explainSignal({ code: 'K9', params: {} }).title, 'K9', 'unknown code → code as title, no crash');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY

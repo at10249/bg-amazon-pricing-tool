@@ -325,10 +325,28 @@ This prevents automatic decisions on insufficient data.
 
 ## 7. KILL / CONTINUE DECISION ENGINE
 
-**CODE LOCATION:** `index.html` → function `checkKillSignals(product)`
+**CODE LOCATION:** `index.html` → functions `checkKillSignals(product)` and `explainSignal(signal, lang)`
 
 These thresholds are SUGGESTIONS, not automatic decisions. The tool shows a "Kill Review"
 badge and explains why. The user decides. All thresholds documented here for easy LLM tuning.
+
+**Structured signals + plain-language explanations:**
+`checkKillSignals()` returns structured objects — `{signals: [{code, params}],
+warnings: [{code, params}]}` — where `params` carries the ACTUAL numbers that
+fired the threshold (days elapsed, sales counts, ACoS values, spend/revenue).
+Codes: `K1`–`K4` for kill signals, `STALE` for the check-in warning.
+
+`explainSignal(signal, lang)` is a pure function that renders a signal into
+`{title, text, rule}`:
+- `text` — full plain-language sentence with the real numbers, e.g.
+  *"ACoS 42% has exceeded break-even ACoS 31% for 95 days in Stage 3
+  (threshold: 90 days), and organic sales are not growing…"*
+- `rule` — names the RULE constant(s) responsible, e.g. `S3_KILL_DAYS = 90`.
+- `lang` is `'en'` or `'zh'`; both variants keep the same numbers.
+
+The UI renders `title` + `text` + a monospace `RULE:` tag per signal.
+**TO ADD a new signal:** push a new `{code, params}` in `checkKillSignals()`
+and add a matching case in `explainSignal()` (EN + ZH).
 
 ### Kill Signal 1: Stage 1 Zero Sales
 **Trigger:** Zero ad-attributed sales after DAY_THRESHOLD days in Stage 1

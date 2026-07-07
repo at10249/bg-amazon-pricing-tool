@@ -233,6 +233,7 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .kill-dot{width:6px;height:6px;border-radius:50%;background:#f87171;margin-top:5px;flex-shrink:0;}
 .warn-panel{background:#1f1a10;border:1px solid #7a5c00;border-radius:10px;padding:14px 16px;margin-bottom:12px;}
 .warn-panel-title{font-size:0.8rem;font-weight:700;color:#f59e0b;margin-bottom:8px;}
+.rule-tag{display:inline-block;font-family:monospace;font-size:0.62rem;color:#fca5a5;background:rgba(0,0,0,0.25);border:1px solid #7a0020;border-radius:4px;padding:1px 6px;letter-spacing:0.02em;}
 
 /* ═══════════════════════════════════════════════════════════
    FEE PILLS
@@ -1820,6 +1821,9 @@ function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
 // KILL SIGNAL ENGINE
 // LOGIC.md Section 7
 // ═══════════════════════════════════════════════════════════════════════════
+// RULE: checkKillSignals returns STRUCTURED signals — [{code, params}] — carrying
+// the actual numbers that fired each threshold. Render them with explainSignal()
+// (below), which produces the plain-language sentence + the RULE responsible.
 function checkKillSignals(product) {
   const signals = [];
   const warnings = [];
@@ -1832,7 +1836,8 @@ function checkKillSignals(product) {
   if (lastCheckin) {
     const staleDays = daysSince(lastCheckin.date);
     if (staleDays > STALE_DAYS) {
-      warnings.push(`No check-in recorded for ${staleDays} days. Last check-in: ${new Date(lastCheckin.date).toLocaleDateString()}.`);
+      warnings.push({ code: 'STALE', params: { staleDays, thresholdDays: STALE_DAYS,
+        lastDate: new Date(lastCheckin.date).toLocaleDateString() } });
     }
   }
 
@@ -1844,13 +1849,13 @@ function checkKillSignals(product) {
     if (daysInS1 >= K1_DAYS && !inVineWindow) {
       const hasAnySales = product.checkins.some(c => (c.adSales || 0) > 0);
       if (!hasAnySales) {
-        signals.push(`Kill Signal 1: No ad-attributed sales after ${daysInS1} days in Stage 1 with Vine window closed. Product may have fundamental discoverability issues.`);
+        signals.push({ code: 'K1', params: { daysInS1, thresholdDays: K1_DAYS,
+          vineEnrolled: !!product.inputs.vine } });
       }
     }
   }
 
   if (lc === 'STAGE_2') {
-    const s2Start = new Date(product.stageStartDates.STAGE_2 || product.createdAt);
     const daysInS2 = daysSince(product.stageStartDates.STAGE_2);
     // RULE: Vine adjustment — only count ad sales after Vine window end
     const vineEnd = product.inputs.vine
@@ -1862,7 +1867,8 @@ function checkKillSignals(product) {
 
     // RULE: Kill Signal 2 — Insufficient velocity in Stage 2
     if (daysInS2 >= S2_KILL_DAYS && postVineSales < S2_AD_SALES_TARGET) {
-      signals.push(`Kill Signal 2: Only ${postVineSales} post-Vine ad sales after ${daysInS2} days in Stage 2 (target: ${S2_AD_SALES_TARGET}). Insufficient demand velocity.`);
+      signals.push({ code: 'K2', params: { postVineSales, target: S2_AD_SALES_TARGET,
+        daysInS2, thresholdDays: S2_KILL_DAYS } });
     }
   }
 
@@ -1877,7 +1883,9 @@ function checkKillSignals(product) {
       );
       const organicGrowing = product.checkins.slice(-3).some(c => c.organicGrowing === 'yes');
       if (!everBelowBE && !organicGrowing) {
-        signals.push(`Kill Signal 3: ACoS has never dropped below break-even (${prices.beAcos.toFixed(1)}%) after ${daysInS3} days in Stage 3, and organic sales are not growing. Product may be structurally unprofitable.`);
+        const lastAcosCI = [...product.checkins].reverse().find(c => c.currentAcos !== undefined);
+        signals.push({ code: 'K3', params: { beAcos: +prices.beAcos.toFixed(1), daysInS3,
+          thresholdDays: S3_KILL_DAYS, latestAcos: lastAcosCI ? +lastAcosCI.currentAcos.toFixed(1) : undefined } });
       }
     }
   }
@@ -1886,10 +1894,59 @@ function checkKillSignals(product) {
   const totalRev = product.checkins.reduce((s,c) => s+(c.totalRevenue||0), 0);
   const totalSpend = product.checkins.reduce((s,c) => s+(c.totalAdSpend||0), 0);
   if (totalRev > 0 && totalSpend > totalRev * K4_SPEND_RATIO) {
-    signals.push(`Danger: Cumulative ad spend ($${totalSpend.toFixed(0)}) is ${((totalSpend/totalRev)*100).toFixed(0)}% of total revenue ($${totalRev.toFixed(0)}). Threshold is ${K4_SPEND_RATIO*100}%. Product may be a money pit.`);
+    signals.push({ code: 'K4', params: { totalSpend: +totalSpend.toFixed(0), totalRev: +totalRev.toFixed(0),
+      ratioPct: +((totalSpend / totalRev) * 100).toFixed(0), thresholdPct: K4_SPEND_RATIO * 100 } });
   }
 
   return { signals, warnings };
+}
+
+// RULE: explainSignal — turns a structured signal {code, params} into a full
+// plain-language explanation: {title, text, rule}. `text` contains the ACTUAL
+// numbers that fired the signal; `rule` names the RULE constant / threshold
+// responsible (documented in LOGIC.md Section 7). Pure function — lang is
+// passed explicitly so it is unit-testable outside the browser.
+function explainSignal(sig, lang = 'en') {
+  const pick = (en, zh) => lang === 'zh' ? zh : en;
+  const p = sig.params || {};
+  switch (sig.code) {
+    case 'K1': return {
+      title: pick('Kill Signal 1 — Stage 1 zero sales', '终止信号1 — 阶段1零销售'),
+      text: pick(
+        `No ad-attributed sales after ${p.daysInS1} days in Stage 1 — past the ${p.thresholdDays}-day threshold${p.vineEnrolled ? ', and the Vine window has closed' : ''}. The product may have fundamental discoverability issues.`,
+        `阶段1已进行${p.daysInS1}天仍无广告归因销售 — 已超过${p.thresholdDays}天阈值${p.vineEnrolled ? '，且Vine窗口已关闭' : ''}。产品可能存在根本性的曝光问题。`),
+      rule: `K1_DAYS = ${p.thresholdDays}`
+    };
+    case 'K2': return {
+      title: pick('Kill Signal 2 — Stage 2 insufficient velocity', '终止信号2 — 阶段2销售速度不足'),
+      text: pick(
+        `Only ${p.postVineSales} post-Vine ad sales after ${p.daysInS2} days in Stage 2 — the target is ${p.target} sales within ${p.thresholdDays} days. Demand may be too weak to support the advertising investment.`,
+        `阶段2已进行${p.daysInS2}天，Vine后广告销售仅${p.postVineSales}笔 — 目标是${p.thresholdDays}天内达到${p.target}笔。需求可能不足以支撑广告投入。`),
+      rule: `S2_AD_SALES_TARGET = ${p.target} · S2_KILL_DAYS = ${p.thresholdDays}`
+    };
+    case 'K3': return {
+      title: pick('Kill Signal 3 — persistent unprofitability', '终止信号3 — 持续不盈利'),
+      text: pick(
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}% has exceeded break-even ACoS ${p.beAcos}%` : `ACoS has never dropped below break-even ACoS ${p.beAcos}%`} for ${p.daysInS3} days in Stage 3 (threshold: ${p.thresholdDays} days), and organic sales are not growing. The unit economics may be structurally broken — price too low, competition too high, or wrong keywords.`,
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}%持续高于盈亏平衡ACoS ${p.beAcos}%` : `ACoS从未低于盈亏平衡ACoS ${p.beAcos}%`}，阶段3已进行${p.daysInS3}天（阈值：${p.thresholdDays}天），且自然销售没有增长。单位经济模型可能存在结构性问题 — 价格过低、竞争过强或关键词不对。`),
+      rule: `S3_KILL_DAYS = ${p.thresholdDays} · beAcos = ${p.beAcos}%`
+    };
+    case 'K4': return {
+      title: pick('Kill Signal 4 — ad spend money pit', '终止信号4 — 广告支出无底洞'),
+      text: pick(
+        `Cumulative ad spend $${p.totalSpend} is ${p.ratioPct}% of cumulative revenue $${p.totalRev} — above the ${p.thresholdPct}% danger threshold. The product could still recover if organic sales start, but review it now.`,
+        `累计广告支出$${p.totalSpend}已达累计收入$${p.totalRev}的${p.ratioPct}% — 超过${p.thresholdPct}%的危险阈值。若自然销售启动仍有机会恢复，但请立即审查。`),
+      rule: `K4_SPEND_RATIO = ${(p.thresholdPct / 100).toFixed(1)}`
+    };
+    case 'STALE': return {
+      title: pick('Stale check-in', '检查记录过期'),
+      text: pick(
+        `No check-in recorded for ${p.staleDays} days — past the ${p.thresholdDays}-day threshold. Last check-in: ${p.lastDate}.`,
+        `已有${p.staleDays}天未记录检查 — 超过${p.thresholdDays}天阈值。最近一次检查：${p.lastDate}。`),
+      rule: `STALE_DAYS = ${p.thresholdDays}`
+    };
+    default: return { title: sig.code, text: '', rule: '' };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2099,13 +2156,23 @@ function renderKillSignals(p) {
     </div>`;
   }
   if (signals.length) {
-    html += `<div class="kill-panel"><div class="kill-panel-title">⚠ Kill Signals Active — Review Required</div>`;
-    signals.forEach(s => html += `<div class="kill-signal"><div class="kill-dot"></div>${s}</div>`);
-    html += `<button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILL_REVIEW')">Mark as Kill Review</button></div>`;
+    html += `<div class="kill-panel"><div class="kill-panel-title">⚠ ${t('Kill Signals Active — Review Required','终止信号已触发 — 需要审查')}</div>`;
+    signals.forEach(s => {
+      const ex = explainSignal(s, state.lang);
+      html += `<div class="kill-signal"><div class="kill-dot"></div><div>
+        <strong style="color:#fca5a5;">${ex.title}</strong>
+        <div style="margin-top:2px;">${ex.text}</div>
+        <div style="margin-top:4px;"><span class="rule-tag">RULE: ${ex.rule}</span></div>
+      </div></div>`;
+    });
+    html += `<button class="grad-btn kill" onclick="advanceStage(getActiveProduct(),'KILL_REVIEW')">${t('Mark as Kill Review','标记为终止评估')}</button></div>`;
   }
   if (warnings.length) {
-    html += `<div class="warn-panel"><div class="warn-panel-title">⚠ Warnings</div>`;
-    warnings.forEach(w => html += `<div style="font-size:0.77rem;color:#f59e0b;padding:4px 0;">${w}</div>`);
+    html += `<div class="warn-panel"><div class="warn-panel-title">⚠ ${t('Warnings','警告')}</div>`;
+    warnings.forEach(w => {
+      const ex = explainSignal(w, state.lang);
+      html += `<div style="font-size:0.77rem;color:#f59e0b;padding:4px 0;"><strong>${ex.title}:</strong> ${ex.text} <span class="rule-tag" style="border-color:#7a5c00;color:#f59e0b;">RULE: ${ex.rule}</span></div>`;
+    });
     html += `</div>`;
   }
   document.getElementById('pv-kill-signals').innerHTML = html;
