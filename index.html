@@ -464,6 +464,13 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
       <span class="sidebar-title" data-en="Products" data-zh="产品">Products</span>
       <button class="sidebar-add" onclick="openAddModal()" title="Add product">+</button>
     </div>
+    <div id="sidebar-search-wrap" style="display:none;padding:8px 8px 0;">
+      <input type="text" id="sidebar-search" autocomplete="off" spellcheck="false"
+        style="font-size:0.78rem;padding:6px 9px;"
+        oninput="setSidebarFilter(this.value)" onkeydown="sidebarSearchKey(event)"
+        aria-label="Search products">
+      <div id="sidebar-search-count" style="font-size:0.62rem;color:#555870;padding:4px 2px 0;"></div>
+    </div>
     <div class="sidebar-scroll" id="sidebar-list"></div>
     <div class="sidebar-bottom">
       <button class="sidebar-mode-btn active" id="sb-seller" onclick="setAppMode('seller')" data-en="Seller Mode" data-zh="卖家模式">Seller Mode</button>
@@ -2100,12 +2107,52 @@ function advanceStage(product, toStage) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SIDEBAR RENDER
+// SIDEBAR RENDER + PRODUCT SEARCH
 // ═══════════════════════════════════════════════════════════════════════════
+
+// RULE: The sidebar search box only appears at SIDEBAR_SEARCH_MIN or more
+// products (below that, scanning the list is faster than typing).
+const SIDEBAR_SEARCH_MIN = 6;
+let _sidebarFilter = ''; // ephemeral — not persisted
+
+function setSidebarFilter(v) {
+  _sidebarFilter = v;
+  renderSidebar();
+}
+
+function sidebarSearchKey(e) {
+  // Escape clears the filter first; a second Escape bubbles (closes the drawer)
+  if (e.key === 'Escape' && e.target.value) {
+    e.target.value = '';
+    setSidebarFilter('');
+    e.stopPropagation();
+  }
+}
+
 function renderSidebar() {
   const list = document.getElementById('sidebar-list');
-  if (!state.products.length) { list.innerHTML = '<div style="font-size:0.73rem;color:#555870;padding:8px;text-align:center;">No products yet</div>'; return; }
-  list.innerHTML = state.products.map(p => {
+  const wrap = document.getElementById('sidebar-search-wrap');
+  const input = document.getElementById('sidebar-search');
+  const countEl = document.getElementById('sidebar-search-count');
+  const showSearch = state.products.length >= SIDEBAR_SEARCH_MIN;
+  if (wrap) wrap.style.display = showSearch ? '' : 'none';
+  if (!showSearch && _sidebarFilter) { _sidebarFilter = ''; if (input) input.value = ''; }
+  if (input) input.placeholder = t('Search name / ASIN…','搜索名称/ASIN…');
+
+  if (!state.products.length) { list.innerHTML = `<div style="font-size:0.73rem;color:#555870;padding:8px;text-align:center;">${t('No products yet','暂无产品')}</div>`; return; }
+
+  const q = _sidebarFilter.trim().toLowerCase();
+  const visible = q
+    ? state.products.filter(p => p.name.toLowerCase().includes(q) || (p.asin || '').toLowerCase().includes(q))
+    : state.products;
+  if (showSearch && countEl) {
+    countEl.textContent = q
+      ? t(`${visible.length} of ${state.products.length} products`, `${visible.length} / ${state.products.length} 个产品`)
+      : t(`${state.products.length} products`, `${state.products.length} 个产品`);
+  }
+  if (!visible.length) { list.innerHTML = `<div style="font-size:0.73rem;color:#555870;padding:8px;text-align:center;">${t('No matches — Esc to clear','无匹配结果 — 按Esc清除')}</div>`; return; }
+
+  list.innerHTML = visible.map(p => {
     const meta = STAGE_META[p.lifecycle] || STAGE_META.PRE_LAUNCH;
     const { signals } = checkKillSignals(p);
     const incomplete = !p.inputs.cogs || p.inputs.cogs === 0;
