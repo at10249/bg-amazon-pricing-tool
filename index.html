@@ -350,6 +350,14 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .sens-table tr.cur td{background:#1e2040;}
 .sens-table tr.cur td:first-child{color:#4ade80;}
 
+/* Fee waterfall (cascading cost bars) */
+.wfall-row{display:flex;align-items:center;gap:8px;padding:3px 0;}
+.wfall-label{width:158px;flex-shrink:0;font-size:0.7rem;color:#8b8fa8;display:flex;gap:6px;align-items:center;}
+.wfall-amt{width:66px;flex-shrink:0;text-align:right;font-size:0.72rem;font-weight:600;color:#c5c8e0;white-space:nowrap;}
+.wfall-track{flex:1;height:12px;background:#0c0e16;border-radius:3px;position:relative;overflow:hidden;min-width:60px;}
+.wfall-seg{position:absolute;top:0;bottom:0;border-radius:2px;}
+@media(max-width:640px){.wfall-label{width:112px;font-size:0.64rem;}.wfall-amt{width:56px;font-size:0.66rem;}}
+
 /* Undo toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e2130;border:1px solid #3a3d6e;border-radius:10px;padding:10px 12px 10px 16px;display:flex;align-items:center;gap:14px;z-index:1200;font-size:0.8rem;color:#e8eaf0;box-shadow:0 8px 24px rgba(0,0,0,.55);max-width:calc(100vw - 32px);}
 .toast-btn{background:#5b63f7;border:none;color:#fff;border-radius:7px;padding:8px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;flex-shrink:0;}
@@ -1648,6 +1656,37 @@ function priceSensitivity(inputs, basePrice) {
   });
 }
 
+// RULE: Fee waterfall — decomposes a selling price into ordered fee segments down
+// to net profit: referral → FBA base → fuel surcharge → COGS → inbound/prep/storage
+// → PPC → returns/overhead(+Vine). Fees are recomputed at the given price, and the
+// segment amounts always sum exactly to the price (net can be negative).
+// LOGIC.md Section 15.4
+function feeWaterfall(inputs, price) {
+  if (!(price > 0)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const fbaBase = getFBAFee(inputs.sizetier, inputs.weight, price);
+  const fuel = inputs.surcharge ? fbaBase * (FUEL_SURCHARGE - 1) : 0;
+  const ref = getReferralFee(inputs.category, price);
+  const logistics = inputs.inbound + inputs.placement + inputs.prep + inputs.storage + inputs.q4storage;
+  const returnsOverhead = inputs.returns + inputs.other + vinePerUnit;
+  const net = price - ref - fbaBase - fuel - inputs.cogs - logistics - inputs.ppc - returnsOverhead;
+  return {
+    price,
+    segments: [
+      { key: 'referral',        amount: ref },
+      { key: 'fba',             amount: fbaBase },
+      { key: 'fuel',            amount: fuel },
+      { key: 'cogs',            amount: inputs.cogs },
+      { key: 'logistics',       amount: logistics },       // inbound + placement + prep + storage + Q4
+      { key: 'ppc',             amount: inputs.ppc },
+      { key: 'returnsOverhead', amount: returnsOverhead }, // returns + other + Vine amortisation
+      { key: 'net',             amount: net }
+    ],
+    net,
+    netPct: net / price * 100
+  };
+}
+
 // RULE: Break-even volume = fixed monthly overheads ÷ contribution margin per unit,
 // rounded UP to whole units. Returns null when contribution margin ≤ 0 (never breaks even),
 // 0 when there are no overheads. LOGIC.md Section 15.2
@@ -1969,6 +2008,52 @@ function getActiveProduct() {
 // ═══════════════════════════════════════════════════════════════════════════
 // CALCULATOR TAB
 // ═══════════════════════════════════════════════════════════════════════════
+
+// Fee waterfall card — pure CSS cascading bars from Price down to net profit.
+// Data comes from feeWaterfall() (LOGIC.md §15.4).
+function waterfallHtml(p, prices) {
+  const wf = feeWaterfall(p.inputs, prices.yp);
+  if (!wf) return '';
+  const META = {
+    referral:        { color:'#f59e0b', en:'Referral fee',              zh:'佣金' },
+    fba:             { color:'#818cf8', en:'FBA fee (base)',            zh:'FBA费用（基础）' },
+    fuel:            { color:'#a78bfa', en:'Fuel surcharge (3.5%)',     zh:'燃油附加费（3.5%）' },
+    cogs:            { color:'#f87171', en:'COGS',                      zh:'货物成本' },
+    logistics:       { color:'#22d3ee', en:'Inbound / prep / storage',  zh:'头程/贴标/仓储' },
+    ppc:             { color:'#fcd34d', en:'PPC / advertising',         zh:'PPC/广告' },
+    returnsOverhead: { color:'#6b6f8a', en:'Returns + overhead',        zh:'退货+其他开支' },
+    net:             { color:'#4ade80', en:'Net profit',                zh:'净利润' }
+  };
+  let cum = 0;
+  const rows = wf.segments.map(seg => {
+    const m = META[seg.key];
+    const isNet = seg.key === 'net';
+    if (!isNet && seg.amount === 0) return ''; // hide empty segments (e.g. surcharge off)
+    const neg = isNet && seg.amount < 0;
+    const color = isNet ? (neg ? '#f87171' : '#4ade80') : m.color;
+    let barL, barW;
+    if (neg) { barW = Math.min(Math.abs(seg.amount) / wf.price * 100, 100); barL = 100 - barW; }
+    else {
+      barL = Math.min(cum, 100);
+      barW = Math.max(0, Math.min(seg.amount / wf.price * 100, 100 - barL));
+      cum += seg.amount / wf.price * 100;
+    }
+    return `<div class="wfall-row">
+      <div class="wfall-label"><span class="bl-dot" style="background:${color}"></span>${t(m.en, m.zh)}</div>
+      <div class="wfall-amt" style="${isNet ? `color:${color};` : ''}">${neg ? '−' : ''}${fmtC(Math.abs(seg.amount))}</div>
+      <div class="wfall-track"><div class="wfall-seg" style="left:${barL}%;width:${Math.max(barW, 0.5)}%;background:${color};"></div></div>
+    </div>`;
+  }).join('');
+  return `<div class="card" style="margin-top:14px;margin-bottom:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+      <div class="card-title" style="margin:0;">${t('Fee Waterfall at Your Price','您的售价费用瀑布图')} ${fmtC(wf.price)}</div>
+      <div style="font-size:0.72rem;font-weight:700;color:${wf.net >= 0 ? '#4ade80' : '#f87171'};">${t('Net:','净利：')} ${wf.net < 0 ? '−' : ''}${fmtC(Math.abs(wf.net))} (${wf.netPct.toFixed(1)}%)</div>
+    </div>
+    <div style="margin-top:8px;">${rows}</div>
+    <div class="hint" style="margin-top:6px;">${t('Each bar starts where the previous cost ends — the green (or red) remainder is your net margin.','每个色条从上一项成本结束处开始 — 绿色（或红色）剩余部分即净利润率。')}</div>
+  </div>`;
+}
+
 function renderCalcTab(p) {
   const prices = calcPrices(p.inputs);
   const { yp, listP, saleP, discP, ypF, listF, saleF, discF, cogs, otherCosts,
@@ -2071,6 +2156,7 @@ function renderCalcTab(p) {
         <div class="bl"><div class="bl-dot" style="background:#4ade80"></div>${t('Profit','利润')}</div>
       </div>
     </div>
+    ${waterfallHtml(p, prices)}
     <div class="card" style="margin-top:14px;margin-bottom:0;">
       <div class="card-title">${t('Price Sensitivity (±$2 around Your Price)','价格敏感度（您的售价 ±$2）')}</div>
       <div style="overflow-x:auto;">

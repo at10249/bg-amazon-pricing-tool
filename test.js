@@ -144,6 +144,34 @@ function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
   return { goodsDuty, freight, total: goodsDuty + freight };
 }
 
+const FUEL_SURCHARGE = 1.035;
+
+function feeWaterfall(inputs, price) {
+  if (!(price > 0)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const fbaBase = getFBAFee(inputs.sizetier, inputs.weight, price);
+  const fuel = inputs.surcharge ? fbaBase * (FUEL_SURCHARGE - 1) : 0;
+  const ref = getReferralFee(inputs.category, price);
+  const logistics = inputs.inbound + inputs.placement + inputs.prep + inputs.storage + inputs.q4storage;
+  const returnsOverhead = inputs.returns + inputs.other + vinePerUnit;
+  const net = price - ref - fbaBase - fuel - inputs.cogs - logistics - inputs.ppc - returnsOverhead;
+  return {
+    price,
+    segments: [
+      { key: 'referral',        amount: ref },
+      { key: 'fba',             amount: fbaBase },
+      { key: 'fuel',            amount: fuel },
+      { key: 'cogs',            amount: inputs.cogs },
+      { key: 'logistics',       amount: logistics },
+      { key: 'ppc',             amount: inputs.ppc },
+      { key: 'returnsOverhead', amount: returnsOverhead },
+      { key: 'net',             amount: net }
+    ],
+    net,
+    netPct: net / price * 100
+  };
+}
+
 function classifyPrice(currentPrice, prices) {
   if (!currentPrice || currentPrice <= 0) return null;
   const tol = PRICE_MATCH_TOLERANCE;
@@ -648,6 +676,46 @@ is(landedCostUSD(0, 7.25, 0, 0)  === null, 'Zero CNY price → null');
 is(landedCostUSD(-5, 7.25, 0, 0) === null, 'Negative CNY price → null');
 is(landedCostUSD(10, 0, 0, 0)    === null, 'Zero exchange rate → null (no division by zero)');
 eq(+landedCostUSD(72.5, 7.25, -5, 0).goodsDuty.toFixed(2), 10.00, 'Negative duty treated as 0%');
+
+// ─── 11. feeWaterfall ────────────────────────────────────────────────────────
+describe('feeWaterfall — price decomposition to net profit');
+
+const wf = feeWaterfall(base, p.yp);
+eq(wf.segments.length, 8, '8 segments: referral, FBA, fuel, COGS, logistics, PPC, returns/overhead, net');
+eq(wf.segments[wf.segments.length - 1].key, 'net', 'last segment is net profit');
+
+const segSum = wf.segments.reduce((s, x) => s + x.amount, 0);
+eq(+segSum.toFixed(6), +wf.price.toFixed(6), 'segments sum exactly to the price');
+eq(+wf.net.toFixed(2), +p.ypF.profit.toFixed(2), 'net matches calcPrices profit at Your Price');
+eq(+wf.netPct.toFixed(4), +p.ypF.pct.toFixed(4), 'netPct matches calcPrices margin at Your Price');
+
+const seg = k => wf.segments.find(s => s.key === k).amount;
+eq(+seg('fuel').toFixed(4), +(seg('fba') * 0.035).toFixed(4), 'fuel segment = 3.5% of FBA base fee');
+eq(+seg('referral').toFixed(2), +getReferralFee(base.category, p.yp).toFixed(2), 'referral recomputed at the given price');
+eq(+seg('logistics').toFixed(2), +(base.inbound + base.placement + base.prep + base.storage + base.q4storage).toFixed(2),
+  'logistics = inbound + placement + prep + storage + Q4');
+eq(+seg('returnsOverhead').toFixed(2), +(base.returns + base.other).toFixed(2), 'returns/overhead = returns + other (no Vine)');
+eq(seg('cogs'), base.cogs, 'COGS segment = input COGS');
+eq(seg('ppc'), base.ppc, 'PPC segment = input PPC');
+
+// Surcharge off → fuel segment is zero, sum still equals price
+const wfNoSur = feeWaterfall({ ...base, surcharge: false }, p.yp);
+eq(wfNoSur.segments.find(s => s.key === 'fuel').amount, 0, 'surcharge off → $0 fuel segment');
+eq(+wfNoSur.segments.reduce((s, x) => s + x.amount, 0).toFixed(6), +p.yp.toFixed(6), 'sum invariant holds without surcharge');
+
+// Vine amortisation flows into returns/overhead
+const wfVine = feeWaterfall({ ...base, vine: true, annualUnits: 500 }, p.yp);
+eq(+wfVine.segments.find(s => s.key === 'returnsOverhead').amount.toFixed(2),
+   +(base.returns + base.other + 200 / 500).toFixed(2), 'Vine $0.40/unit included in returns/overhead');
+
+// Unprofitable price → negative net, sum invariant still holds
+const wfLoss = feeWaterfall(base, 5.00);
+is(wfLoss.net < 0, `net negative at $5.00 (got $${wfLoss.net.toFixed(2)})`);
+eq(+wfLoss.segments.reduce((s, x) => s + x.amount, 0).toFixed(6), 5, 'sum invariant holds when net is negative');
+
+// Guards
+is(feeWaterfall(base, 0)  === null, 'price 0 → null');
+is(feeWaterfall(base, -3) === null, 'negative price → null');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY

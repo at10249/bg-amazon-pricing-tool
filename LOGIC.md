@@ -576,6 +576,20 @@ Shows net profit ($/unit) and net margin (%) at Your Price −$2, −$1, current
   This avoids double-counting freight, since COGS is defined as manufacturing cost only.
 - Returns `null` for non-positive CNY price or exchange rate; negative duty is treated as 0.
 
+### 15.4 Fee Waterfall
+**CODE LOCATION:** `index.html` → function `feeWaterfall(inputs, price)`, rendered by `waterfallHtml()` in the Calculator tab (above the sensitivity table)
+
+**Rule:** Decomposes a selling price into ordered cost segments down to net profit:
+`referral → FBA base fee → fuel surcharge → COGS → inbound/prep/storage → PPC → returns + overhead (+ Vine amortisation) → net`
+- All fees are **recomputed at the given price** (same band logic as the solver).
+- The fuel surcharge is shown as its own segment: `fbaBase × (FUEL_SURCHARGE − 1)`,
+  so users can see exactly what the April 2026 surcharge costs them per unit.
+- Invariant: segment amounts always sum exactly to the price. Net can be negative
+  (rendered red); positive net renders green.
+- Returns `null` for non-positive prices.
+- The UI draws cascading bars: each cost bar starts where the previous one ended,
+  and the remainder is the net margin. Pure CSS, no canvas or libraries.
+
 ---
 
 *Last updated: July 2026*
