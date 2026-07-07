@@ -1508,18 +1508,38 @@ function getReferralFee(catKey, price) {
   }
 }
 
-// RULE: FBA fulfillment fee tables, 2026 rate card.
-// Structure: [max_oz, price_band_<10, price_band_10-50, price_band_>50]
-// Source: Amazon Seller Central, effective January 15, 2026
-const SS_TABLE = [
-  [2,2.43,3.32,3.58],[4,2.49,3.42,3.68],[6,2.56,3.45,3.71],[8,2.66,3.54,3.80],
-  [10,2.77,3.68,3.94],[12,2.82,3.78,4.04],[14,2.92,3.91,4.17],[16,2.95,3.96,4.22]
-];
-const LS_TABLE = [
-  [4,2.91,3.73,3.99],[8,3.13,3.95,4.21],[12,3.38,4.20,4.46],[16,3.78,4.60,4.86],
-  [20,4.22,5.04,5.30],[24,4.60,5.42,5.68],[28,4.75,5.57,5.83],[32,5.00,5.82,6.08],
-  [36,5.10,5.92,6.18],[40,5.28,6.10,6.36],[44,5.44,6.26,6.52],[48,5.85,6.67,6.93]
-];
+// RULE: FBA fee schedule — versioned, dated block. ALL fulfillment fee numbers
+// (weight tables, oversize flat rates, over-48oz formula, fuel surcharge) live
+// in this ONE structure. When Amazon publishes a new rate card, swap this whole
+// block for the new one and update `effectiveFrom` — nothing else needs editing.
+// Update procedure: LOGIC.md Section 1.4.
+// Structure of SS/LS rows: [max_oz, price_band_<10, price_band_10-50, price_band_>50]
+// Source: Amazon Seller Central, effective January 15, 2026 (surcharge April 17, 2026)
+const FEE_SCHEDULE = {
+  effectiveFrom: '2026-01-15',              // FBA rate card effective date
+  fuelSurchargeEffectiveFrom: '2026-04-17', // Fuel & logistics surcharge start date
+  tables: {
+    SS: [
+      [2,2.43,3.32,3.58],[4,2.49,3.42,3.68],[6,2.56,3.45,3.71],[8,2.66,3.54,3.80],
+      [10,2.77,3.68,3.94],[12,2.82,3.78,4.04],[14,2.92,3.91,4.17],[16,2.95,3.96,4.22]
+    ],
+    LS: [
+      [4,2.91,3.73,3.99],[8,3.13,3.95,4.21],[12,3.38,4.20,4.46],[16,3.78,4.60,4.86],
+      [20,4.22,5.04,5.30],[24,4.60,5.42,5.68],[28,4.75,5.57,5.83],[32,5.00,5.82,6.08],
+      [36,5.10,5.92,6.18],[40,5.28,6.10,6.36],[44,5.44,6.26,6.52],[48,5.85,6.67,6.93]
+    ],
+    LS_OVER_48OZ_BASES: [6.15,6.97,7.23], // Large Standard 3lb+ base by price band
+    LS_OVER_48OZ_STEP: 0.08,              // + per 4oz above 48oz
+    LB: [9.61,10.10,10.84],               // Large Bulky flat rates by price band
+    XL: [26.33,27.12,28.01],              // Extra-Large flat rates by price band
+    FUEL_SURCHARGE: 1.035                 // 3.5% fuel surcharge multiplier on all FBA fees
+  }
+};
+// Aliases read from the schedule — do NOT put fee numbers here.
+const SS_TABLE = FEE_SCHEDULE.tables.SS;
+const LS_TABLE = FEE_SCHEDULE.tables.LS;
+// RULE: Fuel & logistics surcharge multiplier applied to every FBA fee (LOGIC.md §1.3)
+const FUEL_SURCHARGE = FEE_SCHEDULE.tables.FUEL_SURCHARGE;
 
 function getFBAFee(tier, wOz, price) {
   // RULE: Price band selection — three bands affect fee
@@ -1530,12 +1550,12 @@ function getFBAFee(tier, wOz, price) {
   }
   if (tier === 'ls') {
     // RULE: Large Standard 3lb+ formula: base + $0.08 per 4oz above 48oz
-    if (wOz > 48) { const bases=[6.15,6.97,7.23]; return bases[b]+Math.ceil((wOz-48)/4)*0.08; }
+    if (wOz > 48) { const bases=FEE_SCHEDULE.tables.LS_OVER_48OZ_BASES; return bases[b]+Math.ceil((wOz-48)/4)*FEE_SCHEDULE.tables.LS_OVER_48OZ_STEP; }
     for (const r of LS_TABLE) if (wOz <= r[0]) return r[b+1];
-    return 6.97;
+    return FEE_SCHEDULE.tables.LS_OVER_48OZ_BASES[1]; // unreachable fallback (6.97, as before)
   }
-  if (tier === 'lb') return [9.61,10.10,10.84][b];   // RULE: Large Bulky flat rates by price band
-  if (tier === 'xl') return [26.33,27.12,28.01][b];  // RULE: Extra-Large flat rates by price band
+  if (tier === 'lb') return FEE_SCHEDULE.tables.LB[b];   // RULE: Large Bulky flat rates by price band
+  if (tier === 'xl') return FEE_SCHEDULE.tables.XL[b];   // RULE: Extra-Large flat rates by price band
   return 3.96;
 }
 
@@ -1565,7 +1585,7 @@ function calcPrices(inputs) {
   let yp = totalFixed / (1 - margin/100);
   for (let i = 0; i < 12; i++) {
     const fbaB = getFBAFee(sizetier, weight, yp);
-    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
+    const fba  = fbaB * (surcharge ? FUEL_SURCHARGE : 1.0);
     const ref  = getReferralFee(category, yp);
     yp = (totalFixed + fba + ref) / (1 - margin/100);
   }
@@ -1574,7 +1594,7 @@ function calcPrices(inputs) {
   // Helper: get all fee breakdown at a given price
   const getAll = (price) => {
     const fbaB = getFBAFee(sizetier, weight, price);
-    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
+    const fba  = fbaB * (surcharge ? FUEL_SURCHARGE : 1.0);
     const ref  = getReferralFee(category, price);
     const profit = price - cogs - fba - ref - otherCosts;
     return { fba, ref, profit, pct: profit/price*100, otherCosts };
@@ -1621,7 +1641,7 @@ function priceSensitivity(inputs, basePrice) {
   return SENSITIVITY_OFFSETS.map(offset => {
     const price = +(basePrice + offset).toFixed(2);
     if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
-    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? 1.035 : 1.0);
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? FUEL_SURCHARGE : 1.0);
     const ref = getReferralFee(inputs.category, price);
     const profit = price - inputs.cogs - fba - ref - otherCosts;
     return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
@@ -2022,7 +2042,7 @@ function renderCalcTab(p) {
     ${discF.profit<0?`<div class="alert bad">${t('⚠ Clearance Price below break-even. Selling at a loss.','⚠ 清仓价低于盈亏平衡点，目前在亏损销售。')}</div>`:''}
     ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">${t(`✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit`,`✓ 所有价格层级均盈利。最低清仓利润：${fmtC(discF.profit)}/件`)}</div>`:''}
     ${(()=>{
-      const sur = p.inputs.surcharge ? 1.035 : 1;
+      const sur = p.inputs.surcharge ? FUEL_SURCHARGE : 1;
       const cliffs = [];
       if (yp >= 10 && yp < 10.50) {
         const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,9.95)*sur).toFixed(2);
@@ -2408,13 +2428,13 @@ function calcMfg() {
 
   let yp = (mfgPrice + sOther) / (1 - sMgn/100);
   for (let i = 0; i < 12; i++) {
-    const fba = getFBAFee(tier, wOz, yp) * (sur ? 1.035 : 1.0);
+    const fba = getFBAFee(tier, wOz, yp) * (sur ? FUEL_SURCHARGE : 1.0);
     const ref = getReferralFee(catKey, yp);
     yp = (mfgPrice + sOther + fba + ref) / (1 - sMgn/100);
   }
   yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
 
-  const ypFba = getFBAFee(tier, wOz, yp) * (sur ? 1.035 : 1.0);
+  const ypFba = getFBAFee(tier, wOz, yp) * (sur ? FUEL_SURCHARGE : 1.0);
   const ypRef = getReferralFee(catKey, yp);
   const ypProfit = yp - mfgPrice - sOther - ypFba - ypRef;
   const ypPct = ypProfit/yp*100;
@@ -2424,7 +2444,7 @@ function calcMfg() {
   let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1-PRICE_DISC_END), PRICE_DISC_END);
   if (discP >= saleP) discP -= 1;
   const listP = roundEnd(yp * LIST_PREMIUM - (1-PRICE_LIST_END), PRICE_LIST_END);
-  const getM = (pr) => { const f=getFBAFee(tier,wOz,pr)*(sur?1.035:1); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
+  const getM = (pr) => { const f=getFBAFee(tier,wOz,pr)*(sur?FUEL_SURCHARGE:1); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
   const pctOff = (a,b) => Math.round((1-b/a)*100);
 
   document.getElementById('mfg_seller_price').innerHTML = `

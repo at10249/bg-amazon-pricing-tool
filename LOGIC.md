@@ -39,7 +39,7 @@ If adding a new category, add a new `case` with the category key and rate logic.
 
 ### 1.2 FBA Fulfillment Fees — Standard Size (2026 rate card)
 **Source:** Amazon Seller Central fee schedule, effective January 15, 2026
-**CODE LOCATION:** `index.html` → constants `SS` (Small Standard) and `LS` (Large Standard), function `getFBAFee(tier, wOz, price)`
+**CODE LOCATION:** `index.html` → versioned constant `FEE_SCHEDULE` (all FBA fee numbers), aliases `SS_TABLE`/`LS_TABLE`, function `getFBAFee(tier, wOz, price)`
 **Last verified:** April 2026
 
 Structure: fees are indexed by [max_weight_oz, price_band_<$10, price_band_$10-$50, price_band_>$50]
@@ -76,18 +76,54 @@ Large Standard (up to 20lb):
 Large Bulky (was Oversize Small/Medium): $9.61 / $10.10 / $10.84 by price band
 Extra-Large (<50lb): $26.33 / $27.12 / $28.01 by price band
 
-**TO UPDATE:** Find the `SS` and `LS` array constants and update the numbers.
-For Large Bulky and Extra-Large, find the return statements in `getFBAFee` for `tier==='lb'` and `tier==='xl'`.
+**TO UPDATE:** See Section 1.4 — all FBA fee numbers live in the single `FEE_SCHEDULE` block.
 
 ---
 
 ### 1.3 Fuel & Logistics Surcharge
 **Source:** Amazon announcement, effective April 17, 2026
-**CODE LOCATION:** `index.html` → everywhere `sur ? 1.035 : 1.0` appears (multiply applied to FBA base fee)
-**Rate:** 3.5% on top of all FBA fulfillment fees
+**CODE LOCATION:** `index.html` → constant `FUEL_SURCHARGE` (read from `FEE_SCHEDULE.tables.FUEL_SURCHARGE`), applied everywhere as `surcharge ? FUEL_SURCHARGE : 1.0` on top of the FBA base fee
+**Rate:** 3.5% on top of all FBA fulfillment fees (multiplier `1.035`)
 
-**TO UPDATE:** Search for `1.035` in index.html and replace with new multiplier.
-E.g. if surcharge becomes 4%, replace `1.035` with `1.04`.
+**TO UPDATE:** Change `FUEL_SURCHARGE` inside the `FEE_SCHEDULE` block (Section 1.4).
+E.g. if the surcharge becomes 4%, set it to `1.04`.
+
+---
+
+### 1.4 Fee Schedule Versioning — how to update rates
+**CODE LOCATION:** `index.html` → constant `FEE_SCHEDULE`
+
+All FBA fulfillment fee numbers are wrapped in ONE dated structure:
+
+```js
+const FEE_SCHEDULE = {
+  effectiveFrom: '2026-01-15',              // rate card effective date
+  fuelSurchargeEffectiveFrom: '2026-04-17', // surcharge start date
+  tables: {
+    SS: [...],                  // Small Standard rows: [max_oz, <$10, $10–$50, >$50]
+    LS: [...],                  // Large Standard rows (same shape)
+    LS_OVER_48OZ_BASES: [...],  // 3lb+ base fee by price band
+    LS_OVER_48OZ_STEP: 0.08,    // added per 4oz above 48oz
+    LB: [...],                  // Large Bulky flat rates by price band
+    XL: [...],                  // Extra-Large flat rates by price band
+    FUEL_SURCHARGE: 1.035       // multiplier on every FBA fee
+  }
+};
+```
+
+**Update procedure when Amazon changes rates:**
+1. Get the new rate card from Seller Central (see README "Fee Table Sources").
+2. Replace the entire `FEE_SCHEDULE` block with the new numbers and set
+   `effectiveFrom` to the new rate card's effective date.
+3. Do NOT edit fee numbers anywhere else — `getFBAFee()`, the price solver and
+   the fuel surcharge all read exclusively from this block (via the aliases
+   `SS_TABLE`, `LS_TABLE`, `FUEL_SURCHARGE`).
+4. Update the mirrored tables at the top of `test.js` and the expected dollar
+   amounts in its fee tests, then run `npm test`.
+5. Update Sections 1.2 / 1.3 of this document.
+
+Referral fees (Section 1.1) are percentage rules, not tables — they stay in
+`getReferralFee()`.
 
 ---
 
