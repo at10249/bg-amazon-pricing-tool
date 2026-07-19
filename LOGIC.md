@@ -350,10 +350,12 @@ Check-ins are stored in the product's `checkins` array in localStorage.
 - `date`: ISO timestamp (auto-set)
 - `currentPrice`: Current public price on Amazon (manual entry)
 - `currentAcos`: ACoS % from ad platform (manual entry)
-- `adSalesLast30`: Ad-attributed sales in last 30 days (manual entry)
-- `totalRevenueLast30`: Total revenue (paid + organic) last 30 days (manual entry)
-- `totalAdSpendLast30`: Total ad spend last 30 days (manual entry)
-- `organicGrowing`: Boolean — is organic traffic/sales growing? (manual flag)
+- `adSales`: Ad-attributed sales in last 30 days (manual entry, key: `adSales` on the object)
+- `totalRevenue`: Total revenue (paid + organic) last 30 days (manual entry)
+- `totalAdSpend`: Total ad spend last 30 days (manual entry)
+- `organicGrowing`: 'yes' / 'stable' / 'no' — is organic traffic/sales growing? (manual flag)
+- `inventoryUnits`: Current FBA sellable inventory, in units (manual entry or Inventory Report import)
+- `unitsSold30`: Total units sold (organic + paid) last 30 days (manual entry or Business Report import)
 - `notes`: Free text
 
 **Price tier classification (CODE: function `classifyPrice(currentPrice, tiers)`):**
@@ -369,6 +371,30 @@ Compare currentPrice to calculated tiers with a tolerance of ±2%:
 **TACoS calculation (CODE: in check-in display):**
 TACoS = totalAdSpendLast30 / totalRevenueLast30 × 100
 Target: below 10% for healthy organic-to-paid ratio.
+
+**Inventory & sales velocity (CODE: function `getInventoryStatus(inventoryUnits, unitsSold30)`):**
+Computed fresh on every render from the two check-in fields above — nothing is stored pre-computed.
+- `velocity` = unitsSold30 ÷ 30 (units sold per day)
+- `daysOfCover` = inventoryUnits ÷ velocity
+- Status thresholds (CODE: constants `STOCKOUT_RISK_DAYS`, `REORDER_SOON_DAYS`, `AGED_INVENTORY_DAYS`):
+  - `daysOfCover < 30` → **stockout_risk** — "Reorder now" (red badge)
+  - `30 ≤ daysOfCover < 90` → **reorder_soon** — "Plan reorder" (amber badge). 90 days accounts
+    for typical China manufacturing + sea freight lead time on a reorder placed today.
+  - `90 ≤ daysOfCover ≤ 181` → **healthy** — no badge
+  - `daysOfCover > 181` → **overstock** — "Overstock risk" (gray badge). 181 days matches the
+    Amazon aged-inventory storage surcharge cutoff already referenced elsewhere in the UI.
+  - `unitsSold30 === 0` and `inventoryUnits > 0` → **no_sales** — "No sales — stagnant" (gray badge).
+    Velocity is 0 so days-of-cover cannot be computed (shown as `null`, never `Infinity`).
+  - `inventoryUnits === 0` and `unitsSold30 === 0` → **unknown** (no badge) — distinguishes a
+    product that's never launched from one that's actually stagnant.
+- If `inventoryUnits` was never entered for a check-in, `getInventoryStatus` returns `null` and
+  the UI shows "—" rather than guessing.
+- This is a display/monitoring signal only — it is NOT wired into `checkKillSignals()`. Running
+  low on stock is an operational reorder problem, not a reason to kill a product.
+
+**TO UPDATE inventory thresholds:** Find `STOCKOUT_RISK_DAYS` / `REORDER_SOON_DAYS` /
+`AGED_INVENTORY_DAYS` constants and adjust. If your supply chain lead time changes
+(e.g. switching from sea to air freight), `REORDER_SOON_DAYS` is the one to tune.
 
 ---
 
@@ -431,14 +457,14 @@ expression of that CPC across expected impression volume.
 
 ## 11. CSV IMPORT FORMAT
 
-**CODE LOCATION:** `index.html` → function `parseCSV(text)`
+**CODE LOCATION:** `index.html` → function `importCSV(event)`
 
 Required columns (header row must match exactly, case-insensitive):
 `name, asin, category, size_tier, weight_oz, cogs, target_margin`
 
 Optional columns (omit = use default values from section 3):
 `inbound_shipping, inbound_placement, prep_labelling, storage, q4_storage,
-ppc_per_unit, returns_allowance, vine_enrolled, vine_units, other_overhead,
+ppc_per_unit, returns_allowance, vine_enrolled, vine_units, annual_units, other_overhead,
 target_acos, launch_acos, cvr, notes`
 
 Category values: `home`, `beauty`, `grocery`, `apparel`, `shoes`, `electronics`,
@@ -448,6 +474,14 @@ Category values: `home`, `beauty`, `grocery`, `apparel`, `shoes`, `electronics`,
 Size tier values: `ss` (small standard), `ls` (large standard), `lb` (large bulky), `xl` (extra-large)
 
 **Template file:** `products-template.csv` (included in repo)
+
+**Importing a landed-cost/CIF figure as `cogs`:** If your cost data is a CIF (Cost, Insurance,
+Freight) or other all-in landed-cost figure that already includes inbound freight, set
+`cogs` = that figure AND `inbound_shipping = 0` in the CSV. Otherwise inbound freight gets
+counted twice (once inside the landed cost, once in the tool's separate inbound_shipping
+field), silently inflating total cost and understating margin. CIF terms typically stop at
+the destination port — verify separately whether US customs duty and last-mile drayage to
+the FBA warehouse still need to be added via `inbound_placement` or `other_overhead`.
 
 ---
 
@@ -493,5 +527,61 @@ the Amazon channel.
 
 ---
 
-*Last updated: June 2026*
+## 15. AMAZON REPORT & FBA FEE PREVIEW IMPORT
+
+Two separate importers read real Amazon export files (distinct from the app's own
+`products-template.csv` format in Section 11).
+
+### 15.1 FBA Fee Preview / Inventory stub import
+**CODE LOCATION:** `index.html` → function `importFBAFeePreview(event)`
+
+Reads an Amazon "FBA Fee Preview" report or "Manage All Inventory" download (tab- or
+comma-delimited) and creates NEW product stubs — one per unmatched ASIN. `cogs` is
+deliberately set to `0` to trigger the app's incomplete-setup banner; the user must open
+Edit and fill in COGS, margin and other costs before the pricing is trustworthy.
+
+Column matching is fuzzy (substring match on lower-cased, `-`/`_`-stripped headers):
+ASIN, product name, product size tier, unit weight. Weight units are auto-detected from
+the column header (grams / oz / assumes lbs otherwise).
+
+Size tier strings from Amazon (e.g. `UsLargeStandardSize`, `SmallBulky`) are mapped to
+this app's 4 buckets via `amazonSizeTierToAppTier()` — see Section 15.3.
+
+### 15.2 Weekly check-in import (Business / Advertising / Inventory reports)
+**CODE LOCATION:** `index.html` → function `importAmazonReport(event)`
+
+Auto-detects one of three report types by column presence and creates a check-in for
+each ASIN that already matches an existing product (does NOT create new products):
+
+| Report type   | Detected by column(s)                          | Fills into check-in |
+|---------------|--------------------------------------------------|----------------------|
+| Business      | "Ordered Product Sales"                          | `totalRevenue`, `unitsSold30` (from "Units Ordered"), `cvr` (on the product) |
+| Advertising   | "Spend" + ("ACoS" or "7 Day Total Sales")         | `currentAcos`, `totalAdSpend`, `adSales` (from "7 Day Total Units/Orders") |
+| Inventory     | a fulfillable/sellable/available quantity column, and NOT Business or Advertising | `inventoryUnits` |
+
+Multiple rows per ASIN are aggregated (summed for $/units, averaged for ACoS/CVR) —
+advertising reports have one row per campaign, inventory reports can have one row per FC.
+
+`currentPrice` is never present in any Amazon export and must always be entered manually
+(see the check-in form's price field).
+
+### 15.3 Size tier string mapping
+**CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
+
+Maps Amazon's various size-tier export strings to this app's 4 buckets (`ss`/`ls`/`lb`/`xl`).
+Handles two real-world quirks:
+1. Amazon exports size tiers as concatenated camelCase with no separator
+   (e.g. `UsSmallStandardSize`) — the function inserts a space at every
+   lowercase→uppercase boundary before pattern-matching, otherwise a naive
+   `/small.+standard/` regex never matches (zero characters between the words).
+2. "Bulky" is Amazon's current term for what used to be called "Oversize" on
+   Small/Medium items (e.g. `SmallBulky`, `LargeBulky`) — both map to this app's `lb`.
+
+Returns `null` for unrecognised strings; callers fall back to a default tier rather
+than guessing. Covered by `test.js` Section 9 against real values pulled from an
+actual Amazon FBA Fee Preview export.
+
+---
+
+*Last updated: July 2026*
 *To update this document after modifying the code, ask an LLM: "Update LOGIC.md to reflect the change I made to [function/constant name]"*

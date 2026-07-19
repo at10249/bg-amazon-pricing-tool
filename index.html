@@ -150,6 +150,12 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
 .pm-above{background:#1e2130;color:#6b6f8a;}
 .pm-below{background:#7a0020;color:#fca5a5;}
 
+/* Inventory / sales velocity status indicator — reuses .price-match badge shape */
+.inv-healthy{background:#14532d;color:#4ade80;}
+.inv-reorder{background:#78350f;color:#fcd34d;}
+.inv-urgent{background:#7a0020;color:#fca5a5;}
+.inv-overstock{background:#1e2130;color:#6b6f8a;}
+
 /* ═══════════════════════════════════════════════════════════
    STAT BOXES
 ═══════════════════════════════════════════════════════════ */
@@ -492,15 +498,15 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
             <button class="topbar-btn" onclick="this.closest('.card').querySelector('#import-guide').classList.toggle('hidden-guide')" data-en="How to export ▾" data-zh="如何导出 ▾">How to export ▾</button>
           </div>
           <div id="import-guide" class="hidden-guide" style="margin-top:12px;">
-            <div class="g2" style="gap:16px;">
+            <div class="g3" style="gap:16px;">
               <div>
-                <div style="font-size:0.7rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Business Report → Revenue &amp; CVR" data-zh="业务报告 → 收入和转化率">Business Report → Revenue &amp; CVR</div>
+                <div style="font-size:0.7rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Business Report → Revenue &amp; Velocity" data-zh="业务报告 → 收入和销售速度">Business Report → Revenue &amp; Velocity</div>
                 <div class="tl" style="padding-left:14px;">
                   <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Seller Central → Reports → Business Reports" data-zh="卖家中心 → 报告 → 业务报告">Seller Central → Reports → Business Reports</div></div>
                   <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Detail Page Sales and Traffic by ASIN" tab' data-zh='"按ASIN的详情页销售和流量"标签'>"Detail Page Sales and Traffic by ASIN" tab</div></div>
                   <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Set date range to last 30 days → Download" data-zh="设置日期范围为最近30天 → 下载">Set date range to last 30 days → Download</div></div>
                 </div>
-                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Total Revenue, CVR" data-zh=" 总收入，转化率"> Total Revenue, CVR</strong></div>
+                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Total Revenue, Units Sold, CVR" data-zh=" 总收入，销量，转化率"> Total Revenue, Units Sold, CVR</strong></div>
               </div>
               <div>
                 <div style="font-size:0.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Advertising Report → ACoS &amp; Spend" data-zh="广告报告 → ACoS和支出">Advertising Report → ACoS &amp; Spend</div>
@@ -511,13 +517,22 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
                 </div>
                 <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" ACoS, Ad Spend, Ad Sales" data-zh=" ACoS，广告花费，广告销售"> ACoS, Ad Spend, Ad Sales</strong></div>
               </div>
+              <div>
+                <div style="font-size:0.7rem;font-weight:700;color:#fcd34d;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Inventory Report → Stock Levels" data-zh="库存报告 → 库存水平">Inventory Report → Stock Levels</div>
+                <div class="tl" style="padding-left:14px;">
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Inventory → Manage All Inventory" data-zh="库存 → 管理所有库存">Inventory → Manage All Inventory</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Download Inventory File" (or Fee Preview report)' data-zh='"下载库存文件"（或费用预览报告）'>"Download Inventory File" (or Fee Preview report)</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Has an Afn Fulfillable Quantity column → Download" data-zh="包含可配送数量列 → 下载">Has an Afn Fulfillable Quantity column → Download</div></div>
+                </div>
+                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Current Inventory (units)" data-zh=" 当前库存（件）"> Current Inventory (units)</strong></div>
+              </div>
             </div>
-            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;" data-en="⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in." data-zh="⚠ 当前价格不在任何亚马逊导出文件中 — 请从您的商品页面手动读取并填写。请分别导入两份报告以完成完整记录。">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import both reports separately for a complete check-in.</div>
+            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;" data-en="⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import each report separately for a complete weekly check-in." data-zh="⚠ 当前价格不在任何亚马逊导出文件中 — 请从您的商品页面手动读取并填写。请分别导入每份报告以完成完整的每周记录。">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import each report separately for a complete weekly check-in.</div>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
             <button class="btn primary" onclick="document.getElementById('amz-report-file').click()" data-en="Import Amazon Report CSV" data-zh="导入亚马逊报告CSV">Import Amazon Report CSV</button>
             <input type="file" id="amz-report-file" accept=".csv,.txt" style="display:none" onchange="importAmazonReport(event)">
-            <span style="font-size:0.72rem;color:#555870;" data-en="Auto-detects Business Report or Advertising Report · matches by ASIN" data-zh="自动识别业务报告或广告报告 · 通过ASIN匹配">Auto-detects Business Report or Advertising Report · matches by ASIN</span>
+            <span style="font-size:0.72rem;color:#555870;" data-en="Auto-detects Business, Advertising, or Inventory Report · matches by ASIN" data-zh="自动识别业务、广告或库存报告 · 通过ASIN匹配">Auto-detects Business, Advertising, or Inventory Report · matches by ASIN</span>
           </div>
         </div>
 
@@ -554,6 +569,16 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
                 <option value="stable" data-en="Stable / flat" data-zh="稳定/持平">Stable / flat</option>
                 <option value="no" data-en="No — declining" data-zh="否—下降中">No — declining</option>
               </select>
+            </div>
+          </div>
+          <div class="g2">
+            <div class="inp">
+              <label data-tip='<strong>Current FBA sellable inventory</strong>Where to find: Inventory → Manage All Inventory → "Available" / "Afn Fulfillable Quantity" column.<br>Or use the Import button above to auto-fill from an Inventory report.'><span data-en="Current Inventory (units)" data-zh="当前库存（件）">Current Inventory (units)</span> ⓘ</label>
+              <input type="number" id="ci-inventory" step="1" min="0" placeholder="e.g. 240">
+            </div>
+            <div class="inp">
+              <label data-tip='<strong>Total units sold — organic + paid — last 30 days</strong>Where to find: Seller Central → Business Reports → Detail Page Sales &amp; Traffic by ASIN → "Units Ordered" column.<br>Used to compute sales velocity (units/day) and days of inventory cover.<br>Or use the Import button above to auto-fill from a Business Report CSV.'><span data-en="Units Sold — last 30d" data-zh="销量—近30天">Units Sold — last 30d</span> ⓘ</label>
+              <input type="number" id="ci-unitssold" step="1" min="0" placeholder="e.g. 145">
             </div>
           </div>
           <div class="inp">
@@ -804,11 +829,11 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
             <div class="wf-num green">1</div>
             <div class="wf-step-body">
               <div class="wf-step-title">Export Business Report</div>
-              <div class="wf-step-desc">Gets total revenue and conversion rate per ASIN for the last 30 days.</div>
+              <div class="wf-step-desc">Gets total revenue, units sold (sales velocity) and conversion rate per ASIN for the last 30 days.</div>
               <div class="wf-step-path"><strong>Seller Central →</strong> Reports → Business Reports → Detail Page Sales and Traffic by ASIN → set date range → Download</div>
               <div class="wf-actions">
                 <button class="topbar-btn" onclick="wfOpenCheckinImport()">⬆ Import Report</button>
-                <span style="font-size:0.71rem;color:#555870;">Fills: Revenue, CVR</span>
+                <span style="font-size:0.71rem;color:#555870;">Fills: Revenue, Units Sold, CVR</span>
               </div>
             </div>
           </div>
@@ -829,6 +854,19 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
           <div class="wf-step">
             <div class="wf-num green">3</div>
             <div class="wf-step-body">
+              <div class="wf-step-title">Export Inventory Report</div>
+              <div class="wf-step-desc">Gets current FBA sellable inventory per ASIN. Combined with units sold from step 1, the tool computes sales velocity and days of cover.</div>
+              <div class="wf-step-path"><strong>Seller Central →</strong> Inventory → Manage All Inventory → Download Inventory File (or the FBA Fee Preview report)</div>
+              <div class="wf-actions">
+                <button class="topbar-btn" onclick="wfOpenCheckinImport()">⬆ Import Report</button>
+                <span style="font-size:0.71rem;color:#555870;">Fills: Current Inventory</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-step">
+            <div class="wf-num green">4</div>
+            <div class="wf-step-body">
               <div class="wf-step-title">Enter current listing prices</div>
               <div class="wf-step-desc">Amazon does not export current prices. Check each listing and enter the live price in the Check-ins tab. This is the only manual step.</div>
               <div class="wf-actions">
@@ -838,17 +876,17 @@ input[type=checkbox]{width:auto;accent-color:#5b63f7;cursor:pointer;flex-shrink:
           </div>
 
           <div class="wf-step">
-            <div class="wf-num green">4</div>
+            <div class="wf-num green">5</div>
             <div class="wf-step-body">
               <div class="wf-step-title">Review signals across all products</div>
-              <div class="wf-step-desc">Check the Portfolio for kill signals (red sidebar dots) and products ready to graduate to the next ad stage.</div>
+              <div class="wf-step-desc">Check the Portfolio for kill signals (red sidebar dots), stockout / reorder warnings on inventory, and products ready to graduate to the next ad stage.</div>
               <div class="wf-actions">
                 <button class="topbar-btn" onclick="toggleWorkflows();togglePortfolio()">Open Portfolio →</button>
               </div>
             </div>
           </div>
 
-          <div class="wf-note"><strong>Tip:</strong> Import the Business Report and Advertising Report separately — the tool auto-detects which is which and matches by ASIN. Import both before recording check-ins so the fields are pre-filled.</div>
+          <div class="wf-note"><strong>Tip:</strong> Import the Business, Advertising and Inventory Reports separately — the tool auto-detects which is which and matches by ASIN. Import all three before recording check-ins so the fields are pre-filled.</div>
         </div>
 
       </div>
@@ -1116,6 +1154,12 @@ const K1_DAYS = 14;              // Kill Signal 1: Stage 1 zero sales threshold 
 const K4_SPEND_RATIO = 1.5;      // Kill Signal 4: Cumulative ad spend / total revenue danger threshold
 const STALE_DAYS = 21;           // Days without check-in before stale warning fires
 
+// RULE: Inventory & sales velocity thresholds (from weekly check-in data)
+// LOGIC.md Section 8
+const STOCKOUT_RISK_DAYS = 30;   // Days of cover below this = urgent reorder / stockout risk
+const REORDER_SOON_DAYS = 90;    // Days of cover below this = plan reorder (China sourcing + sea freight lead time)
+const AGED_INVENTORY_DAYS = 181; // Days of cover above this = excess stock risking Amazon's aged-inventory surcharge
+
 // RULE: Price tier rounding endings
 // LOGIC.md Section 2
 const PRICE_LIST_END = 0.99;     // List Price ends in .99 (MSRP signal)
@@ -1253,6 +1297,24 @@ function sizeTierFromDims(l, w, h, weightOz) {
   return 'xl';
 }
 
+// RULE: Maps Amazon's "product-size-tier" export strings (FBA Fee Preview / Manage Inventory
+// reports) to this app's 4 buckets (ss/ls/lb/xl). "Bulky" is Amazon's current term for what
+// used to be called "Oversize" on Small/Medium items — both map to this app's 'lb' tier.
+// Returns null if the string doesn't match any known pattern (caller should fall back to a default).
+function amazonSizeTierToAppTier(raw) {
+  // Amazon's export values are often camelCase with zero separator (e.g. "UsSmallStandardSize") —
+  // split camelCase word boundaries into spaces before matching, or "small.+standard" never matches.
+  const s = (raw || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[-_]+/g, ' ');
+  if (/small.+standard|standard.+small/.test(s)) return 'ss';
+  if (/large.+standard|standard.+large/.test(s)) return 'ls';
+  if (/bulky/.test(s)) return 'lb';
+  if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
+  if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
+  if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
+  if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
+  return null; // unknown → caller uses default
+}
+
 function importCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1265,14 +1327,19 @@ function importCSV(event) {
     let created = 0, updated = 0, skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      // Use the quote-aware row parser — a naive split(',') corrupts columns whenever a
+      // field (e.g. a real Amazon product title) contains a comma inside quotes.
+      const cols = parseCSVRow(lines[i]).map(c => c.trim().replace(/^"|"$/g,''));
       const row = {};
       headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
 
       const asin = row.asin?.trim().toUpperCase() || '';
-      // Match existing product by ASIN first, then by name
+      // Match existing product by ASIN when the row provides one. Only fall back to matching
+      // by name when the row has NO asin at all — otherwise two different real ASINs that
+      // happen to share templated/identical listing copy (common for color/size variants of
+      // the same private-label product) would collide and silently overwrite each other.
       let existing = asin ? state.products.find(p => p.asin && p.asin.toUpperCase() === asin) : null;
-      if (!existing && row.name) existing = state.products.find(p => p.name === row.name);
+      if (!existing && !asin && row.name) existing = state.products.find(p => p.name === row.name);
 
       if (existing) {
         // UPDATE — only overwrite fields that are present as columns in this CSV
@@ -1312,11 +1379,16 @@ function importCSV(event) {
       } else {
         // CREATE — require at minimum a name (or asin) and cogs
         if ((!row.name && !asin) || !row.cogs) { skipped++; continue; }
+        // Respects an explicit "0" in the CSV (e.g. inbound_shipping=0 when a landed-cost
+        // figure already includes freight) — plain `parseFloat(x) || default` would silently
+        // replace 0 with the default, since 0 is falsy in JS.
+        const numOr = (val, def) => (val !== undefined && val !== '') ? parseFloat(val) : def;
+        const intOr = (val, def) => (val !== undefined && val !== '') ? parseInt(val) : def;
         const p = createDefaultProduct();
         p.name = row.name || `Product ${asin}`;
         p.asin = asin;
         p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
-        const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16 : (parseFloat(row.weight_oz) || 8);
+        const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16 : numOr(row.weight_oz, 8);
         p.inputs.weight = weightOz;
         if (['ss','ls','lb','xl'].includes(row.size_tier)) {
           p.inputs.sizetier = row.size_tier;
@@ -1325,22 +1397,22 @@ function importCSV(event) {
         } else {
           p.inputs.sizetier = 'ss';
         }
-        p.inputs.cogs        = parseFloat(row.cogs) || 6;
-        p.inputs.margin      = parseFloat(row.target_margin) || 30;
-        p.inputs.inbound     = parseFloat(row.inbound_shipping) || 0.50;
-        p.inputs.placement   = parseFloat(row.inbound_placement) || 0;
-        p.inputs.prep        = parseFloat(row.prep_labelling) || 0.25;
-        p.inputs.storage     = parseFloat(row.storage) || 0.10;
-        p.inputs.q4storage   = parseFloat(row.q4_storage) || 0;
-        p.inputs.ppc         = parseFloat(row.ppc_per_unit) || 1.50;
-        p.inputs.returns     = parseFloat(row.returns_allowance) || 0.30;
+        p.inputs.cogs        = numOr(row.cogs, 6);
+        p.inputs.margin      = numOr(row.target_margin, 30);
+        p.inputs.inbound     = numOr(row.inbound_shipping, 0.50);
+        p.inputs.placement   = numOr(row.inbound_placement, 0);
+        p.inputs.prep        = numOr(row.prep_labelling, 0.25);
+        p.inputs.storage     = numOr(row.storage, 0.10);
+        p.inputs.q4storage   = numOr(row.q4_storage, 0);
+        p.inputs.ppc         = numOr(row.ppc_per_unit, 1.50);
+        p.inputs.returns     = numOr(row.returns_allowance, 0.30);
         p.inputs.vine        = row.vine_enrolled?.toLowerCase() === 'true';
-        p.inputs.vineUnits   = parseInt(row.vine_units) || 20;
-        p.inputs.annualUnits = parseInt(row.annual_units) || 500;
-        p.inputs.other       = parseFloat(row.other_overhead) || 0.20;
-        p.inputs.tacos       = parseFloat(row.target_acos) || 25;
-        p.inputs.lacos       = parseFloat(row.launch_acos) || 60;
-        p.inputs.cvr         = parseFloat(row.cvr) || 12;
+        p.inputs.vineUnits   = intOr(row.vine_units, 20);
+        p.inputs.annualUnits = intOr(row.annual_units, 500);
+        p.inputs.other       = numOr(row.other_overhead, 0.20);
+        p.inputs.tacos       = numOr(row.target_acos, 25);
+        p.inputs.lacos       = numOr(row.launch_acos, 60);
+        p.inputs.cvr         = numOr(row.cvr, 12);
         p.notes = row.notes || '';
         state.products.push(p);
         created++;
@@ -1652,6 +1724,32 @@ function classifyPrice(currentPrice, prices) {
   if (currentPrice < prices.discP)          return { label: 'Below Clearance — urgent', cls: 'pm-below' };
   return { label: 'Custom price', cls: '' };
 }
+
+// RULE: Inventory & sales velocity status from weekly check-in data. LOGIC.md Section 8.
+// velocity = units sold per day (last 30d). daysOfCover = current inventory ÷ velocity.
+function getInventoryStatus(inventoryUnits, unitsSold30) {
+  if (inventoryUnits === undefined || inventoryUnits === null) return null;
+  const velocity = (unitsSold30 || 0) / 30;
+  if (velocity <= 0) {
+    return { velocity: 0, daysOfCover: null, status: inventoryUnits > 0 ? 'no_sales' : 'unknown' };
+  }
+  const daysOfCover = inventoryUnits / velocity;
+  let status;
+  if (daysOfCover < STOCKOUT_RISK_DAYS) status = 'stockout_risk';
+  else if (daysOfCover < REORDER_SOON_DAYS) status = 'reorder_soon';
+  else if (daysOfCover > AGED_INVENTORY_DAYS) status = 'overstock';
+  else status = 'healthy';
+  return { velocity, daysOfCover, status };
+}
+
+const INVENTORY_STATUS_META = {
+  stockout_risk: { label: 'Reorder now',    cls: 'inv-urgent' },
+  reorder_soon:  { label: 'Plan reorder',   cls: 'inv-reorder' },
+  healthy:       { label: 'Healthy',        cls: 'inv-healthy' },
+  overstock:     { label: 'Overstock risk', cls: 'inv-overstock' },
+  no_sales:      { label: 'No sales — stagnant', cls: 'inv-overstock' },
+  unknown:       { label: '—',              cls: '' }
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CURRENCY & LANGUAGE
@@ -2115,6 +2213,8 @@ function renderCheckinsTab(p) {
     <div class="checkin-list">${sorted.map((ci, i) => {
       const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
       const tacos = ci.totalRevenue && ci.totalAdSpend ? (ci.totalAdSpend/ci.totalRevenue*100) : null;
+      const inv = getInventoryStatus(ci.inventoryUnits, ci.unitsSold30);
+      const invMeta = inv ? INVENTORY_STATUS_META[inv.status] : null;
       return `<div class="checkin-item">
         <div class="checkin-header">
           <div class="checkin-date">${new Date(ci.date).toLocaleDateString()} ${new Date(ci.date).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
@@ -2129,6 +2229,14 @@ function renderCheckinsTab(p) {
           <div class="checkin-cell"><div class="checkin-cell-label">ACoS</div><div class="checkin-cell-val" style="color:${ci.currentAcos?(ci.currentAcos<prices.beAcos?'#4ade80':ci.currentAcos<prices.beAcos*1.5?'#f59e0b':'#f87171'):'#fff'}">${ci.currentAcos !== undefined ? ci.currentAcos.toFixed(1)+'%' : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">Ad Sales (30d)</div><div class="checkin-cell-val">${ci.adSales !== undefined ? ci.adSales : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">TACoS</div><div class="checkin-cell-val" style="color:${tacos?(tacos<10?'#4ade80':tacos<20?'#f59e0b':'#f87171'):'#fff'}">${tacos !== null ? tacos.toFixed(1)+'%' : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">Inventory (units)</div><div class="checkin-cell-val">${ci.inventoryUnits !== undefined ? ci.inventoryUnits : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">Units Sold (30d)</div><div class="checkin-cell-val">${ci.unitsSold30 !== undefined ? ci.unitsSold30 : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">Sales Velocity</div><div class="checkin-cell-val">${inv && inv.velocity ? inv.velocity.toFixed(2)+'/day' : '—'}</div></div>
+          <div class="checkin-cell">
+            <div class="checkin-cell-label">Days of Cover</div>
+            <div class="checkin-cell-val">${inv && inv.daysOfCover !== null ? Math.round(inv.daysOfCover)+'d' : '—'}
+              ${invMeta && invMeta.cls ? `<span class="price-match ${invMeta.cls}" style="font-size:0.58rem;">${invMeta.label}</span>` : ''}</div>
+          </div>
         </div>
         ${ci.notes ? `<div class="checkin-notes">${ci.notes}</div>` : ''}
       </div>`;
@@ -2147,11 +2255,14 @@ function recordCheckin() {
     totalRevenue: parseFloat(document.getElementById('ci-rev').value) || undefined,
     totalAdSpend: parseFloat(document.getElementById('ci-spend').value) || undefined,
     organicGrowing: document.getElementById('ci-organic').value,
+    inventoryUnits: parseInt(document.getElementById('ci-inventory').value),
+    unitsSold30: parseInt(document.getElementById('ci-unitssold').value) || undefined,
     notes: document.getElementById('ci-notes').value.trim()
   };
+  if (isNaN(ci.inventoryUnits)) delete ci.inventoryUnits;
   p.checkins.push(ci);
   // Clear form
-  ['ci-price','ci-acos','ci-adsales','ci-rev','ci-spend','ci-notes'].forEach(id => { document.getElementById(id).value = ''; });
+  ['ci-price','ci-acos','ci-adsales','ci-rev','ci-spend','ci-inventory','ci-unitssold','ci-notes'].forEach(id => { document.getElementById(id).value = ''; });
   saveToStorage();
   renderAll();
 }
@@ -2556,18 +2667,6 @@ function importFBAFeePreview(event) {
       event.target.value = ''; return;
     }
 
-    // Map Amazon size tier strings to our ls/ss/lb/xl codes
-    const sizeTierMap = raw => {
-      const s = (raw || '').toLowerCase().replace(/[-_]+/g, ' ');
-      if (/small.+standard|standard.+small/.test(s)) return 'ss';
-      if (/large.+standard|standard.+large/.test(s)) return 'ls';
-      if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
-      if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
-      if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
-      if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
-      return null; // unknown → use default
-    };
-
     // Weight: detect units from column header; default to lbs (US Amazon standard)
     const wHdr = weightCol !== -1 ? hdrs[weightCol] : '';
     const parseWeightToOz = val => {
@@ -2595,7 +2694,7 @@ function importFBAFeePreview(event) {
       p.name   = name || `Product ${asin}`;
       p.asin   = asin;
       p.inputs.cogs = 0;  // explicitly mark as incomplete — triggers setup banner
-      const tier = sizeTierMap(tierRaw);
+      const tier = amazonSizeTierToAppTier(tierRaw);
       if (tier) p.inputs.sizetier = tier;
       const oz = parseWeightToOz(weightRaw);
       if (oz) p.inputs.weight = oz;
@@ -2649,53 +2748,59 @@ function importAmazonReport(event) {
     if (lines.length < 2) { alert('File appears empty or has only one row.'); event.target.value=''; return; }
 
     const rawHdrs = parseCSVRow(lines[0]);
-    const hdrs = rawHdrs.map(h => h.trim().toLowerCase().replace(/[()]/g, '').replace(/\s+/g,' '));
+    const hdrs = rawHdrs.map(h => h.trim().toLowerCase().replace(/[()\-_]+/g, ' ').replace(/\s+/g,' ').trim());
 
     // Fuzzy column finder — returns first index where any term is a substring of header
     const fc = (...terms) => hdrs.findIndex(h => terms.some(t => h.includes(t)));
 
     const asinCol    = fc('child asin', 'advertised asin', ' asin');  // ' asin' catches bare "ASIN" without matching e.g. "Parent ASIN" first
     const revenueCol = fc('ordered product sales');                    // Business Report
+    const unitsCol   = fc('units ordered');                            // Business Report — sales velocity
     const spendCol   = fc('spend');                                    // Ad Report
     const acosCol    = fc('acos', 'advertising cost of sale');         // Ad Report
-    const adRevCol   = fc('7 day total sales', '7-day total sales');   // Ad Report
+    const adRevCol   = fc('7 day total sales');                        // Ad Report
     const adUnitCol  = fc('7 day total units', '7 day total orders');  // Ad Report
     const cvrCol     = fc('unit session percentage', '7 day conversion rate'); // Either
+    const qtyCol     = fc('afn fulfillable quantity', 'fulfillable quantity', 'sellable quantity', 'available quantity'); // Inventory Report
 
     // Fall back to any column containing "asin" if specific ones not found
     const resolvedAsinCol = asinCol !== -1 ? asinCol : hdrs.findIndex(h => h.includes('asin'));
 
     if (resolvedAsinCol === -1) {
-      alert('Could not find an ASIN column.\n\nPlease upload:\n• Business Reports → Detail Page Sales and Traffic by ASIN\n• Advertising Console → Reports → Sponsored Products → Advertised Product');
+      alert('Could not find an ASIN column.\n\nPlease upload:\n• Business Reports → Detail Page Sales and Traffic by ASIN\n• Advertising Console → Reports → Sponsored Products → Advertised Product\n• Inventory → Manage All Inventory → Download Inventory File');
       event.target.value = ''; return;
     }
 
-    const isBizReport = revenueCol !== -1;
-    const isAdReport  = spendCol !== -1 && (acosCol !== -1 || adRevCol !== -1);
+    const isBizReport       = revenueCol !== -1;
+    const isAdReport        = spendCol !== -1 && (acosCol !== -1 || adRevCol !== -1);
+    const isInventoryReport = !isBizReport && !isAdReport && qtyCol !== -1;
 
-    if (!isBizReport && !isAdReport) {
-      alert('Report type not recognised. The file must be either:\n• Business Report (must have "Ordered Product Sales" column)\n• Advertising Report (must have "Spend" and "ACoS" columns)\n\nCheck you downloaded the correct report and are using the CSV export.');
+    if (!isBizReport && !isAdReport && !isInventoryReport) {
+      alert('Report type not recognised. The file must be one of:\n• Business Report (must have "Ordered Product Sales" column)\n• Advertising Report (must have "Spend" and "ACoS" columns)\n• Inventory Report (must have a "Fulfillable Quantity" / "Available" column)\n\nCheck you downloaded the correct report and are using the CSV export.');
       event.target.value = ''; return;
     }
 
     const parseNum = s => parseFloat((s || '').replace(/[$,%\s]/g, '').replace(/,/g, '')) || 0;
 
-    // Aggregate rows by ASIN (advertising reports have one row per campaign per ASIN)
+    // Aggregate rows by ASIN (advertising reports have one row per campaign per ASIN;
+    // inventory reports can have one row per fulfillment center, so quantities are summed)
     const byAsin = {};
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCSVRow(lines[i]);
       const asin = (cols[resolvedAsinCol] || '').trim().replace(/^"|"$/g, '').toUpperCase();
       if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
 
-      if (!byAsin[asin]) byAsin[asin] = { revenue:0, spend:0, acosSum:0, acosN:0, adRev:0, adUnits:0, cvrSum:0, cvrN:0 };
+      if (!byAsin[asin]) byAsin[asin] = { revenue:0, units:0, spend:0, acosSum:0, acosN:0, adRev:0, adUnits:0, cvrSum:0, cvrN:0, qty:0, qtySeen:false };
       const d = byAsin[asin];
 
       if (revenueCol  !== -1) d.revenue  += parseNum(cols[revenueCol]);
+      if (unitsCol    !== -1) d.units    += parseNum(cols[unitsCol]);
       if (spendCol    !== -1) d.spend    += parseNum(cols[spendCol]);
       if (adRevCol    !== -1) d.adRev    += parseNum(cols[adRevCol]);
       if (adUnitCol   !== -1) d.adUnits  += parseNum(cols[adUnitCol]);
       if (acosCol !== -1) { const v = parseNum(cols[acosCol]); if (v > 0) { d.acosSum += v; d.acosN++; } }
       if (cvrCol  !== -1) { const v = parseNum(cols[cvrCol]);  if (v > 0) { d.cvrSum  += v; d.cvrN++;  } }
+      if (qtyCol  !== -1) { d.qty += parseNum(cols[qtyCol]); d.qtySeen = true; }
     }
 
     let imported = 0, skipped = Object.keys(byAsin).length;
@@ -2707,16 +2812,19 @@ function importAmazonReport(event) {
       if (data.cvrN > 0) product.inputs.cvr = +(data.cvrSum / data.cvrN).toFixed(1);
 
       const acos = data.acosN > 0 ? +(data.acosSum / data.acosN).toFixed(1) : undefined;
+      const reportLabel = isBizReport ? 'Business Report' : isAdReport ? 'Advertising Report' : 'Inventory Report';
       const ci = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2),
         date: new Date().toISOString(),
         organicGrowing: 'stable',
-        notes: `Auto-imported from ${isBizReport ? 'Business Report' : 'Advertising Report'}. Fill in missing fields below.`
+        notes: `Auto-imported from ${reportLabel}. Fill in missing fields below.`
       };
       if (data.revenue  > 0)       ci.totalRevenue = +data.revenue.toFixed(2);
+      if (data.units    > 0)       ci.unitsSold30  = Math.round(data.units);
       if (data.spend    > 0)       ci.totalAdSpend = +data.spend.toFixed(2);
       if (acos !== undefined)      ci.currentAcos  = acos;
       if (data.adUnits  > 0)       ci.adSales      = Math.round(data.adUnits);
+      if (data.qtySeen)            ci.inventoryUnits = Math.round(data.qty);
 
       product.checkins.push(ci);
       imported++;
@@ -2730,9 +2838,11 @@ function importAmazonReport(event) {
       const sample = Object.keys(byAsin).slice(0, 3).join(', ');
       alert(`No products matched.\n\nASINs found in report: ${sample}${Object.keys(byAsin).length > 3 ? '…' : ''}\n\nMake sure each product has its ASIN entered (Edit product → ASIN field). ASINs must match exactly.`);
     } else {
-      const type = isBizReport ? 'Business Report' : 'Advertising Report';
-      const filled = isBizReport ? 'Total Revenue, CVR' : 'ACoS, Ad Spend, Ad Sales';
-      const miss = isBizReport ? 'ACoS + Ad Spend → import Advertising Report next' : 'Total Revenue → import Business Report next';
+      const type = isBizReport ? 'Business Report' : isAdReport ? 'Advertising Report' : 'Inventory Report';
+      const filled = isBizReport ? 'Total Revenue, Units Sold (velocity), CVR' : isAdReport ? 'ACoS, Ad Spend, Ad Sales' : 'Current Inventory';
+      const miss = isBizReport ? 'ACoS + Ad Spend → import Advertising Report next; Inventory → import Inventory Report next'
+        : isAdReport ? 'Total Revenue + Units Sold → import Business Report next; Inventory → import Inventory Report next'
+        : 'Revenue/ACoS/Units Sold → import Business + Advertising Reports next';
       alert(`✓ Imported check-ins for ${imported} product${imported > 1 ? 's' : ''}.\n\nSource: ${type}\nFilled: ${filled}\nStill needed: ${miss}\n\nCurrent Price is never in any export — enter it manually.`);
     }
   };
@@ -2806,10 +2916,11 @@ function exportCheckinsCSV(productId) {
   const p = state.products.find(x => x.id === productId);
   if (!p || !p.checkins.length) return;
   const prices = calcPrices(p.inputs);
-  const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','notes'];
+  const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','inventory_units','units_sold_30d','sales_velocity_per_day','days_of_cover','inventory_status','notes'];
   const rows = p.checkins.map(c => {
     const tacos = c.totalRevenue && c.totalAdSpend ? (c.totalAdSpend/c.totalRevenue*100).toFixed(1) : '';
     const pc = c.currentPrice ? classifyPrice(c.currentPrice, prices) : null;
+    const inv = getInventoryStatus(c.inventoryUnits, c.unitsSold30);
     return [
       new Date(c.date).toISOString().slice(0,10),
       c.currentPrice || '',
@@ -2820,6 +2931,11 @@ function exportCheckinsCSV(productId) {
       c.totalAdSpend || '',
       tacos,
       c.organicGrowing || '',
+      c.inventoryUnits !== undefined ? c.inventoryUnits : '',
+      c.unitsSold30 !== undefined ? c.unitsSold30 : '',
+      inv && inv.velocity ? inv.velocity.toFixed(2) : '',
+      inv && inv.daysOfCover !== null ? Math.round(inv.daysOfCover) : '',
+      inv ? `"${INVENTORY_STATUS_META[inv.status].label}"` : '',
       `"${(c.notes||'').replace(/"/g,'""')}"`
     ].join(',');
   });

@@ -10,13 +10,17 @@ Items within each section are roughly prioritised top-to-bottom.
 - [x] FBA fee calculator with 2026 price bands and fuel surcharge
 - [x] m19 advertising stage tracker (PRE_LAUNCH → STABLE)
 - [x] Bilingual UI (EN / ZH)
-- [x] CSV import: Amazon Business Report + Advertising Report
+- [x] CSV import: Amazon Business Report + Advertising Report + Inventory Report
 - [x] FBA Fee Preview import to bulk-create product entries
 - [x] Hover tooltips on all key fields (Amazon definitions + source links)
 - [x] Dimension auto-calculator → size tier auto-selection
 - [x] Flow guide modal + pricing rules quick reference
 - [x] Coupon cost calculator (flat fee + % of attributed sales)
 - [x] Kill signal alerts (ACoS runaway, stale stage, no sales)
+- [x] Inventory & sales velocity tracking in weekly check-ins (units in stock, units sold,
+      days of cover, stockout/reorder/overstock badges) — manual entry or CSV import
+- [x] Amazon size-tier string mapping fixed for real export formats (camelCase-concatenated
+      strings like `UsLargeStandardSize`, and "Bulky" tier terminology)
 
 ---
 
@@ -57,7 +61,9 @@ Items within each section are roughly prioritised top-to-bottom.
 ### Amazon SP-API Integration (Real-Time Data)
 - Connect to Amazon Selling Partner API (SP-API) via OAuth
 - Auto-pull live listing price, BSR, review count per ASIN
-- Auto-pull FBA inventory levels and days of cover
+- Auto-pull FBA inventory levels and days of cover directly, without a manual weekly CSV
+  export/import (inventory levels + computed days of cover already work today via the
+  Inventory Report import — this item is only about replacing the manual export step)
 - Detect price changes made outside this tool and flag discrepancies
 - Pull actual FBA fee estimates from `getMyFeesEstimate` endpoint
 
@@ -119,5 +125,6 @@ Items within each section are roughly prioritised top-to-bottom.
 - All state is `localStorage` only — clearing browser storage loses all data
 - No input validation on CSV import (malformed rows silently skipped)
 - FBA fee tables are hardcoded — need a mechanism to update when Amazon changes rates
-- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals (180 tests — run with `npm test`)
+- ~~No unit tests~~ `test.js` covers fee tables, price solver, kill signals, inventory
+  status, and Amazon size-tier mapping (210 tests — run with `npm test`)
 - Single `index.html` file — split into modules when adding build step

@@ -15,6 +15,9 @@ const S3_ACOS_BUFFER       = 3;
 const S3_KILL_DAYS         = 90;
 const K4_SPEND_RATIO       = 1.5;
 const STALE_DAYS           = 21;
+const STOCKOUT_RISK_DAYS   = 30;
+const REORDER_SOON_DAYS    = 90;
+const AGED_INVENTORY_DAYS  = 181;
 const PRICE_LIST_END       = 0.99;
 const PRICE_YOUR_END       = 0.95;
 const PRICE_SALE_END       = 0.90;
@@ -127,6 +130,33 @@ function classifyPrice(currentPrice, prices) {
   if (currentPrice > prices.listP)          return { label: 'Above List Price — check', cls: 'pm-above' };
   if (currentPrice < prices.discP)          return { label: 'Below Clearance — urgent', cls: 'pm-below' };
   return { label: 'Custom price', cls: '' };
+}
+
+function getInventoryStatus(inventoryUnits, unitsSold30) {
+  if (inventoryUnits === undefined || inventoryUnits === null) return null;
+  const velocity = (unitsSold30 || 0) / 30;
+  if (velocity <= 0) {
+    return { velocity: 0, daysOfCover: null, status: inventoryUnits > 0 ? 'no_sales' : 'unknown' };
+  }
+  const daysOfCover = inventoryUnits / velocity;
+  let status;
+  if (daysOfCover < STOCKOUT_RISK_DAYS) status = 'stockout_risk';
+  else if (daysOfCover < REORDER_SOON_DAYS) status = 'reorder_soon';
+  else if (daysOfCover > AGED_INVENTORY_DAYS) status = 'overstock';
+  else status = 'healthy';
+  return { velocity, daysOfCover, status };
+}
+
+function amazonSizeTierToAppTier(raw) {
+  const s = (raw || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[-_]+/g, ' ');
+  if (/small.+standard|standard.+small/.test(s)) return 'ss';
+  if (/large.+standard|standard.+large/.test(s)) return 'ls';
+  if (/bulky/.test(s)) return 'lb';
+  if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
+  if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
+  if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
+  if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
+  return null;
 }
 
 function checkKillSignals(product) {
@@ -562,6 +592,63 @@ const pAt999  = calcPrices({...base, cogs:2, margin:25,
   inbound:0.30, ppc:0.50, prep:0.10, returns:0.10, storage:0.05, other:0.05});
 is(pAt999.ypF.fba < fee_1000 * 1.035 || pAt999.yp > 10,
   `Solver lands product at yp=$${pAt999.yp} — FBA band choice is consistent`);
+
+// ─── 8. getInventoryStatus — sales velocity & days of cover ─────────────────
+describe('getInventoryStatus');
+
+is(getInventoryStatus(undefined, 30) === null, 'No inventory data → null (not yet checked in)');
+is(getInventoryStatus(null, 30) === null, 'Null inventory → null');
+
+const stockout = getInventoryStatus(100, 300); // 10 units/day velocity, 10 days of cover
+eq(stockout.velocity, 10, 'Velocity: 300 units / 30 days = 10/day');
+eq(stockout.daysOfCover, 10, 'Days of cover: 100 units / 10/day = 10 days');
+eq(stockout.status, 'stockout_risk', `10 days < ${STOCKOUT_RISK_DAYS} → stockout_risk`);
+
+const reorderSoon = getInventoryStatus(600, 300); // 10/day velocity, 60 days of cover
+eq(reorderSoon.daysOfCover, 60, 'Days of cover: 600 / 10 = 60 days');
+eq(reorderSoon.status, 'reorder_soon', `60 days is between ${STOCKOUT_RISK_DAYS} and ${REORDER_SOON_DAYS} → reorder_soon`);
+
+const healthy = getInventoryStatus(1500, 300); // 10/day velocity, 150 days of cover
+eq(healthy.daysOfCover, 150, 'Days of cover: 1500 / 10 = 150 days');
+eq(healthy.status, 'healthy', `150 days is between ${REORDER_SOON_DAYS} and ${AGED_INVENTORY_DAYS} → healthy`);
+
+const overstock = getInventoryStatus(6000, 300); // 10/day velocity, 600 days of cover
+eq(overstock.status, 'overstock', `600 days > ${AGED_INVENTORY_DAYS} → overstock`);
+
+const noSales = getInventoryStatus(200, 0);
+eq(noSales.velocity, 0, 'Zero units sold → zero velocity');
+is(noSales.daysOfCover === null, 'Zero velocity → days of cover cannot be computed (null, not Infinity)');
+eq(noSales.status, 'no_sales', 'Inventory present but zero sales → no_sales (stagnant, not a stockout)');
+
+const emptyAndNoSales = getInventoryStatus(0, 0);
+eq(emptyAndNoSales.status, 'unknown', 'Zero inventory AND zero sales → unknown (never launched, not stagnant)');
+
+const zeroInventory = getInventoryStatus(0, 300);
+eq(zeroInventory.daysOfCover, 0, 'Zero inventory with real velocity → 0 days of cover (actual stockout)');
+eq(zeroInventory.status, 'stockout_risk', 'Zero units in stock with sales history → stockout_risk');
+
+// Boundary checks — thresholds are exclusive on the "healthy" side, matching checkKillSignals conventions
+const atStockoutBoundary = getInventoryStatus(300, 300); // 30 days of cover exactly
+eq(atStockoutBoundary.status, 'reorder_soon', `Exactly ${STOCKOUT_RISK_DAYS} days is NOT stockout_risk (threshold is strictly less-than)`);
+const atReorderBoundary = getInventoryStatus(900, 300); // 90 days of cover exactly
+eq(atReorderBoundary.status, 'healthy', `Exactly ${REORDER_SOON_DAYS} days is NOT reorder_soon (threshold is strictly less-than)`);
+const atAgedBoundary = getInventoryStatus(1810, 300); // 181 days of cover exactly
+eq(atAgedBoundary.status, 'healthy', `Exactly ${AGED_INVENTORY_DAYS} days is NOT overstock (threshold is strictly greater-than)`);
+
+// ─── 9. amazonSizeTierToAppTier — real Amazon export → app tier mapping ─────
+describe('amazonSizeTierToAppTier — real-world Amazon FBA size tier strings');
+
+eq(amazonSizeTierToAppTier('UsSmallStandardSize'), 'ss', 'Real CIF export value: UsSmallStandardSize → ss');
+eq(amazonSizeTierToAppTier('UsLargeStandardSize'), 'ls', 'Real CIF export value: UsLargeStandardSize → ls');
+eq(amazonSizeTierToAppTier('SmallBulky'), 'lb', 'Real CIF export value: SmallBulky → lb (was silently falling through to null before the fix)');
+eq(amazonSizeTierToAppTier('LargeBulky'), 'lb', 'LargeBulky → lb (this app has no separate large-bulky bucket)');
+eq(amazonSizeTierToAppTier('Small Oversize'), 'lb', 'Legacy term: Small Oversize → lb');
+eq(amazonSizeTierToAppTier('Medium Oversize'), 'lb', 'Legacy term: Medium Oversize → lb');
+eq(amazonSizeTierToAppTier('Large Oversize'), 'xl', 'Legacy term: Large Oversize → xl');
+eq(amazonSizeTierToAppTier('Special Oversize'), 'xl', 'Legacy term: Special Oversize → xl');
+is(amazonSizeTierToAppTier('Unknown Tier XYZ') === null, 'Unrecognised string → null (caller falls back to a default)');
+is(amazonSizeTierToAppTier('') === null, 'Empty string → null');
+is(amazonSizeTierToAppTier(undefined) === null, 'Undefined → null (missing column value)');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUMMARY
