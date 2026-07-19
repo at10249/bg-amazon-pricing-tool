@@ -26,6 +26,7 @@ const SALE_DISCOUNT        = 0.94;
 const CLEARANCE_DISCOUNT   = 0.91;
 const LIST_PREMIUM         = 1.10;
 const PRICE_MATCH_TOLERANCE= 0.02;
+const SENSITIVITY_OFFSETS  = [-2, -1, 0, 1, 2];
 
 // ── Functions (mirrored from app) ────────────────────────────────────────────
 function getReferralFee(catKey, price) {
@@ -119,6 +120,87 @@ function calcPrices(inputs) {
     maxCPClaunch: yp * (lacos/100) * (cvr/100) };
 }
 
+function priceSensitivity(inputs, basePrice) {
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  return SENSITIVITY_OFFSETS.map(offset => {
+    const price = +(basePrice + offset).toFixed(2);
+    if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? 1.035 : 1.0);
+    const ref = getReferralFee(inputs.category, price);
+    const profit = price - inputs.cogs - fba - ref - otherCosts;
+    return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
+  });
+}
+
+function breakEvenUnits(monthlyOverheads, profitPerUnit) {
+  if (!(monthlyOverheads > 0)) return 0;
+  if (!(profitPerUnit > 0)) return null;
+  return Math.ceil(monthlyOverheads / profitPerUnit);
+}
+
+function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
+  if (!(cnyPrice > 0) || !(rate > 0)) return null;
+  const goodsDuty = (cnyPrice / rate) * (1 + (dutyPct > 0 ? dutyPct : 0) / 100);
+  const freight = freightPerUnit > 0 ? freightPerUnit : 0;
+  return { goodsDuty, freight, total: goodsDuty + freight };
+}
+
+const FUEL_SURCHARGE = 1.035;
+
+function feeWaterfall(inputs, price) {
+  if (!(price > 0)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const fbaBase = getFBAFee(inputs.sizetier, inputs.weight, price);
+  const fuel = inputs.surcharge ? fbaBase * (FUEL_SURCHARGE - 1) : 0;
+  const ref = getReferralFee(inputs.category, price);
+  const logistics = inputs.inbound + inputs.placement + inputs.prep + inputs.storage + inputs.q4storage;
+  const returnsOverhead = inputs.returns + inputs.other + vinePerUnit;
+  const net = price - ref - fbaBase - fuel - inputs.cogs - logistics - inputs.ppc - returnsOverhead;
+  return {
+    price,
+    segments: [
+      { key: 'referral',        amount: ref },
+      { key: 'fba',             amount: fbaBase },
+      { key: 'fuel',            amount: fuel },
+      { key: 'cogs',            amount: inputs.cogs },
+      { key: 'logistics',       amount: logistics },
+      { key: 'ppc',             amount: inputs.ppc },
+      { key: 'returnsOverhead', amount: returnsOverhead },
+      { key: 'net',             amount: net }
+    ],
+    net,
+    netPct: net / price * 100
+  };
+}
+
+function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
+  if (!(targetPrice > 0) || !(targetMarginPct < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const fba = getFBAFee(inputs.sizetier, inputs.weight, targetPrice) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+  const ref = getReferralFee(inputs.category, targetPrice);
+  const maxCogs = targetPrice * (1 - targetMarginPct / 100) - fba - ref - otherCosts;
+  return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
+}
+
+function solveMinPriceRaw(inputs) {
+  if (!(inputs.margin < 100)) return null;
+  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
+  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
+    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
+  const totalFixed = inputs.cogs + otherCosts;
+  let yp = totalFixed / (1 - inputs.margin / 100);
+  for (let i = 0; i < 40; i++) {
+    const fba = getFBAFee(inputs.sizetier, inputs.weight, yp) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+    const ref = getReferralFee(inputs.category, yp);
+    yp = (totalFixed + fba + ref) / (1 - inputs.margin / 100);
+  }
+  return yp;
+}
+
 function classifyPrice(currentPrice, prices) {
   if (!currentPrice || currentPrice <= 0) return null;
   const tol = PRICE_MATCH_TOLERANCE;
@@ -157,6 +239,27 @@ function amazonSizeTierToAppTier(raw) {
   if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
   if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
   return null;
+}
+
+const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
+  electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
+  jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
+const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
+
+function validateCSVRow(row, isUpdate) {
+  const errors = [];
+  const v = f => (row[f] ?? '').toString().trim();
+  const badNum = f => v(f) !== '' && isNaN(Number(v(f)));
+  if (!isUpdate && !v('name') && !v('asin')) errors.push({ field: 'name/asin', code: 'missing_required' });
+  if (!isUpdate && !v('cogs'))               errors.push({ field: 'cogs', code: 'missing_required' });
+  if (badNum('cogs'))          errors.push({ field: 'cogs', code: 'not_numeric', value: v('cogs') });
+  if (badNum('target_margin')) errors.push({ field: 'target_margin', code: 'not_numeric', value: v('target_margin') });
+  if (badNum('weight_oz'))     errors.push({ field: 'weight_oz', code: 'not_numeric', value: v('weight_oz') });
+  if (v('category') && !CAT_MAP[v('category').toLowerCase()])
+    errors.push({ field: 'category', code: 'unknown_category', value: v('category') });
+  if (v('size_tier') && !VALID_SIZE_TIERS.includes(v('size_tier').toLowerCase()))
+    errors.push({ field: 'size_tier', code: 'bad_size_tier', value: v('size_tier') });
+  return errors;
 }
 
 function checkKillSignals(product) {
@@ -203,6 +306,59 @@ function checkKillSignals(product) {
   const totalSpend = product.checkins.reduce((s,c) => s+(c.totalAdSpend||0), 0);
   if (totalRev > 0 && totalSpend > totalRev * K4_SPEND_RATIO) signals.push('Kill Signal 4');
   return { signals, warnings };
+}
+
+const BACKUP_NUDGE_DAYS  = 30;
+const BACKUP_SNOOZE_DAYS = 7;
+
+function shouldShowBackupNudge(lastExportIso, snoozedUntilIso, oldestProductIso, nowMs) {
+  if (!oldestProductIso) return false;
+  if (snoozedUntilIso && nowMs < new Date(snoozedUntilIso).getTime()) return false;
+  const ref = lastExportIso || oldestProductIso;
+  return (nowMs - new Date(ref).getTime()) / 86400000 > BACKUP_NUDGE_DAYS;
+}
+
+function explainSignal(sig, lang = 'en') {
+  const pick = (en, zh) => lang === 'zh' ? zh : en;
+  const p = sig.params || {};
+  switch (sig.code) {
+    case 'K1': return {
+      title: pick('Kill Signal 1 — Stage 1 zero sales', '终止信号1 — 阶段1零销售'),
+      text: pick(
+        `No ad-attributed sales after ${p.daysInS1} days in Stage 1 — past the ${p.thresholdDays}-day threshold${p.vineEnrolled ? ', and the Vine window has closed' : ''}. The product may have fundamental discoverability issues.`,
+        `阶段1已进行${p.daysInS1}天仍无广告归因销售 — 已超过${p.thresholdDays}天阈值${p.vineEnrolled ? '，且Vine窗口已关闭' : ''}。产品可能存在根本性的曝光问题。`),
+      rule: `K1_DAYS = ${p.thresholdDays}`
+    };
+    case 'K2': return {
+      title: pick('Kill Signal 2 — Stage 2 insufficient velocity', '终止信号2 — 阶段2销售速度不足'),
+      text: pick(
+        `Only ${p.postVineSales} post-Vine ad sales after ${p.daysInS2} days in Stage 2 — the target is ${p.target} sales within ${p.thresholdDays} days. Demand may be too weak to support the advertising investment.`,
+        `阶段2已进行${p.daysInS2}天，Vine后广告销售仅${p.postVineSales}笔 — 目标是${p.thresholdDays}天内达到${p.target}笔。需求可能不足以支撑广告投入。`),
+      rule: `S2_AD_SALES_TARGET = ${p.target} · S2_KILL_DAYS = ${p.thresholdDays}`
+    };
+    case 'K3': return {
+      title: pick('Kill Signal 3 — persistent unprofitability', '终止信号3 — 持续不盈利'),
+      text: pick(
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}% has exceeded break-even ACoS ${p.beAcos}%` : `ACoS has never dropped below break-even ACoS ${p.beAcos}%`} for ${p.daysInS3} days in Stage 3 (threshold: ${p.thresholdDays} days), and organic sales are not growing. The unit economics may be structurally broken — price too low, competition too high, or wrong keywords.`,
+        `${p.latestAcos !== undefined ? `ACoS ${p.latestAcos}%持续高于盈亏平衡ACoS ${p.beAcos}%` : `ACoS从未低于盈亏平衡ACoS ${p.beAcos}%`}，阶段3已进行${p.daysInS3}天（阈值：${p.thresholdDays}天），且自然销售没有增长。单位经济模型可能存在结构性问题 — 价格过低、竞争过强或关键词不对。`),
+      rule: `S3_KILL_DAYS = ${p.thresholdDays} · beAcos = ${p.beAcos}%`
+    };
+    case 'K4': return {
+      title: pick('Kill Signal 4 — ad spend money pit', '终止信号4 — 广告支出无底洞'),
+      text: pick(
+        `Cumulative ad spend $${p.totalSpend} is ${p.ratioPct}% of cumulative revenue $${p.totalRev} — above the ${p.thresholdPct}% danger threshold. The product could still recover if organic sales start, but review it now.`,
+        `累计广告支出$${p.totalSpend}已达累计收入$${p.totalRev}的${p.ratioPct}% — 超过${p.thresholdPct}%的危险阈值。若自然销售启动仍有机会恢复，但请立即审查。`),
+      rule: `K4_SPEND_RATIO = ${(p.thresholdPct / 100).toFixed(1)}`
+    };
+    case 'STALE': return {
+      title: pick('Stale check-in', '检查记录过期'),
+      text: pick(
+        `No check-in recorded for ${p.staleDays} days — past the ${p.thresholdDays}-day threshold. Last check-in: ${p.lastDate}.`,
+        `已有${p.staleDays}天未记录检查 — 超过${p.thresholdDays}天阈值。最近一次检查：${p.lastDate}。`),
+      rule: `STALE_DAYS = ${p.thresholdDays}`
+    };
+    default: return { title: sig.code, text: '', rule: '' };
+  }
 }
 
 // ── Test harness ─────────────────────────────────────────────────────────────
@@ -593,7 +749,254 @@ const pAt999  = calcPrices({...base, cogs:2, margin:25,
 is(pAt999.ypF.fba < fee_1000 * 1.035 || pAt999.yp > 10,
   `Solver lands product at yp=$${pAt999.yp} — FBA band choice is consistent`);
 
-// ─── 8. getInventoryStatus — sales velocity & days of cover ─────────────────
+// ─── 8. priceSensitivity ─────────────────────────────────────────────────────
+describe('priceSensitivity — ±$2 margin table');
+
+const sens = priceSensitivity(base, p.yp);
+eq(sens.length, 5, '5 rows: −$2, −$1, current, +$1, +$2');
+is(sens[2].isCurrent, 'centre row flagged as current');
+is(!sens[0].isCurrent && !sens[4].isCurrent, 'outer rows not flagged as current');
+eq(sens[2].price, p.yp, 'centre row price = Your Price');
+eq(sens[0].price, +(p.yp - 2).toFixed(2), 'first row = yp − $2');
+eq(sens[4].price, +(p.yp + 2).toFixed(2), 'last row = yp + $2');
+eq(+sens[2].profit.toFixed(2), +p.ypF.profit.toFixed(2), 'centre row profit matches calcPrices profit at yp');
+eq(+sens[2].pct.toFixed(4), +p.ypF.pct.toFixed(4), 'centre row margin matches calcPrices margin at yp');
+// Within one FBA band, 15% referral: +$1 price → +$0.85 profit exactly
+eq(+(sens[3].profit - sens[2].profit).toFixed(2), 0.85, '+$1 price → +$0.85 profit (15% ref, same FBA band)');
+is(sens[4].pct > sens[2].pct && sens[2].pct > sens[0].pct, 'margin % increases with price within one band');
+
+// FBA band cliff: rows straddling $10 recompute fees per-row
+const cliff = priceSensitivity(base, 11.95); // rows at 9.95, 10.95, 11.95, 12.95, 13.95
+eq(+cliff[0].fba.toFixed(2), +(2.66 * 1.035).toFixed(2), 'row at $9.95 uses <$10 FBA band ($2.66 base)');
+eq(+cliff[1].fba.toFixed(2), +(3.54 * 1.035).toFixed(2), 'row at $10.95 uses $10–50 FBA band ($3.54 base)');
+is(cliff[1].profit < cliff[0].profit, 'crossing the $10 band: +$1 price yields LOWER profit (cliff visible)');
+
+// Guard: offsets that push price ≤ 0 are marked invalid, no crash
+is(!priceSensitivity(base, 1.50)[0].valid, 'price ≤ 0 row marked invalid (base $1.50, offset −$2)');
+is(priceSensitivity(base, 1.50)[2].valid, 'centre row still valid at base $1.50');
+
+// ─── 9. breakEvenUnits ───────────────────────────────────────────────────────
+describe('breakEvenUnits — fixed overheads ÷ contribution margin');
+
+eq(breakEvenUnits(500, 5),     100, '$500 ÷ $5.00/unit = 100 units');
+eq(breakEvenUnits(500, 6.29),   80, '$500 ÷ $6.29/unit = 79.49 → rounds UP to 80');
+eq(breakEvenUnits(1, 1000),      1, 'Tiny overhead still needs ≥1 whole unit');
+eq(breakEvenUnits(0, 5),         0, 'Zero overheads → 0 units needed');
+eq(breakEvenUnits(-10, 5),       0, 'Negative overheads treated as none');
+eq(breakEvenUnits(500, 0),    null, 'Zero contribution margin → null (never breaks even)');
+eq(breakEvenUnits(500, -2),   null, 'Negative contribution margin → null (never breaks even)');
+
+// ─── 10. landedCostUSD ───────────────────────────────────────────────────────
+describe('landedCostUSD — CNY → USD landed cost');
+
+const lc1 = landedCostUSD(43.5, 7.25, 0, 0);
+eq(+lc1.goodsDuty.toFixed(2), 6.00, '¥43.50 @ 7.25 = $6.00 goods (no duty)');
+eq(lc1.freight, 0,                  'No freight → $0');
+eq(+lc1.total.toFixed(2), 6.00,     'Total = $6.00');
+
+const lc2 = landedCostUSD(72.5, 7.25, 10, 0);
+eq(+lc2.goodsDuty.toFixed(2), 11.00, '¥72.50 @ 7.25 + 10% duty = $11.00');
+
+const lc3 = landedCostUSD(72.5, 7.25, 10, 1);
+eq(+lc3.goodsDuty.toFixed(2), 11.00, 'Duty applies to goods value only…');
+eq(lc3.freight, 1,                   '…freight kept separate ($1.00)');
+eq(+lc3.total.toFixed(2), 12.00,     'Total = goods+duty $11.00 + freight $1.00 = $12.00');
+
+is(landedCostUSD(0, 7.25, 0, 0)  === null, 'Zero CNY price → null');
+is(landedCostUSD(-5, 7.25, 0, 0) === null, 'Negative CNY price → null');
+is(landedCostUSD(10, 0, 0, 0)    === null, 'Zero exchange rate → null (no division by zero)');
+eq(+landedCostUSD(72.5, 7.25, -5, 0).goodsDuty.toFixed(2), 10.00, 'Negative duty treated as 0%');
+
+// ─── 11. feeWaterfall ────────────────────────────────────────────────────────
+describe('feeWaterfall — price decomposition to net profit');
+
+const wf = feeWaterfall(base, p.yp);
+eq(wf.segments.length, 8, '8 segments: referral, FBA, fuel, COGS, logistics, PPC, returns/overhead, net');
+eq(wf.segments[wf.segments.length - 1].key, 'net', 'last segment is net profit');
+
+const segSum = wf.segments.reduce((s, x) => s + x.amount, 0);
+eq(+segSum.toFixed(6), +wf.price.toFixed(6), 'segments sum exactly to the price');
+eq(+wf.net.toFixed(2), +p.ypF.profit.toFixed(2), 'net matches calcPrices profit at Your Price');
+eq(+wf.netPct.toFixed(4), +p.ypF.pct.toFixed(4), 'netPct matches calcPrices margin at Your Price');
+
+const seg = k => wf.segments.find(s => s.key === k).amount;
+eq(+seg('fuel').toFixed(4), +(seg('fba') * 0.035).toFixed(4), 'fuel segment = 3.5% of FBA base fee');
+eq(+seg('referral').toFixed(2), +getReferralFee(base.category, p.yp).toFixed(2), 'referral recomputed at the given price');
+eq(+seg('logistics').toFixed(2), +(base.inbound + base.placement + base.prep + base.storage + base.q4storage).toFixed(2),
+  'logistics = inbound + placement + prep + storage + Q4');
+eq(+seg('returnsOverhead').toFixed(2), +(base.returns + base.other).toFixed(2), 'returns/overhead = returns + other (no Vine)');
+eq(seg('cogs'), base.cogs, 'COGS segment = input COGS');
+eq(seg('ppc'), base.ppc, 'PPC segment = input PPC');
+
+// Surcharge off → fuel segment is zero, sum still equals price
+const wfNoSur = feeWaterfall({ ...base, surcharge: false }, p.yp);
+eq(wfNoSur.segments.find(s => s.key === 'fuel').amount, 0, 'surcharge off → $0 fuel segment');
+eq(+wfNoSur.segments.reduce((s, x) => s + x.amount, 0).toFixed(6), +p.yp.toFixed(6), 'sum invariant holds without surcharge');
+
+// Vine amortisation flows into returns/overhead
+const wfVine = feeWaterfall({ ...base, vine: true, annualUnits: 500 }, p.yp);
+eq(+wfVine.segments.find(s => s.key === 'returnsOverhead').amount.toFixed(2),
+   +(base.returns + base.other + 200 / 500).toFixed(2), 'Vine $0.40/unit included in returns/overhead');
+
+// Unprofitable price → negative net, sum invariant still holds
+const wfLoss = feeWaterfall(base, 5.00);
+is(wfLoss.net < 0, `net negative at $5.00 (got $${wfLoss.net.toFixed(2)})`);
+eq(+wfLoss.segments.reduce((s, x) => s + x.amount, 0).toFixed(6), 5, 'sum invariant holds when net is negative');
+
+// Guards
+is(feeWaterfall(base, 0)  === null, 'price 0 → null');
+is(feeWaterfall(base, -3) === null, 'negative price → null');
+
+// ─── 12. What-if inverse solver ──────────────────────────────────────────────
+describe('solveMaxCOGS — lock price + margin, solve max COGS');
+
+// Hand-verified: base inputs, otherCosts = $2.85
+// P=$20, m=30%: FBA = 3.54×1.035 = $3.6639, ref = 20×15% = $3.00
+// maxCogs = 20×0.70 − 3.6639 − 3.00 − 2.85 = $4.4861
+const mc = solveMaxCOGS(base, 20, 30);
+eq(+mc.maxCogs.toFixed(4), 4.4861, 'P=$20 m=30% → maxCogs = $4.4861');
+eq(+mc.ref.toFixed(2), 3.00,       'referral computed at target price');
+eq(+mc.fba.toFixed(4), 3.6639,     'FBA (incl. surcharge) computed at target price');
+eq(+mc.otherCosts.toFixed(2), 2.85,'other per-unit costs unchanged');
+eq(+mc.gap.toFixed(4), +(4.4861 - base.cogs).toFixed(4), 'gap = maxCogs − current COGS');
+
+// Impossible target: fees alone exceed price × (1−margin)
+const mcNeg = solveMaxCOGS(base, 8, 50);
+is(mcNeg.maxCogs < 0, `impossible target → negative maxCogs ($${mcNeg.maxCogs.toFixed(2)})`);
+
+// Guards
+is(solveMaxCOGS(base, 0, 30)    === null, 'price 0 → null');
+is(solveMaxCOGS(base, -5, 30)   === null, 'negative price → null');
+is(solveMaxCOGS(base, 20, 100)  === null, 'margin 100% → null');
+is(solveMaxCOGS(base, 20, 150)  === null, 'margin >100% → null');
+
+describe('solveMinPriceRaw — unrounded fixed-point solver');
+
+const rawP = solveMinPriceRaw(base);
+is(rawP > 0, `raw price positive ($${rawP.toFixed(2)})`);
+is(rawP <= p.yp, `raw price ($${rawP.toFixed(2)}) ≤ rounded Your Price ($${p.yp})`);
+is(p.yp - rawP < 1, 'rounded price is within $1 above the raw solution (.95 round-up)');
+// At the fixed point, margin is exactly the target
+{
+  const fba = getFBAFee(base.sizetier, base.weight, rawP) * FUEL_SURCHARGE;
+  const ref = getReferralFee(base.category, rawP);
+  const profit = rawP - base.cogs - 2.85 - fba - ref;
+  eq(+(profit / rawP * 100).toFixed(3), 30, 'margin at raw price = exactly 30%');
+}
+is(solveMinPriceRaw({ ...base, margin: 100 }) === null, 'margin 100% → null');
+
+describe('What-if round-trip property — COGS↔price invert within $0.01');
+
+// solveMaxCOGS(P, m) → cogs, then solveMinPriceRaw(cogs, m) must return P
+for (const [P, m] of [[24.95, 30], [12.95, 35], [45.50, 25], [72.95, 40], [19.95, 20]]) {
+  const cogs = solveMaxCOGS(base, P, m).maxCogs;
+  const back = solveMinPriceRaw({ ...base, cogs, margin: m });
+  is(Math.abs(back - P) < 0.01, `P=$${P} m=${m}% → cogs=$${cogs.toFixed(2)} → back to $${back.toFixed(4)} (Δ<$0.01)`);
+}
+// Reverse direction: price from COGS, then max COGS at that price returns the COGS
+for (const [c, m] of [[4.00, 30], [9.50, 25], [1.25, 40]]) {
+  const P = solveMinPriceRaw({ ...base, cogs: c, margin: m });
+  const back = solveMaxCOGS({ ...base, cogs: c }, P, m).maxCogs;
+  is(Math.abs(back - c) < 0.01, `cogs=$${c} m=${m}% → P=$${P.toFixed(2)} → back to $${back.toFixed(4)} (Δ<$0.01)`);
+}
+
+// ─── 13. validateCSVRow ──────────────────────────────────────────────────────
+describe('validateCSVRow — CSV import row validation');
+
+const goodRow = { name: 'Widget', asin: 'B01ABCDE01', category: 'home', size_tier: 'ss', weight_oz: '8', cogs: '6.00', target_margin: '30' };
+eq(validateCSVRow(goodRow, false).length, 0, 'fully valid create row → no errors');
+eq(validateCSVRow({ name: 'Widget', cogs: '6' }, false).length, 0, 'minimal create row (name + cogs) → no errors');
+eq(validateCSVRow({ asin: 'B01ABCDE01', cogs: '6' }, false).length, 0, 'ASIN-only identity accepted');
+
+// Missing required fields (create rows)
+const eNoId = validateCSVRow({ cogs: '6' }, false);
+is(eNoId.some(e => e.code === 'missing_required' && e.field === 'name/asin'), 'no name and no ASIN → missing_required(name/asin)');
+const eNoCogs = validateCSVRow({ name: 'Widget' }, false);
+is(eNoCogs.some(e => e.code === 'missing_required' && e.field === 'cogs'), 'no COGS → missing_required(cogs)');
+
+// Update rows may omit required create fields
+eq(validateCSVRow({ name: 'Widget' }, true).length, 0, 'update row without COGS → no errors');
+eq(validateCSVRow({ asin: 'B01ABCDE01', target_margin: '25' }, true).length, 0, 'update row with only margin → no errors');
+
+// Non-numeric values
+is(validateCSVRow({ ...goodRow, cogs: 'abc' }, false).some(e => e.code === 'not_numeric' && e.field === 'cogs'), 'cogs "abc" → not_numeric');
+is(validateCSVRow({ ...goodRow, cogs: '12x' }, false).some(e => e.code === 'not_numeric' && e.field === 'cogs'), 'cogs "12x" → not_numeric (strict Number parse)');
+is(validateCSVRow({ ...goodRow, target_margin: 'high' }, false).some(e => e.code === 'not_numeric' && e.field === 'target_margin'), 'target_margin "high" → not_numeric');
+is(validateCSVRow({ ...goodRow, weight_oz: 'heavy' }, false).some(e => e.code === 'not_numeric' && e.field === 'weight_oz'), 'weight_oz "heavy" → not_numeric');
+eq(validateCSVRow({ ...goodRow, cogs: '  6.50 ' }, false).length, 0, 'whitespace-padded number accepted');
+
+// Unknown category / bad size tier
+is(validateCSVRow({ ...goodRow, category: 'gadgets' }, false).some(e => e.code === 'unknown_category'), 'category "gadgets" → unknown_category');
+eq(validateCSVRow({ ...goodRow, category: 'ELECTRONICS' }, false).length, 0, 'category is case-insensitive');
+is(validateCSVRow({ ...goodRow, size_tier: 'xxl' }, false).some(e => e.code === 'bad_size_tier'), 'size_tier "xxl" → bad_size_tier');
+eq(validateCSVRow({ ...goodRow, size_tier: 'LS' }, false).length, 0, 'size_tier is case-insensitive');
+eq(validateCSVRow({ ...goodRow, category: '', size_tier: '' }, false).length, 0, 'empty optional fields → no errors (defaults apply)');
+
+// Multiple errors accumulate on one row
+const multi = validateCSVRow({ cogs: 'abc', category: 'gadgets', size_tier: 'huge' }, false);
+eq(multi.length, 4, 'bad row collects all errors (identity + numeric + category + tier)');
+
+// Error objects carry the offending value for reporting
+eq(validateCSVRow({ ...goodRow, category: 'gadgets' }, false).find(e => e.code === 'unknown_category').value, 'gadgets', 'error carries the bad value');
+
+// ─── 14. explainSignal ───────────────────────────────────────────────────────
+describe('explainSignal — plain-language kill-signal explanations');
+
+const exK1 = explainSignal({ code: 'K1', params: { daysInS1: 16, thresholdDays: 14, vineEnrolled: false } });
+is(exK1.text.includes('16 days'), 'K1 text contains actual days in Stage 1 (16)');
+is(exK1.text.includes('14-day threshold'), 'K1 text names the 14-day threshold');
+is(!exK1.text.includes('Vine'), 'K1 without Vine does not mention the Vine window');
+eq(exK1.rule, 'K1_DAYS = 14', 'K1 rule names the RULE constant and value');
+
+const exK1v = explainSignal({ code: 'K1', params: { daysInS1: 35, thresholdDays: 14, vineEnrolled: true } });
+is(exK1v.text.includes('Vine window has closed'), 'K1 with Vine mentions the closed Vine window');
+
+const exK2 = explainSignal({ code: 'K2', params: { postVineSales: 20, target: 40, daysInS2: 61, thresholdDays: 60 } });
+is(exK2.text.includes('Only 20 post-Vine ad sales'), 'K2 text contains actual sales count');
+is(exK2.text.includes('61 days') && exK2.text.includes('40 sales'), 'K2 text contains days and target');
+is(exK2.rule.includes('S2_AD_SALES_TARGET = 40') && exK2.rule.includes('S2_KILL_DAYS = 60'), 'K2 rule names both thresholds');
+
+// Spec example shape: "ACoS 42% has exceeded break-even ACoS 31% for N days"
+const exK3 = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90, latestAcos: 42 } });
+is(exK3.text.includes('ACoS 42% has exceeded break-even ACoS 31%'), 'K3 leads with actual vs break-even ACoS');
+is(exK3.text.includes('95 days'), 'K3 text contains days in Stage 3');
+is(exK3.rule.includes('S3_KILL_DAYS = 90'), 'K3 rule names S3_KILL_DAYS');
+
+const exK3n = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90 } });
+is(exK3n.text.includes('never dropped below break-even ACoS 31%'), 'K3 without a recorded ACoS falls back to "never dropped below"');
+
+const exK4 = explainSignal({ code: 'K4', params: { totalSpend: 160, totalRev: 100, ratioPct: 160, thresholdPct: 150 } });
+is(exK4.text.includes('$160') && exK4.text.includes('$100'), 'K4 text contains spend and revenue dollars');
+is(exK4.text.includes('160%') && exK4.text.includes('150%'), 'K4 text contains actual ratio and threshold');
+eq(exK4.rule, 'K4_SPEND_RATIO = 1.5', 'K4 rule names the ratio constant');
+
+const exStale = explainSignal({ code: 'STALE', params: { staleDays: 25, thresholdDays: 21, lastDate: '6/1/2026' } });
+is(exStale.text.includes('25 days') && exStale.text.includes('21-day'), 'STALE text contains actual and threshold days');
+is(exStale.text.includes('6/1/2026'), 'STALE text contains last check-in date');
+
+// Bilingual: zh variant is Chinese and carries the same numbers
+const exK3zh = explainSignal({ code: 'K3', params: { beAcos: 31, daysInS3: 95, thresholdDays: 90, latestAcos: 42 } }, 'zh');
+is(/[一-鿿]/.test(exK3zh.text), 'zh explanation contains Chinese characters');
+is(exK3zh.text.includes('42%') && exK3zh.text.includes('31%'), 'zh explanation keeps the actual numbers');
+
+// Unknown code degrades gracefully
+eq(explainSignal({ code: 'K9', params: {} }).title, 'K9', 'unknown code → code as title, no crash');
+
+// ─── 15. shouldShowBackupNudge ───────────────────────────────────────────────
+describe('shouldShowBackupNudge — export reminder decision');
+
+const NOW = Date.now();
+is(!shouldShowBackupNudge(null, null, null, NOW), 'no products → no nudge');
+is( shouldShowBackupNudge(null, null, daysAgo(40), NOW), 'never exported, oldest product 40d old → nudge');
+is(!shouldShowBackupNudge(null, null, daysAgo(10), NOW), 'never exported, oldest product 10d old → no nudge yet');
+is(!shouldShowBackupNudge(null, null, daysAgo(30), NOW), 'exactly 30 days → no nudge (strictly greater)');
+is(!shouldShowBackupNudge(daysAgo(5),  null, daysAgo(100), NOW), 'exported 5d ago → no nudge');
+is( shouldShowBackupNudge(daysAgo(31), null, daysAgo(100), NOW), 'exported 31d ago → nudge');
+is(!shouldShowBackupNudge(daysAgo(31), daysAgo(-3), daysAgo(100), NOW), 'snoozed until 3d from now → no nudge');
+is( shouldShowBackupNudge(daysAgo(31), daysAgo(1),  daysAgo(100), NOW), 'snooze expired yesterday → nudge again');
+is( shouldShowBackupNudge(null, daysAgo(1), daysAgo(40), NOW), 'expired snooze does not suppress never-exported nudge');
+
+// ─── 16. getInventoryStatus — sales velocity & days of cover ────────────────
 describe('getInventoryStatus');
 
 is(getInventoryStatus(undefined, 30) === null, 'No inventory data → null (not yet checked in)');
@@ -635,7 +1038,7 @@ eq(atReorderBoundary.status, 'healthy', `Exactly ${REORDER_SOON_DAYS} days is NO
 const atAgedBoundary = getInventoryStatus(1810, 300); // 181 days of cover exactly
 eq(atAgedBoundary.status, 'healthy', `Exactly ${AGED_INVENTORY_DAYS} days is NOT overstock (threshold is strictly greater-than)`);
 
-// ─── 9. amazonSizeTierToAppTier — real Amazon export → app tier mapping ─────
+// ─── 17. amazonSizeTierToAppTier — real Amazon export → app tier mapping ────
 describe('amazonSizeTierToAppTier — real-world Amazon FBA size tier strings');
 
 eq(amazonSizeTierToAppTier('UsSmallStandardSize'), 'ss', 'Real CIF export value: UsSmallStandardSize → ss');

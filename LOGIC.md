@@ -39,7 +39,7 @@ If adding a new category, add a new `case` with the category key and rate logic.
 
 ### 1.2 FBA Fulfillment Fees — Standard Size (2026 rate card)
 **Source:** Amazon Seller Central fee schedule, effective January 15, 2026
-**CODE LOCATION:** `index.html` → constants `SS` (Small Standard) and `LS` (Large Standard), function `getFBAFee(tier, wOz, price)`
+**CODE LOCATION:** `index.html` → versioned constant `FEE_SCHEDULE` (all FBA fee numbers), aliases `SS_TABLE`/`LS_TABLE`, function `getFBAFee(tier, wOz, price)`
 **Last verified:** April 2026
 
 Structure: fees are indexed by [max_weight_oz, price_band_<$10, price_band_$10-$50, price_band_>$50]
@@ -76,18 +76,54 @@ Large Standard (up to 20lb):
 Large Bulky (was Oversize Small/Medium): $9.61 / $10.10 / $10.84 by price band
 Extra-Large (<50lb): $26.33 / $27.12 / $28.01 by price band
 
-**TO UPDATE:** Find the `SS` and `LS` array constants and update the numbers.
-For Large Bulky and Extra-Large, find the return statements in `getFBAFee` for `tier==='lb'` and `tier==='xl'`.
+**TO UPDATE:** See Section 1.4 — all FBA fee numbers live in the single `FEE_SCHEDULE` block.
 
 ---
 
 ### 1.3 Fuel & Logistics Surcharge
 **Source:** Amazon announcement, effective April 17, 2026
-**CODE LOCATION:** `index.html` → everywhere `sur ? 1.035 : 1.0` appears (multiply applied to FBA base fee)
-**Rate:** 3.5% on top of all FBA fulfillment fees
+**CODE LOCATION:** `index.html` → constant `FUEL_SURCHARGE` (read from `FEE_SCHEDULE.tables.FUEL_SURCHARGE`), applied everywhere as `surcharge ? FUEL_SURCHARGE : 1.0` on top of the FBA base fee
+**Rate:** 3.5% on top of all FBA fulfillment fees (multiplier `1.035`)
 
-**TO UPDATE:** Search for `1.035` in index.html and replace with new multiplier.
-E.g. if surcharge becomes 4%, replace `1.035` with `1.04`.
+**TO UPDATE:** Change `FUEL_SURCHARGE` inside the `FEE_SCHEDULE` block (Section 1.4).
+E.g. if the surcharge becomes 4%, set it to `1.04`.
+
+---
+
+### 1.4 Fee Schedule Versioning — how to update rates
+**CODE LOCATION:** `index.html` → constant `FEE_SCHEDULE`
+
+All FBA fulfillment fee numbers are wrapped in ONE dated structure:
+
+```js
+const FEE_SCHEDULE = {
+  effectiveFrom: '2026-01-15',              // rate card effective date
+  fuelSurchargeEffectiveFrom: '2026-04-17', // surcharge start date
+  tables: {
+    SS: [...],                  // Small Standard rows: [max_oz, <$10, $10–$50, >$50]
+    LS: [...],                  // Large Standard rows (same shape)
+    LS_OVER_48OZ_BASES: [...],  // 3lb+ base fee by price band
+    LS_OVER_48OZ_STEP: 0.08,    // added per 4oz above 48oz
+    LB: [...],                  // Large Bulky flat rates by price band
+    XL: [...],                  // Extra-Large flat rates by price band
+    FUEL_SURCHARGE: 1.035       // multiplier on every FBA fee
+  }
+};
+```
+
+**Update procedure when Amazon changes rates:**
+1. Get the new rate card from Seller Central (see README "Fee Table Sources").
+2. Replace the entire `FEE_SCHEDULE` block with the new numbers and set
+   `effectiveFrom` to the new rate card's effective date.
+3. Do NOT edit fee numbers anywhere else — `getFBAFee()`, the price solver and
+   the fuel surcharge all read exclusively from this block (via the aliases
+   `SS_TABLE`, `LS_TABLE`, `FUEL_SURCHARGE`).
+4. Update the mirrored tables at the top of `test.js` and the expected dollar
+   amounts in its fee tests, then run `npm test`.
+5. Update Sections 1.2 / 1.3 of this document.
+
+Referral fees (Section 1.1) are percentage rules, not tables — they stay in
+`getReferralFee()`.
 
 ---
 
@@ -289,10 +325,28 @@ This prevents automatic decisions on insufficient data.
 
 ## 7. KILL / CONTINUE DECISION ENGINE
 
-**CODE LOCATION:** `index.html` → function `checkKillSignals(product)`
+**CODE LOCATION:** `index.html` → functions `checkKillSignals(product)` and `explainSignal(signal, lang)`
 
 These thresholds are SUGGESTIONS, not automatic decisions. The tool shows a "Kill Review"
 badge and explains why. The user decides. All thresholds documented here for easy LLM tuning.
+
+**Structured signals + plain-language explanations:**
+`checkKillSignals()` returns structured objects — `{signals: [{code, params}],
+warnings: [{code, params}]}` — where `params` carries the ACTUAL numbers that
+fired the threshold (days elapsed, sales counts, ACoS values, spend/revenue).
+Codes: `K1`–`K4` for kill signals, `STALE` for the check-in warning.
+
+`explainSignal(signal, lang)` is a pure function that renders a signal into
+`{title, text, rule}`:
+- `text` — full plain-language sentence with the real numbers, e.g.
+  *"ACoS 42% has exceeded break-even ACoS 31% for 95 days in Stage 3
+  (threshold: 90 days), and organic sales are not growing…"*
+- `rule` — names the RULE constant(s) responsible, e.g. `S3_KILL_DAYS = 90`.
+- `lang` is `'en'` or `'zh'`; both variants keep the same numbers.
+
+The UI renders `title` + `text` + a monospace `RULE:` tag per signal.
+**TO ADD a new signal:** push a new `{code, params}` in `checkKillSignals()`
+and add a matching case in `explainSignal()` (EN + ZH).
 
 ### Kill Signal 1: Stage 1 Zero Sales
 **Trigger:** Zero ad-attributed sales after DAY_THRESHOLD days in Stage 1
@@ -396,6 +450,13 @@ Computed fresh on every render from the two check-in fields above — nothing is
 `AGED_INVENTORY_DAYS` constants and adjust. If your supply chain lead time changes
 (e.g. switching from sea to air freight), `REORDER_SOON_DAYS` is the one to tune.
 
+**Undo / soft delete (CODE: `deleteCheckin()`, `recordCheckin()`, `showUndoToast()`):**
+Deleting a check-in shows no confirm dialog — it is a soft delete. A toast with an
+Undo button appears for `UNDO_WINDOW_MS` (8,000 ms; CODE: `UNDO_WINDOW_MS = 8000`).
+Undo restores the check-in at its original position in the `checkins` array.
+Saving a new check-in shows the same toast; Undo removes the just-added record.
+**TO UPDATE the undo window:** change the `UNDO_WINDOW_MS` constant.
+
 ---
 
 ## 9. ADVERTISING BUDGET RECOMMENDATIONS
@@ -475,13 +536,36 @@ Size tier values: `ss` (small standard), `ls` (large standard), `lb` (large bulk
 
 **Template file:** `products-template.csv` (included in repo)
 
-**Importing a landed-cost/CIF figure as `cogs`:** If your cost data is a CIF (Cost, Insurance,
-Freight) or other all-in landed-cost figure that already includes inbound freight, set
-`cogs` = that figure AND `inbound_shipping = 0` in the CSV. Otherwise inbound freight gets
-counted twice (once inside the landed cost, once in the tool's separate inbound_shipping
-field), silently inflating total cost and understating margin. CIF terms typically stop at
-the destination port — verify separately whether US customs duty and last-mile drayage to
-the FBA warehouse still need to be added via `inbound_placement` or `other_overhead`.
+### 11.1 Row Validation & Import Report
+**CODE LOCATION:** `index.html` → function `validateCSVRow(row, isUpdate)`, report UI in `showImportReport()` / `csvErrorText()`, modal `#import-report-modal`
+
+Rows are validated BEFORE import; a row with any error is **skipped entirely**
+(never partially imported or silently coerced) and listed in the post-import
+report ("Imported X · Updated Y · Skipped Z" with an expandable per-row error
+list showing row number, field, and reason).
+
+Validation rules (error codes):
+- `missing_required` — create rows must have a `name` or `asin`, and a `cogs` value.
+  Update rows (matched to an existing product by ASIN or name) are exempt — they
+  may carry only the columns being updated.
+- `not_numeric` — `cogs`, `target_margin`, `weight_oz` present but not parseable
+  as a number (strict `Number()` parse: `"12x"` is rejected).
+- `unknown_category` — `category` present but not a key of `CAT_MAP`.
+- `bad_size_tier` — `size_tier` present but not `ss`/`ls`/`lb`/`xl` (case-insensitive).
+
+Empty optional fields are NOT errors — defaults from Section 3 apply.
+
+**TO UPDATE validation rules:** edit `validateCSVRow()` and add a matching
+entry to `csvErrorText()` for any new error code.
+
+### 11.2 Importing a landed-cost/CIF figure as `cogs`
+If your cost data is a CIF (Cost, Insurance, Freight) or other all-in landed-cost figure
+that already includes inbound freight, set `cogs` = that figure AND `inbound_shipping = 0`
+in the CSV. Otherwise inbound freight gets counted twice (once inside the landed cost,
+once in the tool's separate inbound_shipping field), silently inflating total cost and
+understating margin. CIF terms typically stop at the destination port — verify separately
+whether US customs duty and last-mile drayage to the FBA warehouse still need to be added
+via `inbound_placement` or `other_overhead`.
 
 ---
 
@@ -527,12 +611,135 @@ the Amazon channel.
 
 ---
 
-## 15. AMAZON REPORT & FBA FEE PREVIEW IMPORT
+## 15. CALCULATOR EXTRAS
+
+### 15.1 Price Sensitivity Table
+**CODE LOCATION:** `index.html` → constant `SENSITIVITY_OFFSETS`, function `priceSensitivity(inputs, basePrice)`, rendered in `renderCalcTab()`
+
+Shows net profit ($/unit) and net margin (%) at Your Price −$2, −$1, current, +$1, +$2.
+- Offsets: `SENSITIVITY_OFFSETS = [-2, -1, 0, 1, 2]` (dollar amounts relative to Your Price)
+- FBA and referral fees are **recomputed at each price point**, so FBA price-band cliffs
+  ($10 and $50 boundaries) are visible in the table — a $1 price increase across the $10
+  boundary can *reduce* profit because the FBA fee jumps ~$0.88.
+- The current-price row is highlighted. Rows where price ≤ 0 are suppressed.
+- Margin colour coding: green ≥ `LOW_MARGIN_WARNING` (20%), amber 0–20%, red < 0%.
+
+**TO UPDATE:** change `SENSITIVITY_OFFSETS` to widen/narrow the range (e.g. `[-5,-2,0,2,5]`).
+
+### 15.2 Break-even Units / Month
+**CODE LOCATION:** `index.html` → function `breakEvenUnits(monthlyOverheads, profitPerUnit)`, UI in `renderBreakevenCalc(p)`, input persisted as `p.inputs.monthlyOverhead`
+
+**Rule:** `units = ceil(fixedMonthlyOverheads ÷ contributionMarginPerUnit)`
+- Contribution margin per unit = net profit at Your Price (from `calcPrices().ypF.profit`),
+  i.e. after COGS, FBA, referral, and all per-unit costs. Overheads must therefore be
+  genuinely *fixed* costs (software, warehousing rent, salaries) — not per-unit costs,
+  which are already inside the margin.
+- Rounded UP to whole units (you cannot sell a fraction of a unit).
+- Returns `null` when contribution margin ≤ $0 (product can never cover overheads) —
+  the UI shows a red alert in that case. Returns `0` when overheads are 0 or unset.
+- The overhead input is stored per product in `inputs.monthlyOverhead` and preserved
+  when the product is edited via the modal (see `saveProduct()`).
+
+### 15.3 Landed Cost Calculator (CNY → USD)
+**CODE LOCATION:** `index.html` → function `landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit)`, UI in the Add/Edit Product modal (`#landed-calc`), functions `calcLanded()` / `applyLandedCost()`
+
+**Rule:** `goodsDuty = (cnyPrice ÷ exchangeRate) × (1 + dutyPct/100)`; `total = goodsDuty + freightPerUnit`
+- Duty is applied to the **goods value only**, not to freight (quick-estimate convention).
+- Default exchange rate = `CNY_RATE` (7.25, see Section 12); editable per calculation.
+- **"Use as COGS" applies the result in two parts** to keep the cost model of Section 3
+  intact: goods + duty fills the COGS field, freight fills the Inbound Shipping field.
+  This avoids double-counting freight, since COGS is defined as manufacturing cost only.
+- Returns `null` for non-positive CNY price or exchange rate; negative duty is treated as 0.
+
+### 15.4 Fee Waterfall
+**CODE LOCATION:** `index.html` → function `feeWaterfall(inputs, price)`, rendered by `waterfallHtml()` in the Calculator tab (above the sensitivity table)
+
+**Rule:** Decomposes a selling price into ordered cost segments down to net profit:
+`referral → FBA base fee → fuel surcharge → COGS → inbound/prep/storage → PPC → returns + overhead (+ Vine amortisation) → net`
+- All fees are **recomputed at the given price** (same band logic as the solver).
+- The fuel surcharge is shown as its own segment: `fbaBase × (FUEL_SURCHARGE − 1)`,
+  so users can see exactly what the April 2026 surcharge costs them per unit.
+- Invariant: segment amounts always sum exactly to the price. Net can be negative
+  (rendered red); positive net renders green.
+- Returns `null` for non-positive prices.
+- The UI draws cascading bars: each cost bar starts where the previous one ended,
+  and the remainder is the net margin. Pure CSS, no canvas or libraries.
+
+### 15.5 What-if Solver (inverse pricing)
+**CODE LOCATION:** `index.html` → functions `solveMaxCOGS(inputs, targetPrice, targetMarginPct)` and `solveMinPriceRaw(inputs)`, UI in `renderWhatIf()` / `calcWhatIf()` (Calculator tab, "What-if Solver" card)
+
+Two inversion modes, selectable via tabs:
+
+**Mode A — lock price + margin, solve max COGS:**
+`maxCogs = price × (1 − margin/100) − FBA(price) − referral(price) − otherPerUnitCosts`
+- Direct formula, no iteration — the fees depend only on the price, which is locked.
+- All other per-unit costs (inbound, prep, storage, PPC, returns, overhead, Vine
+  amortisation) are taken from the product's current inputs.
+- Output includes `gap = maxCogs − current COGS` (positive = sourcing headroom,
+  negative = current supplier is too expensive for this price/margin combo).
+- Returns `null` for non-positive price or margin ≥ 100%. `maxCogs` can be
+  negative (impossible target) — the UI shows a red alert in that case.
+
+**Mode B — lock COGS + margin, solve min price:**
+Reuses the main iterative solver, exposed as `solveMinPriceRaw()` — identical
+fixed-point iteration to `calcPrices()` but WITHOUT the .95 rounding, run for
+40 iterations. The UI shows both the exact break-point price and the rounded
+Your Price (via `calcPrices`), with the margin achieved at the rounded price.
+
+**Round-trip property (tested):** solving max COGS from a price, then solving
+the raw price back from that COGS, returns the original price within $0.01
+(and vice versa). This holds because both directions solve the same equation
+`price × (1 − m) = COGS + fees(price) + otherCosts`.
+
+## 16. AUTO-BACKUP NUDGE
+
+**CODE LOCATION:** `index.html` → constants `BACKUP_NUDGE_DAYS` / `BACKUP_SNOOZE_DAYS`, pure function `shouldShowBackupNudge()`, UI in `renderBackupNudge()` / `snoozeBackupNudge()`, banner container `#backup-nudge`
+
+All data lives in browser localStorage (Section 10) — clearing browser data
+erases it. The nudge reminds users to export a JSON backup.
+
+Rules:
+- Show a dismissible amber banner when there is at least one product AND no
+  JSON export for more than `BACKUP_NUDGE_DAYS` (30) days.
+- Reference date = `state.lastExportAt` (stamped by `exportJSON()`), falling
+  back to the **oldest product's `createdAt`** when the user has never exported.
+- The comparison is strictly greater-than: exactly 30 days does not fire.
+- Dismissing ("Later") sets `state.backupSnoozedUntil` = now + `BACKUP_SNOOZE_DAYS`
+  (7) days; the banner stays hidden until then.
+- `state.lastExportAt` is written BEFORE serialising the export, so the backup
+  file itself records when it was made.
+
+**TO UPDATE:** change `BACKUP_NUDGE_DAYS` (nudge threshold) or
+`BACKUP_SNOOZE_DAYS` (snooze length).
+
+## 17. THEME (DARK / LIGHT)
+
+**CODE LOCATION:** `index.html` → CSS variable blocks `:root` / `html.light` (top of `<style>`), constant `THEME_KEY`, functions `applyTheme()` / `toggleTheme()` / `initTheme()`, toggle button `#btn-theme`
+
+Rules:
+- Every component color reads a CSS variable `var(--c-XXXXXX)`, named after its
+  dark-mode hex value. The dark palette is defined on `:root`, the light palette
+  on `html.light`. Components are NEVER forked per theme — switching themes is a
+  single class toggle on `<html>`.
+- The chosen theme persists in localStorage under `THEME_KEY`
+  (`amazon_pricing_theme`) — separate from app data so Import JSON cannot
+  change the user's theme.
+- **First visit** (no saved choice): follows the OS `prefers-color-scheme`.
+  After the first manual toggle, the explicit choice always wins.
+- `color-scheme: dark|light` is set per theme so native form controls match.
+
+**TO UPDATE a color:** change the variable value in `:root` (dark) and/or
+`html.light` (light). **TO ADD a color:** add it to both blocks and reference
+it as `var(--c-...)` — never hardcode a hex in a component style.
+
+---
+
+## 18. AMAZON REPORT & FBA FEE PREVIEW IMPORT
 
 Two separate importers read real Amazon export files (distinct from the app's own
 `products-template.csv` format in Section 11).
 
-### 15.1 FBA Fee Preview / Inventory stub import
+### 18.1 FBA Fee Preview / Inventory stub import
 **CODE LOCATION:** `index.html` → function `importFBAFeePreview(event)`
 
 Reads an Amazon "FBA Fee Preview" report or "Manage All Inventory" download (tab- or
@@ -545,9 +752,9 @@ ASIN, product name, product size tier, unit weight. Weight units are auto-detect
 the column header (grams / oz / assumes lbs otherwise).
 
 Size tier strings from Amazon (e.g. `UsLargeStandardSize`, `SmallBulky`) are mapped to
-this app's 4 buckets via `amazonSizeTierToAppTier()` — see Section 15.3.
+this app's 4 buckets via `amazonSizeTierToAppTier()` — see Section 18.3.
 
-### 15.2 Weekly check-in import (Business / Advertising / Inventory reports)
+### 18.2 Weekly check-in import (Business / Advertising / Inventory reports)
 **CODE LOCATION:** `index.html` → function `importAmazonReport(event)`
 
 Auto-detects one of three report types by column presence and creates a check-in for
@@ -565,7 +772,7 @@ advertising reports have one row per campaign, inventory reports can have one ro
 `currentPrice` is never present in any Amazon export and must always be entered manually
 (see the check-in form's price field).
 
-### 15.3 Size tier string mapping
+### 18.3 Size tier string mapping
 **CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
 
 Maps Amazon's various size-tier export strings to this app's 4 buckets (`ss`/`ls`/`lb`/`xl`).
@@ -578,8 +785,8 @@ Handles two real-world quirks:
    Small/Medium items (e.g. `SmallBulky`, `LargeBulky`) — both map to this app's `lb`.
 
 Returns `null` for unrecognised strings; callers fall back to a default tier rather
-than guessing. Covered by `test.js` Section 9 against real values pulled from an
-actual Amazon FBA Fee Preview export.
+than guessing. Covered by `test.js` against real values pulled from an actual Amazon
+FBA Fee Preview export.
 
 ---
 
