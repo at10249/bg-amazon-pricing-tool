@@ -754,23 +754,32 @@ the column header (grams / oz / assumes lbs otherwise).
 Size tier strings from Amazon (e.g. `UsLargeStandardSize`, `SmallBulky`) are mapped to
 this app's 4 buckets via `amazonSizeTierToAppTier()` — see Section 18.3.
 
-### 18.2 Weekly check-in import (Business / Advertising / Inventory reports)
-**CODE LOCATION:** `index.html` → function `importAmazonReport(event)`
+### 18.2 Weekly check-in import (Business / Advertising / Inventory Health reports)
+**CODE LOCATION:** `index.html` → `importAmazonReport(event)`, `detectAmazonReport(hdrs)`,
+`parseBusinessReport()`, `parseAdsReport()`, `parseInventoryReport()`, `applyAmazonReports()`
 
-Auto-detects one of three report types by column presence and creates a check-in for
-each ASIN that already matches an existing product (does NOT create new products):
+The file input is **multi-select**: the user picks all three CSVs in one dialog. Each
+file's type is auto-detected from its headers (2026 formats first, legacy formats as
+fallbacks), and the whole batch produces **one merged check-in per matched product**
+(never one per file). Files of the same kind apply in selection order (later wins
+field-by-field). Direct links to each report live in `AMZ_REPORT_LINKS`; the
+step-by-step guide in the import card is the backup if Amazon changes URLs.
 
-| Report type   | Detected by column(s)                          | Fills into check-in |
-|---------------|--------------------------------------------------|----------------------|
-| Business      | "Ordered Product Sales"                          | `totalRevenue`, `unitsSold30` (from "Units Ordered"), `cvr` (on the product) |
-| Advertising   | "Spend" + ("ACoS" or "7 Day Total Sales")         | `currentAcos`, `totalAdSpend`, `adSales` (from "7 Day Total Units/Orders") |
-| Inventory     | a fulfillable/sellable/available quantity column, and NOT Business or Advertising | `inventoryUnits` |
+| Report type   | Detected by                                       | Fills |
+|---------------|---------------------------------------------------|-------|
+| Business      | "Ordered Product Sales"                           | `totalRevenue`, `unitsSold30` ("Units Ordered"), `cvr` (product), `periodDays` (user-prompted, default 30 — the file carries no dates) |
+| Advertising   | "Advertised product ID" (2026) or "Spend"+"ACoS" (legacy) | `currentAcos` = Σ Total cost ÷ Σ Sales × 100 (per ASIN across campaign rows), `totalAdSpend`, `adSales`; period parsed from the per-row "Date range" column (min start / max end) |
+| Inventory Health | exact `asin`/`sku` + `available` (2026) or legacy fulfillable-quantity columns | `inventoryUnits`, **`currentPrice`** (`sales-price` when > 0, else `your-price`), plus per-ASIN report data: SKU, inbound qty, snapshot date, units/sales shipped at 7/30/60/90d |
 
-Multiple rows per ASIN are aggregated (summed for $/units, averaged for ACoS/CVR) —
-advertising reports have one row per campaign, inventory reports can have one row per FC.
+RULE: the active `sales-price` wins over `your-price` for `currentPrice` because it is
+what buyers actually see. RULE: Amazon is the source of truth for SKU — `p.sku` is
+always overwritten from the Inventory Health import (it is the join key for the
+shipments import and the price-feed export).
 
-`currentPrice` is never present in any Amazon export and must always be entered manually
-(see the check-in form's price field).
+All parsed per-ASIN data is also merged into `state.reportData.byAsin` (flat record;
+only fields present in the batch are overwritten) — this feeds the Sale Planner
+(Section 19). Dates are formatted with a local `ymd()` helper, never
+`toISOString()` (timezone-shift bug).
 
 ### 18.3 Size tier string mapping
 **CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
@@ -787,6 +796,89 @@ Handles two real-world quirks:
 Returns `null` for unrecognised strings; callers fall back to a default tier rather
 than guessing. Covered by `test.js` against real values pulled from an actual Amazon
 FBA Fee Preview export.
+
+---
+
+## 19. SALE PLANNER
+
+**CODE LOCATION:** `index.html` → `renderSalePlanner()`, `plannerRows()`,
+`suggestSalePrice(o)`, `roundSaleEnding(x)`, `SALE_LADDER`, `SALE_MIN_OFF`,
+`PLANNER_COVER_THRESHOLD_DEFAULT`, `defaultSaleEndYmd(d)`, `exportPriceFile()`
+
+Portfolio-wide view (top bar) answering: *which ASINs need faster sales in the next
+month, and at what sale price?*
+
+### 19.1 Data sources per row (priority order)
+- **Your Price**: `reportData.yourPrice` → latest check-in `currentPrice` → none.
+- **Velocity**: Inventory Health `u30/30` → Business `bizUnits/bizDays` → latest
+  check-in `unitsSold30/periodDays`.
+- **Stock**: Inventory Health `available` → latest check-in `inventoryUnits`.
+- **Realized price** (actual average transaction price): `s30/u30` per the Inventory
+  Health 30-day trailing window; the 90/60/30/7d series is shown as a trend. RULE:
+  realized price captures sale prices and deals that `your-price` cannot (verified
+  against real exports where an active sale shows `avg30 ≈ sales-price`). It does NOT
+  capture coupon clip-discounts (promotion rebates) — deliberately out of scope.
+- **Inbound pipeline**: shipments xlsx (`inbound + awdInbound + awdAvailable`) →
+  Inventory Health `inbound-quantity`.
+
+### 19.2 Suggestion taxonomy (`suggestSalePrice`)
+RULE: suggestions anchor on **Your Price**; margin data only adds guardrails
+("easy mode" = no COGS = ladder only, no floor).
+
+1. No price → `no_data/no_price`; no sellable stock → `skip/no_stock`.
+2. Your Price < break-even (`solveMinPriceRaw` at margin 0) → `skip/loss_leader`
+   (RULE: a Your Price below break-even is a deliberate loss leader — never deepen it).
+3. Realized price < break-even while Your Price ≥ break-even →
+   `skip/below_breakeven_promo` (promos already erode margin past zero).
+4. No velocity data → `no_data/no_velocity`; days of cover ≤ threshold
+   (default 120, editable) → `keep/healthy`.
+   RULE: 120 because the aged-inventory surcharge starts at 181 days — act before it.
+5. Otherwise `sale`: discount ladder by days-of-cover — ≥365d (or ∞ = stock with zero
+   sales) 20%, ≥240d 15%, ≥180d 12%, ≥120d 8%, else 5%. Price = `roundSaleEnding`
+   (ends in .90 — promo signal), capped at ≥5% off (`SALE_MIN_OFF`, Amazon badge
+   minimum), floored at break-even. Floor above the 5%-off cap → `blocked/floor_above_5pct`.
+
+An amber row badge flags hidden discounting: realized30 < 97% of Your Price with no
+active sale price ("selling below Your Price — deal/coupon?").
+
+Per-row price and inclusion overrides persist in `state.planner.overrides[productId]`;
+default inclusion = `action === 'sale'`.
+
+### 19.3 Price-feed export
+`exportPriceFile()` collects checked rows (requires a SKU — rows without one are
+listed as skipped), validates start ≤ end, and downloads
+`PriceUpdate-Sale-<end>.xlsx` built by `buildPriceFeedXlsx()` (Section 20.2).
+RULE: sale end defaults to the **last day of the current month** regardless of upload
+date (`defaultSaleEndYmd`) — but rolls to the end of NEXT month when fewer than 3 days
+(including today) remain, because a 1–2 day "month-end sale" is never the intent.
+Rows discounted <5% are exported but the summary warns Amazon may not show a badge.
+
+## 20. ZERO-DEPENDENCY XLSX READ / WRITE
+
+### 20.1 Reader (incoming shipments, F4)
+**CODE LOCATION:** `index.html` → `unzip()`, `parseXlsxSharedStrings()`,
+`parseXlsxSheet()`, `readXlsxFirstSheet()`, `importShipmentsXlsx(event)`
+
+Parses the team's 总体控制表 `.xlsx` in the browser with no libraries: manual ZIP
+central-directory walk (EOCD scan over the last 64KB), DEFLATE entries inflated via
+the native `DecompressionStream('deflate-raw')` (browsers + Node 18+, so `test.js`
+exercises the same code), worksheet XML parsed with regex (no DOMParser — Node-testable),
+shared strings with rich-text runs concatenated. Header row is located by the exact
+cell `Merchant SKU`; `Inbound` is matched exactly (substring would collide with
+`AWD Inbound`). Result stored as `state.shipments.bySku` — the file has **no ASIN
+column**, so SKU (captured by the Inventory Health import) is the join key.
+
+### 20.2 Writer (Amazon price feed, F5)
+**CODE LOCATION:** `index.html` → `buildPriceFeedXlsx()`, `zipStore()`, `crc32()`,
+`sheetXmlFromRows()`, plus the embedded `PQ_TEMPLATE_*` header constants
+
+Emits a real `.xlsx` cloning Amazon's PriceAndQuantity template: the verbatim
+`settings=feedType=256…` string in A1 (declares `labelRow=4&attributeRow=5&dataRow=7`),
+label/attribute header rows reproduced byte-for-byte, data from row 7 with SKU (col A),
+Sale Price as a number (col K), Sale Start/End as `YYYY-MM-DD` strings (cols L/M).
+ZIP entries are **STORED** (method 0) so no compression API is needed; inline strings
+avoid sharedStrings. Round-tripped in `test.js` through the Section 20.1 reader and
+validated externally with openpyxl against the original template.
 
 ---
 

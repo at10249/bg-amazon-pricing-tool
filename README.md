@@ -91,10 +91,16 @@ covered by tests (`npm test` — 213 tests), and fully bilingual (EN/ZH).
   with documented reasoning
 - **Manufacturer mode** — enter landed cost + margin to see minimum viable Amazon price
   and all price tiers; share with your supplier to align on unit pricing
-- **CSV import** — upload a sheet of ASINs with product data to bulk-add products
-- **Amazon report import** — upload a Business Report, Advertising Report, or Inventory
-  Report from Seller Central; the tool auto-detects the type and fills in a weekly check-in
-  by matching ASIN
+- **CSV import** — upload a sheet of ASINs with product data to bulk-add products; the
+  latest cost-data (CIF) import is recorded and shown in the Sale Planner
+- **Amazon report import** — multi-select the Business Report, Advertising Report and
+  Inventory Health CSVs in one go; the tool auto-detects each type and fills one merged
+  weekly check-in per product by ASIN (including current price from Inventory Health)
+- **Sale Planner** — suggests month-end sale prices for slow movers anchored on Your
+  Price (days-of-cover discount ladder, break-even floor, loss-leader detection) and
+  exports an upload-ready PriceAndQuantity `.xlsx` price feed
+- **Incoming shipments import** — optional team 总体控制表 `.xlsx` upload (zero-dependency
+  parser) showing the inbound pipeline per product, matched by Merchant SKU
 - **Export/Import JSON** — portable data backup; copy between devices
 - **English / Chinese UI** — toggle between languages with one click
 - **USD / CNY display** — toggle currency display (all calculations stay in USD)
@@ -153,21 +159,52 @@ for the full note on what CIF terms typically do and don't cover.
 ## Amazon Report Import (weekly check-ins)
 
 For the recurring weekly routine — pricing, inventory and sales velocity — use **Import
-Amazon Report CSV** in the Check-ins tab instead of re-typing everything by hand. The tool
-auto-detects which of these three reports you uploaded and matches rows to products by ASIN:
+Amazon Reports** in the Check-ins tab (or the Sale Planner). Select **all three CSVs in
+one file dialog**; the tool auto-detects each report type and creates one merged check-in
+per product, matched by ASIN. Direct links to each report live in the app (import card +
+Sale Planner); the step-by-step paths below are the backup if Amazon changes the URLs:
 
 | Report | Where to export it | Fills |
 |---|---|---|
-| Business Report | Seller Central → Reports → Business Reports → Detail Page Sales and Traffic by ASIN | Total Revenue, Units Sold (velocity), CVR |
-| Advertising Report | Advertising Console → Reports → Create Report → Sponsored Products → Advertised Product | ACoS, Ad Spend, Ad Sales |
-| Inventory Report | Seller Central → Inventory → Manage All Inventory → Download Inventory File (or FBA Fee Preview) | Current Inventory (units) |
+| Business Report | Seller Central → Reports → Business Reports → Detail Page Sales and Traffic by Child Item | Total Revenue, Units Sold (velocity), CVR |
+| Advertising Report | Advertising Console → Sponsored ads reports → Create report → Advertised product | ACoS (computed as spend ÷ sales), Ad Spend, Ad Sales |
+| Inventory Health | Seller Central → Reports (hamburger menu) → Fulfillment → Inventory Health | Current Inventory, **Current Price** (your-price / active sale-price), realized price at 7/30/60/90d, SKU |
 
-Import all three before recording a check-in so every field is pre-filled. **Current
-price is never in any Amazon export** — read it off the live listing and enter it manually.
+Report dates are flexible: the Advertising report's own `Date range` column is parsed,
+the Inventory Health report is a dated snapshot with fixed 30-day trailing windows, and
+Business Reports (which carry no dates) prompt you for the number of days covered
+(default 30). Velocity and days of cover are computed over the actual window.
 
 Once a check-in has both `Current Inventory` and `Units Sold`, the tool computes sales
 velocity (units/day) and days of inventory cover, and flags stockout risk, reorder-soon,
 or overstock in the check-in history.
+
+Optionally, upload the team's incoming-shipments spreadsheet (总体控制表 `.xlsx`) to see
+the inbound pipeline per product — matched by Merchant SKU, which the Inventory Health
+import captures automatically.
+
+---
+
+## Sale Planner & Amazon price-feed export
+
+The **Sale Planner** (top bar) answers "which ASINs need faster sales, and at what sale
+price?" from the imported reports:
+
+- Per product: Your Price, **realized average price** over 90/60/30/7 days (actual
+  transaction prices — catches deals and price discounts that Your Price can't),
+  velocity, stock, days of cover, inbound pipeline, and margin.
+- Suggestions anchor on **Your Price** with a days-of-cover discount ladder
+  (5% beyond the threshold — default 120 days — up to 20% at 365+ days or zero sales),
+  rounded to a `.90` ending and always ≥5% off so Amazon shows the sale badge.
+- Products with COGS get a **break-even floor**; products whose Your Price is already
+  below break-even are flagged as deliberate **loss leaders** and excluded by default.
+  Products with no COGS work in **easy mode** — ladder only, no margin data needed.
+- Every row's price and inclusion is editable before export.
+
+**Export Amazon Price File** generates a real `.xlsx` in the exact PriceAndQuantity
+template format (Sale Price + Sale Start/End dates per SKU). Upload it via Seller
+Central → Catalog → **Add Products via Upload**. The sale end date defaults to the last
+day of the current month (rolling to next month's end when fewer than 3 days remain).
 
 ---
 

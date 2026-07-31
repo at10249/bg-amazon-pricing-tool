@@ -38,6 +38,23 @@ Items within each section are roughly prioritised top-to-bottom.
       days of cover, stockout/reorder/overstock badges) — manual entry or CSV import *(shipped 2026-07-20)*
 - [x] Amazon size-tier string mapping fixed for real export formats (camelCase-concatenated
       strings like `UsLargeStandardSize`, and "Bulky" tier terminology) *(shipped 2026-07-20)*
+- [x] Direct links to the 3 weekly Amazon reports (Business / Advertised product /
+      Inventory Health) with step-by-step paths kept as backup *(shipped 2026-07-31)*
+- [x] Multi-select import of all 3 report CSVs in one dialog, auto-detected from real
+      2026 export headers; one merged check-in per product per batch *(shipped 2026-07-31)*
+- [x] Flexible report date windows (`periodDays` on check-ins; ads date-range parsing;
+      Business Report period prompt) *(shipped 2026-07-31)*
+- [x] Current price auto-fill from Inventory Health (`your-price` / `sales-price`) +
+      ASIN→SKU capture *(shipped 2026-07-31)*
+- [x] Realized-price tracking (avg transaction price at 7/30/60/90d) with hidden-discount
+      and below-break-even-promo detection *(shipped 2026-07-31)*
+- [x] Optional incoming-shipments xlsx import (zero-dependency ZIP/XLSX reader),
+      matched by Merchant SKU *(shipped 2026-07-31)*
+- [x] Sale Planner: days-of-cover discount ladder anchored on Your Price, break-even
+      floor, loss-leader exclusion, easy mode without COGS *(shipped 2026-07-31)*
+- [x] Amazon PriceAndQuantity `.xlsx` price-feed export (zero-dependency xlsx writer,
+      byte-faithful template clone, month-end sale window) *(shipped 2026-07-31)*
+- [x] Latest cost-data (CIF) import recorded and shown in the planner *(shipped 2026-07-31)*
 
 ---
 
@@ -134,6 +151,7 @@ Items within each section are roughly prioritised top-to-bottom.
   updates are a single block swap (LOGIC.md §1.4)
 - ~~No unit tests~~ `test.js` covers fee tables, price solver, inverse solver,
   kill signals + explanations, CSV validation, waterfall, backup nudge,
-  sensitivity/break-even/landed-cost calculators, inventory status, and Amazon
-  size-tier mapping (332 tests — run with `npm test`)
+  sensitivity/break-even/landed-cost calculators, inventory status, Amazon
+  size-tier mapping, report detection/parsing (real export fixtures), sale-price
+  suggestion logic, and an xlsx write→read round-trip (440 tests — run with `npm test`)
 - Single `index.html` file — split into modules when adding build step

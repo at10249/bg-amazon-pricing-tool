@@ -214,9 +214,10 @@ function classifyPrice(currentPrice, prices) {
   return { label: 'Custom price', cls: '' };
 }
 
-function getInventoryStatus(inventoryUnits, unitsSold30) {
+function getInventoryStatus(inventoryUnits, unitsSold, periodDays) {
   if (inventoryUnits === undefined || inventoryUnits === null) return null;
-  const velocity = (unitsSold30 || 0) / 30;
+  const days = periodDays > 0 ? periodDays : 30;
+  const velocity = (unitsSold || 0) / days;
   if (velocity <= 0) {
     return { velocity: 0, daysOfCover: null, status: inventoryUnits > 0 ? 'no_sales' : 'unknown' };
   }
@@ -359,6 +360,438 @@ function explainSignal(sig, lang = 'en') {
     };
     default: return { title: sig.code, text: '', rule: '' };
   }
+}
+
+// ── Amazon report + Sale Planner + XLSX (mirrored from app) ──────────────────
+function parseCSVRow(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  cols.push(cur);
+  return cols;
+}
+function normalizeHeaders(rawHdrs) {
+  return rawHdrs.map(h => h.trim().toLowerCase().replace(/[()\-_]+/g, ' ').replace(/\s+/g, ' ').trim());
+}
+function parseAmzNum(s) {
+  if (s === undefined || s === null) return 0;
+  const cleaned = String(s).replace(/^="?/, '').replace(/"$/, '').replace(/[$%,\s"]/g, '');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function _amzCell(s) { return (s || '').trim().replace(/^="?/, '').replace(/"$/, ''); }
+function detectAmazonReport(hdrs) {
+  const has = h => hdrs.indexOf(h) !== -1;
+  const inc = s => hdrs.some(h => h.includes(s));
+  if (inc('ordered product sales')) return 'business';
+  if (has('advertised product id') || (inc('spend') && (inc('acos') || inc('7 day total sales')))) return 'ads';
+  const invQty = has('available') || inc('afn fulfillable quantity') || inc('fulfillable quantity') ||
+                 inc('sellable quantity') || inc('available quantity');
+  if ((has('asin') || has('sku')) && invQty) return 'inventory';
+  return null;
+}
+function ymd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function endOfMonthYmd(d) { return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
+// RULE: default sale end rolls to NEXT month's end when fewer than 3 days (incl. today) remain.
+function defaultSaleEndYmd(d) {
+  const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const remainingDays = eom.getDate() - d.getDate() + 1;
+  if (remainingDays < 3) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  return ymd(eom);
+}
+const _AMZ_MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+function parseDateRangeStr(s) {
+  if (!s) return null;
+  const clean = _amzCell(s);
+  const parts = clean.split(/\s*[-–—]\s*/);
+  if (parts.length !== 2) return null;
+  const parseOne = str => {
+    const m = str.trim().match(/([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})/);
+    if (!m) return null;
+    const mo = _AMZ_MONTHS[m[1].slice(0, 3).toLowerCase()];
+    if (mo === undefined) return null;
+    return new Date(m[3] * 1, mo, m[2] * 1);
+  };
+  const start = parseOne(parts[0]), end = parseOne(parts[1]);
+  if (!start || !end) return null;
+  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+  return { start: ymd(start), end: ymd(end), days };
+}
+function parseBusinessReport(lines, periodDays, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const asinC = idx('child asin', 'asin');
+  const revC  = idx('ordered product sales');
+  const unitsC= idx('units ordered');
+  const sessC = idx('sessions total', 'sessions');
+  const cvrC  = idx('unit session percentage');
+  const skuC  = idx('sku');
+  const byAsin = {};
+  let rowCount = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '' };
+    const d = byAsin[asin];
+    if (revC   !== -1) d.revenue  += parseAmzNum(cols[revC]);
+    if (unitsC !== -1) d.units    += parseAmzNum(cols[unitsC]);
+    if (sessC  !== -1) d.sessions += parseAmzNum(cols[sessC]);
+    if (cvrC   !== -1) { const v = parseAmzNum(cols[cvrC]); if (v > 0) { d.cvr = v; d.cvrSeen = true; } }
+    if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    rowCount++;
+  }
+  for (const a in byAsin) { const d = byAsin[a]; if (!d.cvrSeen && d.sessions > 0) d.cvr = +(d.units / d.sessions * 100).toFixed(2); }
+  return { kind: 'business', fileName, periodDays: periodDays || 30, byAsin, rowCount };
+}
+function parseAdsReport(lines, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const asinC  = idx('advertised product id', 'advertised asin', 'asin');
+  const spendC = idx('total cost', 'spend');
+  const revC   = idx('sales', '7 day total sales');
+  const unitsC = idx('units sold', '7 day total units', '7 day total orders');
+  const skuC   = idx('advertised product sku', 'sku');
+  const dateC  = idx('date range');
+  const byAsin = {};
+  let rowCount = 0, overallStart = null, overallEnd = null;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { spend: 0, adRev: 0, adUnits: 0, sku: '', start: null, end: null };
+    const d = byAsin[asin];
+    if (spendC !== -1) d.spend   += parseAmzNum(cols[spendC]);
+    if (revC   !== -1) d.adRev   += parseAmzNum(cols[revC]);
+    if (unitsC !== -1) d.adUnits += parseAmzNum(cols[unitsC]);
+    if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (dateC !== -1) {
+      const r = parseDateRangeStr(cols[dateC]);
+      if (r) {
+        if (!d.start || r.start < d.start) d.start = r.start;
+        if (!d.end   || r.end   > d.end)   d.end   = r.end;
+        if (!overallStart || r.start < overallStart) overallStart = r.start;
+        if (!overallEnd   || r.end   > overallEnd)   overallEnd   = r.end;
+      }
+    }
+    rowCount++;
+  }
+  let periodDays = 30;
+  if (overallStart && overallEnd) periodDays = Math.round((new Date(overallEnd).getTime() - new Date(overallStart).getTime()) / 86400000) + 1;
+  return { kind: 'ads', fileName, periodDays, byAsin, rowCount, start: overallStart, end: overallEnd };
+}
+function parseInventoryReport(lines, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const incIdx = frag => hdrs.findIndex(h => h.includes(frag));
+  const asinC = idx('asin');
+  const skuC  = idx('sku');
+  let availC  = idx('available');
+  if (availC === -1) availC = [incIdx('afn fulfillable quantity'), incIdx('fulfillable quantity'), incIdx('sellable quantity'), incIdx('available quantity')].find(i => i !== -1);
+  if (availC === undefined) availC = -1;
+  const inbC  = idx('inbound quantity');
+  const ypC   = idx('your price');
+  const spC   = idx('sales price');
+  const snapC = idx('snapshot date');
+  const u7C = idx('units shipped t7'), u30C = idx('units shipped t30'), u60C = idx('units shipped t60'), u90C = idx('units shipped t90');
+  const s7C = idx('sales shipped last 7 days'), s30C = idx('sales shipped last 30 days'), s60C = idx('sales shipped last 60 days'), s90C = idx('sales shipped last 90 days');
+  const byAsin = {};
+  let rowCount = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { sku: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
+      u7: 0, u30: 0, u60: 0, u90: 0, s7: 0, s30: 0, s60: 0, s90: 0 };
+    const d = byAsin[asin];
+    if (skuC  !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (availC !== -1) d.available += parseAmzNum(cols[availC]);
+    if (inbC   !== -1) d.inboundQty += parseAmzNum(cols[inbC]);
+    if (ypC !== -1 && d.yourPrice <= 0)  { const v = parseAmzNum(cols[ypC]); if (v > 0) d.yourPrice = v; }
+    if (spC !== -1 && d.salesPrice <= 0) { const v = parseAmzNum(cols[spC]); if (v > 0) d.salesPrice = v; }
+    if (snapC !== -1 && !d.snapshotDate) d.snapshotDate = _amzCell(cols[snapC]);
+    if (u7C  !== -1) d.u7  += parseAmzNum(cols[u7C]);
+    if (u30C !== -1) d.u30 += parseAmzNum(cols[u30C]);
+    if (u60C !== -1) d.u60 += parseAmzNum(cols[u60C]);
+    if (u90C !== -1) d.u90 += parseAmzNum(cols[u90C]);
+    if (s7C  !== -1) d.s7  += parseAmzNum(cols[s7C]);
+    if (s30C !== -1) d.s30 += parseAmzNum(cols[s30C]);
+    if (s60C !== -1) d.s60 += parseAmzNum(cols[s60C]);
+    if (s90C !== -1) d.s90 += parseAmzNum(cols[s90C]);
+    rowCount++;
+  }
+  return { kind: 'inventory', fileName, byAsin, rowCount };
+}
+const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ];
+const SALE_MIN_OFF = 0.05;
+const PLANNER_COVER_THRESHOLD_DEFAULT = 120;
+function roundSaleEnding(x) {
+  if (!(x > 0)) return +(x).toFixed(2);
+  const candidate = Math.floor(x) - 0.10;
+  if (candidate < 1) return +(x).toFixed(2);
+  return +candidate.toFixed(2);
+}
+function suggestSalePrice(o) {
+  const yourPrice = o.yourPrice, available = o.available, daysOfCover = o.daysOfCover;
+  const threshold = o.coverThreshold > 0 ? o.coverThreshold : PLANNER_COVER_THRESHOLD_DEFAULT;
+  const be = (o.breakEvenPrice !== undefined && o.breakEvenPrice !== null) ? o.breakEvenPrice : null;
+  const realizedPrice = (o.realizedPrice !== undefined && o.realizedPrice !== null) ? o.realizedPrice : null;
+  if (!(yourPrice > 0)) return { action: 'no_data', reason: 'no_price' };
+  if (!(available > 0)) return { action: 'skip', reason: 'no_stock' };
+  if (be !== null && yourPrice < be) return { action: 'skip', reason: 'loss_leader' };
+  if (be !== null && realizedPrice !== null && realizedPrice > 0 && realizedPrice < be && yourPrice >= be)
+    return { action: 'skip', reason: 'below_breakeven_promo' };
+  if (daysOfCover === null || daysOfCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
+  if (daysOfCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  let off = SALE_MIN_OFF;
+  for (const rung of SALE_LADDER) { if (daysOfCover >= rung.cover) { off = rung.off; break; } }
+  const cap = +(yourPrice * (1 - SALE_MIN_OFF)).toFixed(2);
+  let price = roundSaleEnding(yourPrice * (1 - off));
+  if (price > cap) price = cap;
+  const reason = daysOfCover === Infinity ? 'no_sales' : 'overstock';
+  if (be !== null) {
+    if (price < be) {
+      const floored = +Math.max(be, 0).toFixed(2);
+      if (floored > cap) return { action: 'blocked', reason: 'floor_above_5pct', off, floor: floored };
+      return { action: 'sale', reason, off, price: floored, floor: be };
+    }
+    return { action: 'sale', reason, off, price, floor: be };
+  }
+  return { action: 'sale', reason, off, price };
+}
+
+// ── XLSX writer (mirrored from app) ──
+function xmlEscapeXlsx(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function colIndexToRef(i) {
+  let s = ''; i = i + 1;
+  while (i > 0) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); }
+  return s;
+}
+function sheetXmlFromRows(rows) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  for (let r = 0; r < rows.length; r++) {
+    const cells = rows[r], rowNum = r + 1;
+    let rowXml = `<row r="${rowNum}">`;
+    for (let c = 0; c < cells.length; c++) {
+      const val = cells[c];
+      if (val === '' || val === null || val === undefined) continue;
+      const ref = colIndexToRef(c) + rowNum;
+      if (typeof val === 'number') rowXml += `<c r="${ref}"><v>${val}</v></c>`;
+      else rowXml += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscapeXlsx(val)}</t></is></c>`;
+    }
+    xml += rowXml + '</row>';
+  }
+  return xml + '</sheetData></worksheet>';
+}
+const _CRC_TABLE = (() => {
+  const tbl = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); tbl[n] = c >>> 0; }
+  return tbl;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = _CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function _strToBytesXlsx(str) {
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(str);
+  return Uint8Array.from(Buffer.from(str, 'utf8'));
+}
+function zipStore(files) {
+  const enc = files.map(f => ({ nameBytes: _strToBytesXlsx(f.name), data: f.data, crc: crc32(f.data) }));
+  const chunks = []; let offset = 0; const localOffsets = [];
+  const u16 = n => [n & 0xFF, (n >>> 8) & 0xFF];
+  const u32 = n => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+  for (const f of enc) {
+    localOffsets.push(offset);
+    const h = Uint8Array.from([].concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(f.crc), u32(f.data.length), u32(f.data.length), u16(f.nameBytes.length), u16(0)));
+    chunks.push(h, f.nameBytes, f.data);
+    offset += h.length + f.nameBytes.length + f.data.length;
+  }
+  const cdStart = offset;
+  for (let i = 0; i < enc.length; i++) {
+    const f = enc[i];
+    const c = Uint8Array.from([].concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(f.crc), u32(f.data.length), u32(f.data.length), u16(f.nameBytes.length), u16(0), u16(0), u16(0), u16(0),
+      u32(0), u32(localOffsets[i])));
+    chunks.push(c, f.nameBytes);
+    offset += c.length + f.nameBytes.length;
+  }
+  const eocd = Uint8Array.from([].concat(u32(0x06054b50), u16(0), u16(0), u16(enc.length), u16(enc.length),
+    u32(offset - cdStart), u32(cdStart), u16(0)));
+  chunks.push(eocd);
+  let total = 0; for (const c of chunks) total += c.length;
+  const out = new Uint8Array(total); let p = 0; for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+const PQ_SETTINGS_ROW1 = 'settings=feedType=256&timestamp=2026-06-30T22%3A06%3A04.523Z&contributorId=amzn1.cr.o.AODBV7DB6KCBN&primaryMarketplaceId=amzn1.mp.o.ATVPDKIKX0DER&contentLanguageTag=en_US&templateIdentifier=39e0163e-fe4b-436f-b663-6bed17e81396&headerLanguageTag=en_US&labelRow=4&attributeRow=5&dataRow=7&flavor=seller-price-quantity&isProcessingSummary=false&isEdit=false&productTypeRequirement=LISTING_OFFER_ONLY&listingsItemRequirement=LISTING_OFFER_ONLY&reportProvenance=false&settingsHasAllDelocalizationData=true&ptds=UFJPRFVDVA%3D%3D&ptdToNamespaceMap=eyJQUk9EVUNUIjoiaW5nZXN0aW9uIn0%3D&browseClassifications=W3sicHJvZHVjdFR5cGUiOiJQUk9EVUNUIiwiYnJvd3NlQ2xhc3NpZmljYXRpb25LZXlzIjpbXX1d&vendorCodes=W10%3D&AttributeDefaultValues=eyJwcm9kdWN0X3R5cGUjMS52YWx1ZSI6IlBST0RVQ1QiLCJyZWNvcmRfYWN0aW9uIzEudmFsdWUiOiJwYXJ0aWFsX3VwZGF0ZSJ9&attributeSettings=W3siYXR0cmlidXRlIjoicHJvZHVjdF90eXBlIzEudmFsdWUiLCJhbGlhc2VzIjp7IlBST0RVQ1QiOiJQUk9EVUNUIn19LHsiYXR0cmlidXRlIjoiZnVsZmlsbG1lbnRfYXZhaWxhYmlsaXR5IzEuaXNfaW52ZW50b3J5X2F2YWlsYWJsZSIsImFsaWFzZXMiOnsiRW5hYmxlZCI6InRydWUiLCJEaXNhYmxlZCI6ImZhbHNlIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbbWFya2V0cGxhY2VfaWQ9QVRWUERLSUtYMERFUl1bYXVkaWVuY2U9QjJCXSMxLnF1YW50aXR5X2Rpc2NvdW50X3BsYW4jMS5zY2hlZHVsZSMxLmRpc2NvdW50X3R5cGUiLCJhbGlhc2VzIjp7IlBlcmNlbnQiOiJwZXJjZW50IiwiRGVsZXRlIFF1YW50aXR5IERpc2NvdW50cyI6ImFtem4xLnZvbHQuY3YuZGVsZXRlX3VtcF90b3BfbGV2ZWxfZmllbGQiLCJGaXhlZCI6ImZpeGVkIn19LHsiYXR0cmlidXRlIjoibWVyY2hhbnRfc2hpcHBpbmdfZ3JvdXAjMS52YWx1ZSIsImFsaWFzZXMiOnsiTWlncmF0ZWQgVGVtcGxhdGUiOiJsZWdhY3ktdGVtcGxhdGUtaWQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclttYXJrZXRwbGFjZV9pZD1BVFZQREtJS1gwREVSXVthdWRpZW5jZT1BTExdIzEub3VyX3ByaWNlIzEuc2NoZWR1bGUjMS52YWx1ZV93aXRoX3RheCIsImFsaWFzZXMiOnsiRGVsZXRlIE9mZmVyIChTZWxsIG9uIEFtYXpvbikiOiJhbXpuMS52b2x0LmN2LmRlbGV0ZV91bXBfdmFyaWFudCJ9fSx7ImF0dHJpYnV0ZSI6InB1cmNoYXNhYmxlX29mZmVyW21hcmtldHBsYWNlX2lkPUFUVlBES0lLWDBERVJdW2F1ZGllbmNlPUFMTF0jMS5hdXRvbWF0ZWRfcHJpY2luZ19tZXJjaGFuZGlzaW5nX3J1bGVfcGxhbiMxLm1lcmNoYW5kaXNpbmdfcnVsZS5ydWxlX2lkIiwiYWxpYXNlcyI6eyJObyBQcmljZSBSdWxlIjoiZW1wdHlfdmFsdWVfbGFiZWwiLCJDb21wZXRpdGl2ZSBQcmljZSBSdWxlIGJ5IEFtYXpvbiI6IjUxMTM0MTU0MTIyLUNPTVBFVElUSVZFX0JVWUJPWCJ9fSx7ImF0dHJpYnV0ZSI6InB1cmNoYXNhYmxlX29mZmVyW2F1ZGllbmNlPUIyQl0jMS5jdXJyZW5jeSIsImFsaWFzZXMiOnsiRkpEIjoiRkpEIiwiTVhOIjoiTVhOIiwiU0NSIjoiU0NSIiwiTFZMIjoiTFZMIiwiQ0RGIjoiQ0RGIiwiR1RRIjoiR1RRIiwiQkJEIjoiQkJEIiwiQ0xQIjoiQ0xQIiwiVUdYIjoiVUdYIiwiSE5MIjoiSE5MIiwiWkFSIjoiWkFSIiwiVE5EIjoiVE5EIiwiU1ROIjoiU1ROIiwiU0xMIjoiU0xMIiwiQlNEIjoiQlNEIiwiU0RHIjoiU0RHIiwiSVFEIjoiSVFEIiwiR01EIjoiR01EIiwiQ1VQIjoiQ1VQIiwiVFdEIjoiVFdEIiwiUlNEIjoiUlNEIiwiRE9QIjoiRE9QIiwiS01GIjoiS01GIiwiTVlSIjoiTVlSIiwiRktQIjoiRktQIiwiWE9GIjoiWE9GIiwiR0VMIjoiR0VMIiwiVVlVIjoiVVlVIiwiTUFEIjoiTUFEIiwiQ1ZFIjoiQ1ZFIiwiVE9QIjoiVE9QIiwiUEdLIjoiUEdLIiwiT01SIjoiT01SIiwiQVpOIjoiQVpOIiwiU0VLIjoiU0VLIiwiS0VTIjoiS0VTIiwiVUFIIjoiVUFIIiwiQlROIjoiQlROIiwiR05GIjoiR05GIiwiTVpOIjoiTVpOIiwiRVJOIjoiRVJOIiwiU1ZDIjoiU1ZDIiwiQVJTIjoiQVJTIiwiUUFSIjoiUUFSIiwiSVJSIjoiSVJSIiwiWFBGIjoiWFBGIiwiVVpTIjoiVVpTIiwiVEhCIjoiVEhCIiwiQ05ZIjoiQ05ZIiwiTVJVIjoiTVJVIiwiQkRUIjoiQkRUIiwiTFlEIjoiTFlEIiwiQk1EIjoiQk1EIiwiUEhQIjoiUEhQIiwiS1dEIjoiS1dEIiwiUlVCIjoiUlVCIiwiUFlHIjoiUFlHIiwiSk1EIjoiSk1EIiwiSVNLIjoiSVNLIiwiQkVGIjoiQkVGIiwiRVNQIjoiRVNQIiwiQ09QIjoiQ09QIiwiVVNEIjoiVVNEIiwiTUtEIjoiTUtEIiwiRFpEIjoiRFpEIiwiUEFCIjoiUEFCIiwiU0dEIjoiU0dEIiwiR0dQIjoiR0dQIiwiRVRCIjoiRVRCIiwiSkVQIjoiSkVQIiwiVlVWIjoiVlVWIiwiVkVGIjoiVkVGIiwiU09TIjoiU09TIiwiS0dTIjoiS0dTIiwiTEFLIjoiTEFLIiwiQk5EIjoiQk5EIiwiWEFGIjoiWEFGIiwiTFJEIjoiTFJEIiwiSVRMIjoiSVRMIiwiSFJLIjoiSFJLIiwiQ0hGIjoiQ0hGIiwiQVRTIjoiQVRTIiwiREpGIjoiREpGIiwiQUxMIjoiQUxMIiwiWk1XIjoiWk1XIiwiVkVTIjoiVkVTIiwiVFpTIjoiVFpTIiwiVk5EIjoiVk5EIiwiQVVEIjoiQVVEIiwiSUxTIjoiSUxTIiwiS1BXIjoiS1BXIiwiR1lEIjoiR1lEIiwiR0hTIjoiR0hTIiwiTURMIjoiTURMIiwiS0hSIjoiS0hSIiwiQk9CIjoiQk9CIiwiSURSIjoiSURSIiwiS1lEIjoiS1lEIiwiQU1EIjoiQU1EIiwiVFJZIjoiVFJZIiwiU0hQIjoiU0hQIiwiQldQIjoiQldQIiwiTEJQIjoiTEJQIiwiVEpTIjoiVEpTIiwiSk9EIjoiSk9EIiwiUldGIjoiUldGIiwiSEtEIjoiSEtEIiwiQUVEIjoiQUVEIiwiRVVSIjoiRVVSIiwiTFNMIjoiTFNMIiwiREtLIjoiREtLIiwiQ0FEIjoiQ0FEIiwiQkdOIjoiQkdOIiwiTU1LIjoiTU1LIiwiRUVLIjoiRUVLIiwiU1lQIjoiU1lQIiwiTk9LIjoiTk9LIiwiTVVSIjoiTVVSIiwiSU1QIjoiSU1QIiwiR0lQIjoiR0lQIiwiUk9OIjoiUk9OIiwiTEtSIjoiTEtSIiwiTkdOIjoiTkdOIiwiQ1pLIjoiQ1pLIiwiQ1JDIjoiQ1JDIiwiUEtSIjoiUEtSIiwiWENEIjoiWENEIiwiR1JEIjoiR1JEIiwiSFRHIjoiSFRHIiwiQU5HIjoiQU5HIiwiQkhEIjoiQkhEIiwiUFRFIjoiUFRFIiwiU1pMIjoiU1pMIiwiU1JEIjoiU1JEIiwiS1pUIjoiS1pUIiwiVFREIjoiVFREIiwiU0FSIjoiU0FSIiwiTFRMIjoiTFRMIiwiWUVSIjoiWUVSIiwiTVZSIjoiTVZSIiwiQUZOIjoiQUZOIiwiSU5SIjoiSU5SIiwiTlBSIjoiTlBSIiwiS1JXIjoiS1JXIiwiQVdHIjoiQVdHIiwiTU5UIjoiTU5UIiwiSlBZIjoiSlBZIiwiUExOIjoiUExOIiwiQU9BIjoiQU9BIiwiU0JEIjoiU0JEIiwiR0JQIjoiR0JQIiwiQ1NEIjoiQ1NEIiwiQllOIjoiQllOIiwiSFVGIjoiSFVGIiwiQllSIjoiQllSIiwiTFVGIjoiTFVGIiwiQklGIjoiQklGIiwiTVdLIjoiTVdLIiwiTUdBIjoiTUdBIiwiRklNIjoiRklNIiwiREVNIjoiREVNIiwiQlpEIjoiQlpEIiwiQkFNIjoiQkFNIiwiTU9QIjoiTU9QIiwiRUdQIjoiRUdQIiwiTkFEIjoiTkFEIiwiU1NQIjoiU1NQIiwiU0tLIjoiU0tLIiwiTklPIjoiTklPIiwiUEVOIjoiUEVOIiwiV1NUIjoiV1NUIiwiTlpEIjoiTlpEIiwiVE1UIjoiVE1UIiwiRlJGIjoiRlJGIiwiQlJMIjoiQlJMIn19LHsiYXR0cmlidXRlIjoibWVyY2hhbnRfc2hpcHBpbmdfZ3JvdXBbbWFya2V0cGxhY2VfaWQ9QVRWUERLSUtYMERFUl0jMS52YWx1ZSIsImFsaWFzZXMiOnsiTWlncmF0ZWQgVGVtcGxhdGUiOiJsZWdhY3ktdGVtcGxhdGUtaWQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclttYXJrZXRwbGFjZV9pZD1BVFZQREtJS1gwREVSXVthdWRpZW5jZT1CMkJdIzEub3VyX3ByaWNlIzEuc2NoZWR1bGUjMS52YWx1ZV93aXRoX3RheCIsImFsaWFzZXMiOnsiRGVsZXRlIE9mZmVyIChBbWF6b24gQnVzaW5lc3MgKEIyQikpIjoiYW16bjEudm9sdC5jdi5kZWxldGVfdW1wX3ZhcmlhbnQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclthdWRpZW5jZT1CMkJdIzEucXVhbnRpdHlfZGlzY291bnRfcGxhbiMxLnNjaGVkdWxlIzEuZGlzY291bnRfdHlwZSIsImFsaWFzZXMiOnsiUGVyY2VudCI6InBlcmNlbnQiLCJGaXhlZCI6ImZpeGVkIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbYXVkaWVuY2U9QUxMXSMxLmF1dG9tYXRlZF9wcmljaW5nX21lcmNoYW5kaXNpbmdfcnVsZV9wbGFuIzEubWVyY2hhbmRpc2luZ19ydWxlLnJ1bGVfaWQiLCJhbGlhc2VzIjp7Ik5vIFByaWNlIFJ1bGUiOiJlbXB0eV92YWx1ZV9sYWJlbCIsIkNvbXBldGl0aXZlIFByaWNlIFJ1bGUgYnkgQW1hem9uIjoiNTExMzQxNTQxMjItQ09NUEVUSVRJVkVfQlVZQk9YIn19LHsiYXR0cmlidXRlIjoiZnVsZmlsbG1lbnRfYXZhaWxhYmlsaXR5IzEuZnVsZmlsbG1lbnRfY2hhbm5lbF9jb2RlIiwiYWxpYXNlcyI6eyJBTUFaT05fVVMyTVhfUkFGTiI6IkFNQVpPTl9VUzJNWF9SQUZOIiwiRnVsZmlsbG1lbnQgYnkgTWVyY2hhbnQgKERlZmF1bHQpIjoiREVGQVVMVCIsIjhjZDZhZTEzLTlhNGQtNDBhMS1iOGZmLTBkZjg0ZWQyYTRiZCI6IjhjZDZhZTEzLTlhNGQtNDBhMS1iOGZmLTBkZjg0ZWQyYTRiZCIsIkZ1bGZpbGxtZW50IGJ5IEFtYXpvbiAoTkEpIjoiQU1BWk9OX05BIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbYXVkaWVuY2U9QUxMXSMxLmN1cnJlbmN5IiwiYWxpYXNlcyI6eyJGSkQiOiJGSkQiLCJNWE4iOiJNWE4iLCJTQ1IiOiJTQ1IiLCJMVkwiOiJMVkwiLCJDREYiOiJDREYiLCJHVFEiOiJHVFEiLCJCQkQiOiJCQkQiLCJDTFAiOiJDTFAiLCJVR1giOiJVR1giLCJITkwiOiJITkwiLCJaQVIiOiJaQVIiLCJUTkQiOiJUTkQiLCJTVE4iOiJTVE4iLCJTTEwiOiJTTEwiLCJCU0QiOiJCU0QiLCJTREciOiJTREciLCJJUUQiOiJJUUQiLCJHTUQiOiJHTUQiLCJDVVAiOiJDVVAiLCJUV0QiOiJUV0QiLCJSU0QiOiJSU0QiLCJET1AiOiJET1AiLCJLTUYiOiJLTUYiLCJNWVIiOiJNWVIiLCJGS1AiOiJGS1AiLCJYT0YiOiJYT0YiLCJHRUwiOiJHRUwiLCJVWVUiOiJVWVUiLCJNQUQiOiJNQUQiLCJDVkUiOiJDVkUiLCJUT1AiOiJUT1AiLCJQR0siOiJQR0siLCJPTVIiOiJPTVIiLCJBWk4iOiJBWk4iLCJTRUsiOiJTRUsiLCJLRVMiOiJLRVMiLCJVQUgiOiJVQUgiLCJCVE4iOiJCVE4iLCJHTkYiOiJHTkYiLCJNWk4iOiJNWk4iLCJFUk4iOiJFUk4iLCJTVkMiOiJTVkMiLCJBUlMiOiJBUlMiLCJRQVIiOiJRQVIiLCJJUlIiOiJJUlIiLCJYUEYiOiJYUEYiLCJVWlMiOiJVWlMiLCJUSEIiOiJUSEIiLCJDTlkiOiJDTlkiLCJNUlUiOiJNUlUiLCJCRFQiOiJCRFQiLCJMWUQiOiJMWUQiLCJCTUQiOiJCTUQiLCJQSFAiOiJQSFAiLCJLV0QiOiJLV0QiLCJSVUIiOiJSVUIiLCJQWUciOiJQWUciLCJKTUQiOiJKTUQiLCJJU0siOiJJU0siLCJCRUYiOiJCRUYiLCJFU1AiOiJFU1AiLCJDT1AiOiJDT1AiLCJVU0QiOiJVU0QiLCJNS0QiOiJNS0QiLCJEWkQiOiJEWkQiLCJQQUIiOiJQQUIiLCJTR0QiOiJTR0QiLCJHR1AiOiJHR1AiLCJFVEIiOiJFVEIiLCJKRVAiOiJKRVAiLCJWVVYiOiJWVVYiLCJWRUYiOiJWRUYiLCJTT1MiOiJTT1MiLCJLR1MiOiJLR1MiLCJMQUsiOiJMQUsiLCJCTkQiOiJCTkQiLCJYQUYiOiJYQUYiLCJMUkQiOiJMUkQiLCJJVEwiOiJJVEwiLCJIUksiOiJIUksiLCJDSEYiOiJDSEYiLCJBVFMiOiJBVFMiLCJESkYiOiJESkYiLCJBTEwiOiJBTEwiLCJaTVciOiJaTVciLCJWRVMiOiJWRVMiLCJUWlMiOiJUWlMiLCJWTkQiOiJWTkQiLCJBVUQiOiJBVUQiLCJJTFMiOiJJTFMiLCJLUFciOiJLUFciLCJHWUQiOiJHWUQiLCJHSFMiOiJHSFMiLCJNREwiOiJNREwiLCJLSFIiOiJLSFIiLCJCT0IiOiJCT0IiLCJJRFIiOiJJRFIiLCJLWUQiOiJLWUQiLCJBTUQiOiJBTUQiLCJUUlkiOiJUUlkiLCJTSFAiOiJTSFAiLCJCV1AiOiJCV1AiLCJMQlAiOiJMQlAiLCJUSlMiOiJUSlMiLCJKT0QiOiJKT0QiLCJSV0YiOiJSV0YiLCJIS0QiOiJIS0QiLCJBRUQiOiJBRUQiLCJFVVIiOiJFVVIiLCJMU0wiOiJMU0wiLCJES0siOiJES0siLCJDQUQiOiJDQUQiLCJCR04iOiJCR04iLCJNTUsiOiJNTUsiLCJFRUsiOiJFRUsiLCJTWVAiOiJTWVAiLCJOT0siOiJOT0siLCJNVVIiOiJNVVIiLCJJTVAiOiJJTVAiLCJHSVAiOiJHSVAiLCJST04iOiJST04iLCJMS1IiOiJMS1IiLCJOR04iOiJOR04iLCJDWksiOiJDWksiLCJDUkMiOiJDUkMiLCJQS1IiOiJQS1IiLCJYQ0QiOiJYQ0QiLCJHUkQiOiJHUkQiLCJIVEciOiJIVEciLCJBTkciOiJBTkciLCJCSEQiOiJCSEQiLCJQVEUiOiJQVEUiLCJTWkwiOiJTWkwiLCJTUkQiOiJTUkQiLCJLWlQiOiJLWlQiLCJUVEQiOiJUVEQiLCJTQVIiOiJTQVIiLCJMVEwiOiJMVEwiLCJZRVIiOiJZRVIiLCJNVlIiOiJNVlIiLCJBRk4iOiJBRk4iLCJJTlIiOiJJTlIiLCJOUFIiOiJOUFIiLCJLUlciOiJLUlciLCJBV0ciOiJBV0ciLCJNTlQiOiJNTlQiLCJKUFkiOiJKUFkiLCJQTE4iOiJQTE4iLCJBT0EiOiJBT0EiLCJTQkQiOiJTQkQiLCJHQlAiOiJHQlAiLCJDU0QiOiJDU0QiLCJCWU4iOiJCWU4iLCJIVUYiOiJIVUYiLCJCWVIiOiJCWVIiLCJMVUYiOiJMVUYiLCJCSUYiOiJCSUYiLCJNV0siOiJNV0siLCJNR0EiOiJNR0EiLCJGSU0iOiJGSU0iLCJERU0iOiJERU0iLCJCWkQiOiJCWkQiLCJCQU0iOiJCQU0iLCJNT1AiOiJNT1AiLCJFR1AiOiJFR1AiLCJOQUQiOiJOQUQiLCJTU1AiOiJTU1AiLCJTS0siOiJTS0siLCJOSU8iOiJOSU8iLCJQRU4iOiJQRU4iLCJXU1QiOiJXU1QiLCJOWkQiOiJOWkQiLCJUTVQiOiJUTVQiLCJGUkYiOiJGUkYiLCJCUkwiOiJCUkwifX1d&TemplateType=unified&Version=2026.0630&TemplateSignature=UFJPRFVDVA==&umpVersion=MS41Mi40NQ==';
+const PQ_INSTRUCTION_ROW2 = '     Use ENGLISH to fill this template. DO NOT modify or delete the colored header rows. To expand all optional columns, click the "2" button on the top left.';
+const PQ_GROUP_ROW3 = ['Listing Identity', 'Offer (US) - (Sell on Amazon), (US) - (Amazon Business (B2B))'];
+const PQ_LABELS_ROW4 = ['SKU','Fulfillment Channel Code (US)','Quantity (US)','Handling Time (US)','Restock Date (US)','Inventory Always Available (US)','Your Price USD (Sell on Amazon, US)','Pricing Rule (Sell on Amazon, US)','Minimum Seller Allowed Price (Sell on Amazon, US)','Maximum Seller Allowed Price (Sell on Amazon, US)','Sale Price USD (Sell on Amazon, US)','Sale Start Date (Sell on Amazon, US)','Sale End Date (Sell on Amazon, US)','Offering Release Date (Sell on Amazon, US)','Stop Selling Date (Sell on Amazon, US)','Your Price USD (Amazon Business (B2B), US)','Minimum Seller Allowed Price (Amazon Business (B2B), US)','Maximum Seller Allowed Price (Amazon Business (B2B), US)','Offering Release Date (Amazon Business (B2B), US)','Stop Selling Date (Amazon Business (B2B), US)','Quantity Price Type (Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Shipping Template (US)'];
+const PQ_ATTR_ROW5 = ['contribution_sku#1.value','fulfillment_availability#1.fulfillment_channel_code','fulfillment_availability#1.quantity','fulfillment_availability#1.lead_time_to_ship_max_days','fulfillment_availability#1.restock_date','fulfillment_availability#1.is_inventory_available','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.our_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.automated_pricing_merchandising_rule_plan#1.merchandising_rule.rule_id','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.minimum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.maximum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.start_at','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.end_at','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.start_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.end_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.our_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.minimum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.maximum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.start_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.end_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.discount_type','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#1.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#1.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#2.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#2.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#3.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#3.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#4.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#4.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#5.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#5.value','merchant_shipping_group[marketplace_id=ATVPDKIKX0DER]#1.value'];
+const PQ_NCOLS = 32;
+function _padPQRow(arr) { const r = arr.slice(); while (r.length < PQ_NCOLS) r.push(''); return r; }
+function buildPriceFeedXlsx(items, startYmd, endYmd) {
+  const rows = [ _padPQRow([PQ_SETTINGS_ROW1]), _padPQRow([PQ_INSTRUCTION_ROW2]), _padPQRow(PQ_GROUP_ROW3),
+    _padPQRow(PQ_LABELS_ROW4), _padPQRow(PQ_ATTR_ROW5), _padPQRow([]) ];
+  for (const it of items) {
+    const r = new Array(PQ_NCOLS).fill('');
+    r[0] = String(it.sku); r[10] = Number(it.price); r[11] = startYmd; r[12] = endYmd;
+    rows.push(r);
+  }
+  const sheetXml = sheetXmlFromRows(rows);
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+  const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Template" sheetId="1" r:id="rId1"/></sheets></workbook>';
+  const workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  return zipStore([
+    { name: '[Content_Types].xml', data: _strToBytesXlsx(contentTypes) },
+    { name: '_rels/.rels', data: _strToBytesXlsx(rootRels) },
+    { name: 'xl/workbook.xml', data: _strToBytesXlsx(workbook) },
+    { name: 'xl/_rels/workbook.xml.rels', data: _strToBytesXlsx(workbookRels) },
+    { name: 'xl/styles.xml', data: _strToBytesXlsx(styles) },
+    { name: 'xl/worksheets/sheet1.xml', data: _strToBytesXlsx(sheetXml) }
+  ]);
+}
+
+// ── XLSX reader (mirrored from app) ──
+function _zU16(dv, o) { return dv.getUint16(o, true); }
+function _zU32(dv, o) { return dv.getUint32(o, true); }
+async function _amzInflateRaw(bytes) {
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+async function unzip(arrayBuffer) {
+  const bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  const minPos = Math.max(0, bytes.length - 65536 - 22);
+  for (let i = bytes.length - 22; i >= minPos; i--) { if (_zU32(dv, i) === 0x06054b50) { eocd = i; break; } }
+  if (eocd === -1) throw new Error('Not a valid ZIP (EOCD not found) — is this really an .xlsx file?');
+  const count = _zU16(dv, eocd + 10);
+  const cdOffset = _zU32(dv, eocd + 16);
+  const entries = {};
+  let p = cdOffset;
+  for (let n = 0; n < count; n++) {
+    if (_zU32(dv, p) !== 0x02014b50) throw new Error('ZIP central directory corrupt');
+    const method = _zU16(dv, p + 10);
+    const compSize = _zU32(dv, p + 20);
+    const nameLen = _zU16(dv, p + 28);
+    const extraLen = _zU16(dv, p + 30);
+    const commentLen = _zU16(dv, p + 32);
+    const localOff = _zU32(dv, p + 42);
+    const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    if (_zU32(dv, localOff) !== 0x04034b50) throw new Error('ZIP local header corrupt');
+    const lNameLen = _zU16(dv, localOff + 26);
+    const lExtraLen = _zU16(dv, localOff + 28);
+    const dataStart = localOff + 30 + lNameLen + lExtraLen;
+    entries[name] = { method, slice: bytes.subarray(dataStart, dataStart + compSize) };
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  const result = {};
+  for (const name in entries) {
+    const { method, slice } = entries[name];
+    if (method === 0) result[name] = slice.slice();
+    else if (method === 8) result[name] = await _amzInflateRaw(slice);
+    else throw new Error('Unsupported ZIP compression method ' + method + ' for ' + name);
+  }
+  return result;
+}
+function _xmlUnescape(s) {
+  return s.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+          .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+function parseXlsxSharedStrings(xml) {
+  if (!xml) return [];
+  const strings = [];
+  const siRe = /<si\b[^>]*>([\s\S]*?)<\/si>/g;
+  let m;
+  while ((m = siRe.exec(xml)) !== null) {
+    let text = '';
+    const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let tm;
+    while ((tm = tRe.exec(m[1])) !== null) text += _xmlUnescape(tm[1]);
+    strings.push(text);
+  }
+  return strings;
+}
+function _colRefToIndex(ref) {
+  const m = ref.match(/^([A-Z]+)/);
+  if (!m) return 0;
+  let col = 0;
+  for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
+  return col - 1;
+}
+function parseXlsxSheet(sheetXml, sharedStrings) {
+  const ss = sharedStrings || [];
+  const rows = [];
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g;
+  let rm;
+  while ((rm = rowRe.exec(sheetXml)) !== null) {
+    const inner = rm[1] || '';
+    const cells = [];
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm;
+    while ((cm = cellRe.exec(inner)) !== null) {
+      const attrs = cm[1] || '', bodyc = cm[2] || '';
+      const refM = attrs.match(/r="([A-Z]+\d+)"/);
+      const tM = attrs.match(/t="([^"]+)"/);
+      const type = tM ? tM[1] : 'n';
+      const colIdx = refM ? _colRefToIndex(refM[1]) : cells.length;
+      let val = '';
+      if (type === 's') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/);
+        if (vM) { const si = parseInt(_xmlUnescape(vM[1]), 10); val = ss[si] !== undefined ? ss[si] : ''; }
+      } else if (type === 'inlineStr') {
+        let txt = ''; const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let tm;
+        while ((tm = tRe.exec(bodyc)) !== null) txt += _xmlUnescape(tm[1]);
+        val = txt;
+      } else if (type === 'str') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM ? _xmlUnescape(vM[1]) : '';
+      } else if (type === 'b') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM && vM[1].trim() === '1' ? 'TRUE' : 'FALSE';
+      } else {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM ? _xmlUnescape(vM[1]) : '';
+      }
+      while (cells.length < colIdx) cells.push('');
+      cells[colIdx] = val;
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+async function readXlsxFirstSheet(arrayBuffer) {
+  const files = await unzip(arrayBuffer);
+  const dec = new TextDecoder();
+  let sheetName = null;
+  if (files['xl/worksheets/sheet1.xml']) sheetName = 'xl/worksheets/sheet1.xml';
+  else {
+    const names = Object.keys(files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+      .sort((a, b) => (+a.match(/sheet(\d+)/)[1]) - (+b.match(/sheet(\d+)/)[1]));
+    if (names.length) sheetName = names[0];
+  }
+  if (!sheetName) throw new Error('No worksheet found inside the .xlsx file.');
+  const sharedStrings = files['xl/sharedStrings.xml'] ? parseXlsxSharedStrings(dec.decode(files['xl/sharedStrings.xml'])) : [];
+  return parseXlsxSheet(dec.decode(files[sheetName]), sharedStrings);
 }
 
 // ── Test harness ─────────────────────────────────────────────────────────────
@@ -1038,6 +1471,16 @@ eq(atReorderBoundary.status, 'healthy', `Exactly ${REORDER_SOON_DAYS} days is NO
 const atAgedBoundary = getInventoryStatus(1810, 300); // 181 days of cover exactly
 eq(atAgedBoundary.status, 'healthy', `Exactly ${AGED_INVENTORY_DAYS} days is NOT overstock (threshold is strictly greater-than)`);
 
+// F3 — flexible period: the SAME units over a LONGER window halve velocity / double cover.
+const p30 = getInventoryStatus(600, 300, 30);
+const p60 = getInventoryStatus(600, 300, 60);
+eq(p30.velocity, 10, '300 units / 30d = 10/day');
+eq(p60.velocity, 5, '300 units / 60d = 5/day (longer window → slower velocity)');
+eq(p30.daysOfCover, 60, '600 / 10 = 60 days of cover (30d window)');
+eq(p60.daysOfCover, 120, '600 / 5 = 120 days of cover (60d window → doubled)');
+eq(getInventoryStatus(600, 300).daysOfCover, 60, 'omitted periodDays defaults to 30 (backward compatible)');
+eq(getInventoryStatus(600, 300, 0).daysOfCover, 60, 'periodDays 0 falls back to 30');
+
 // ─── 17. amazonSizeTierToAppTier — real Amazon export → app tier mapping ────
 describe('amazonSizeTierToAppTier — real-world Amazon FBA size tier strings');
 
@@ -1053,15 +1496,175 @@ is(amazonSizeTierToAppTier('Unknown Tier XYZ') === null, 'Unrecognised string �
 is(amazonSizeTierToAppTier('') === null, 'Empty string → null');
 is(amazonSizeTierToAppTier(undefined) === null, 'Undefined → null (missing column value)');
 
+// ─── 18. Amazon report fixtures (REAL header + data lines from the sample files) ─
+const FX_bizHdr = "﻿(Parent) ASIN,(Child) ASIN,Title,SKU,Sessions - Total,Sessions - Total - B2B,Session Percentage - Total,Session Percentage - Total - B2B,Page Views - Total,Page Views - Total - B2B,Page Views Percentage - Total,Page Views Percentage - Total - B2B,Featured Offer (Buy Box) Percentage,Featured Offer (Buy Box) Percentage - B2B,Units Ordered,Units Ordered - B2B,Unit Session Percentage,Unit Session Percentage - B2B,Ordered Product Sales,Ordered Product Sales - B2B,Total Order Items,Total Order Items - B2B";
+const FX_bizRow = "B0CKPQNSHN,B096MCMDPL,\"BasicGear Cast Net, Zinc Iron, 3ft Radius, 3/8 in Mesh, for Bait Fish\",5K-SC4U-PO06,\"12,131\",261,12.02%,9.85%,\"17,004\",336,12.57%,9.28%,99.80%,100.00%,683,5,5.63%,1.92%,\"$12,905.25\",$94.50,668,5";
+const FX_adsHdr = "﻿Budget currency,Date range,Advertiser account ID,Advertiser account name,Portfolio ID,Portfolio name,Campaign ID,Campaign name,Ad group ID,Ad group name,Advertised product ID,Advertised product name,Advertised product parent ID,Advertised product brand,Advertised product category,Advertised product subcategory,Advertised product group,Advertised product SKU,Advertised product marketplace,Impressions,Clicks,CTR,Total cost,Purchases,Sales,Units sold,Cost per purchase,Purchase rate,ROAS,Purchases (promoted),Sales (promoted),Units sold (promoted),Cost per purchase (promoted),Purchase rate (promoted),ROAS (promoted),Purchases (halo),Sales (halo),Units sold (halo),Purchases (new to brand),Sales (new to brand),Units sold (new to brand),Cost per purchase (new to brand),Purchase rate (new to brand),ROAS (new to brand),Detail page views,Cost per detail page view,Detail page view rate";
+const FX_adRow1 = "USD,\"Jul 06, 2026 - Jul 29, 2026\",\"=\"\"amzn1.ads-account.g.vgaf40no2wdzrxol9ycnbs55\"\"\",FishersCove,228547447293264,New Pliers HQ - Focus on top competitors - m19 - NI9AVFf1YbGU0YNz,\"=\"\"254927681919372\"\"\",\"SP - Knives, Pliers, Scissors, Carabiners, Tool Set - New Pliers HQ - Focus on top competitors -  - ZhLGEbJ7wPVzZHV2\",\"=\"\"5546739244741\"\"\",B0GWCDX3HY_product,B0GWCDX3HY,\"BasicGear Fishing Pliers, 17-4 PH Steel, 6.3 in Compact, Orange\",B0GWCY2NMC,BasicGear,31000 Professional Medical,31131 Pliers & Tweezers,Biss,BSCGRFT-PLIER-1PC-ITEM030163-ORANGE,AMAZON.COM,9582,100,1.0436%,108.61,11,180.90,11,9.87364,0.1148%,1.66559,8,127.20,8,13.57625,0.0835%,1.17116,3,53.70,3,,,,,,,,,";
+const FX_adRow2 = "USD,\"Jul 01, 2026 - Jul 30, 2026\",\"=\"\"amzn1.ads-account.g.vgaf40no2wdzrxol9ycnbs55\"\"\",FishersCove,209409462944401,Fishing Pliers - m19 - uTSC5Ff1YbGrTfZX,\"=\"\"185952517318547\"\"\",\"SP - Knives, Pliers, Scissors, Carabiners, Tool Set - Fishing Pliers -  - auto - m19 - ZVb1EFKmOjELf+7y\",\"=\"\"481498426639588\"\"\",B0GWCDX3HY_auto,B0GWCDX3HY,\"BasicGear Fishing Pliers, 17-4 PH Steel, 6.3 in Compact, Orange\",B0GWCY2NMC,BasicGear,31000 Professional Medical,31131 Pliers & Tweezers,Biss,BSCGRFT-PLIER-1PC-ITEM030163-ORANGE,AMAZON.COM,1595,11,0.6897%,7.23,1,15.90,1,7.23000,0.0627%,2.19917,1,15.90,1,7.23000,0.0627%,2.19917,0,0.00,0,,,,,,,,,";
+const FX_invHdr = "﻿\"snapshot-date\",\"sku\",\"fnsku\",\"asin\",\"product-name\",\"condition\",\"available\",\"fc-transfer\",\"pending-removal-quantity\",\"inv-age-0-to-90-days\",\"inv-age-91-to-180-days\",\"inv-age-181-to-270-days\",\"inv-age-271-to-365-days\",\"inv-age-366-to-455-days\",\"inv-age-456-plus-days\",\"currency\",\"units-shipped-t7\",\"units-shipped-t30\",\"units-shipped-t60\",\"units-shipped-t90\",\"alert\",\"your-price\",\"sales-price\",\"lowest-price-new-plus-shipping\",\"lowest-price-used\",\"recommended-action\",\"DEPRECATED healthy-inventory-level\",\"recommended-sales-price\",\"recommended-sale-duration-days\",\"recommended-removal-quantity\",\"estimated-cost-savings-of-recommended-actions\",\"sell-through\",\"item-volume\",\"volume-unit-measurement\",\"storage-type\",\"storage-volume\",\"marketplace\",\"product-group\",\"sales-rank\",\"days-of-supply\",\"estimated-excess-quantity\",\"weeks-of-cover-t30\",\"weeks-of-cover-t90\",\"featuredoffer-price\",\"sales-shipped-last-7-days\",\"sales-shipped-last-30-days\",\"sales-shipped-last-60-days\",\"sales-shipped-last-90-days\",\"inv-age-0-to-30-days\",\"inv-age-31-to-60-days\",\"inv-age-61-to-90-days\",\"inv-age-181-to-330-days\",\"inv-age-331-to-365-days\",\"estimated-storage-cost-next-month\",\"inbound-quantity\",\"inbound-working\",\"inbound-shipped\",\"inbound-received\",\"no-sale-last-6-months\",\"Total Reserved Quantity\",\"unfulfillable-quantity\",\"quantity-to-be-charged-ais-181-210-days\",\"estimated-ais-181-210-days\",\"quantity-to-be-charged-ais-211-240-days\",\"estimated-ais-211-240-days\",\"quantity-to-be-charged-ais-241-270-days\",\"estimated-ais-241-270-days\",\"quantity-to-be-charged-ais-271-300-days\",\"estimated-ais-271-300-days\",\"quantity-to-be-charged-ais-301-330-days\",\"estimated-ais-301-330-days\",\"quantity-to-be-charged-ais-331-365-days\",\"estimated-ais-331-365-days\",\"quantity-to-be-charged-ais-366-455-days\",\"estimated-ais-366-455-days\",\"quantity-to-be-charged-ais-456-plus-days\",\"estimated-ais-456-plus-days\",\"historical-days-of-supply\",\"fba-minimum-inventory-level\",\"fba-inventory-level-health-status\",\"Recommended ship-in quantity\",\"Recommended ship-in date\",\"Last updated date for Historical Days of Supply\",\"Exempted from Low-Inventory-Level fee?\",\"Low-Inventory-Level fee applied in current week?\",\"Short term historical days of supply\",\"Long term historical days of supply\",\"Inventory age snapshot date\",\"Inventory Supply at FBA\",\"Reserved FC Processing\",\"Reserved Customer Order\",\"Reserved Staging\",\"Total Days of Supply (including units from open shipments)\",\"supplier\",\"is-seasonal-in-next-3-months\",\"season-name\",\"season-start-date\",\"season-end-date\"";
+const FX_invRow1 = "\"2026-07-31\",\"BSCGRSNT108\",\"X004MM14RB\",\"B0F315F9P2\",\"BasicGear Professional Seine Net, 6' x 20'\",\"\",\"0\",\"0\",\"0\",\"3\",\"0\",\"0\",\"0\",\"0\",\"0\",\"USD\",\"2\",\"18\",\"47\",\"59\",\"\",\"0.0\",\"0.0\",\"0.0\",\"0.0\",\"NoRestockExcessActionRequired\",\"\",\"\",\"0\",\"0\",\"\",\"6.56\",\"0.518913\",\"cubic feet\",\"Standard\",\"0.0\",\"US\",\"gl_sports\",\"12185\",\"366\",\"0\",\"41\",\"40\",\"49.99\",\"99.98\",\"899.82\",\"2349.53\",\"2949.41\",\"3\",\"0\",\"0\",\"0\",\"0\",\"\",\"186\",\"0\",\"186\",\"0\",\"\",\"2\",\"0\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"19.0\",\"27\",\"Out of stock\",\"\",\"\",\"2026-07-27\",\"Yes\",\"No\",\"13.3\",\"19.0\",\"2026-07-28\",\"186\",\"1\",\"1\",\"0\",\"366\",\"unassigned\",\"N\",\"\",\"\",\"\"";
+const FX_invRow24 = "\"2026-07-31\",\"LANDINGNET-BAITWELLNET-01-24INCH\",\"X004TU68DV\",\"B0FQ2HP3Z9\",\"BasicGear Medium Baitwell Landing Net, 8x10 in Hoop, 24 in\",\"New\",\"165\",\"0\",\"0\",\"177\",\"0\",\"0\",\"0\",\"0\",\"0\",\"USD\",\"31\",\"153\",\"340\",\"373\",\"\",\"24.95\",\"22.9\",\"22.9\",\"0.0\",\"NoExcessInventory\",\"\",\"0.0\",\"0\",\"0\",\"0.0\",\"1.68\",\"0.210729\",\"cubic feet\",\"Oversize\",\"34.770285\",\"US\",\"gl_sports\",\"9430\",\"248\",\"0\",\"17\",\"23\",\"22.9\",\"709.9\",\"3507.8\",\"7940.47\",\"8732.64\",\"41\",\"136\",\"0\",\"0\",\"0\",\"23.95\",\"500\",\"0\",\"500\",\"0\",\"\",\"3\",\"1\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"53.8\",\"139\",\"Healthy\",\"\",\"\",\"2026-07-27\",\"No\",\"No\",\"44.6\",\"53.8\",\"2026-07-28\",\"665\",\"3\",\"0\",\"0\",\"249\",\"unassigned\",\"N\",\"\",\"\",\"\"";
+
+describe('detectAmazonReport — real header rows + fallbacks');
+eq(detectAmazonReport(normalizeHeaders(parseCSVRow(FX_bizHdr))), 'business', 'real Business header → business');
+eq(detectAmazonReport(normalizeHeaders(parseCSVRow(FX_adsHdr))), 'ads', 'real Advertised-product header → ads');
+eq(detectAmazonReport(normalizeHeaders(parseCSVRow(FX_invHdr))), 'inventory', 'real Inventory Health header → inventory');
+eq(detectAmazonReport(['spend', '7 day total sales', 'advertised asin']), 'ads', 'old-format ads (spend + 7 day total sales) → ads');
+eq(detectAmazonReport(['spend', 'acos', 'child asin']), 'ads', 'old-format ads (spend + acos) → ads');
+eq(detectAmazonReport(['asin', 'afn fulfillable quantity', 'title']), 'inventory', 'old-format inventory (afn fulfillable quantity) → inventory');
+eq(detectAmazonReport(['sku', 'sellable quantity']), 'inventory', 'old-format inventory (sellable quantity) → inventory');
+eq(detectAmazonReport(['foo', 'bar', 'baz']), null, 'unrelated headers → null (unrecognized)');
+
+describe('parseBusinessReport — real child-ASIN row');
+const biz1 = parseBusinessReport([FX_bizHdr, FX_bizRow], 30, 'biz.csv');
+const bd = biz1.byAsin['B096MCMDPL'];
+is(!!bd, 'child ASIN B096MCMDPL parsed (not the parent B0CKPQNSHN)');
+eq(bd.revenue, 12905.25, 'Ordered Product Sales "$12,905.25" → 12905.25 (strips $ and comma)');
+eq(bd.units, 683, 'Units Ordered 683 (non-B2B column, not the B2B 5)');
+eq(bd.sessions, 12131, 'Sessions - Total "12,131" → 12131');
+eq(bd.cvr, 5.63, 'Unit Session Percentage 5.63% → 5.63');
+eq(bd.sku, '5K-SC4U-PO06', 'SKU column captured');
+eq(biz1.periodDays, 30, 'periodDays passed through');
+// CVR recompute path (report missing Unit Session Percentage → units/sessions*100)
+const bizNoCvr = parseBusinessReport(['child asin,sessions - total,units ordered,ordered product sales', 'B012345678,200,20,100'], 30, 'x');
+eq(bizNoCvr.byAsin['B012345678'].cvr, 10, 'no CVR column → recompute 20/200*100 = 10');
+
+describe('parseAdsReport — aggregate 2 campaign rows for one ASIN + guard/date tolerance');
+const ads1 = parseAdsReport([FX_adsHdr, FX_adRow1, FX_adRow2], 'ads.csv');
+const ad = ads1.byAsin['B0GWCDX3HY'];
+is(!!ad, 'Advertised product ID B0GWCDX3HY parsed (plain, no guard)');
+eq(+ad.spend.toFixed(2), 115.84, 'Total cost aggregated across 2 campaigns: 108.61 + 7.23');
+eq(+ad.adRev.toFixed(2), 196.80, 'Sales aggregated: 180.90 + 15.90');
+eq(ad.adUnits, 12, 'Units sold aggregated: 11 + 1 (not the promoted/halo variants)');
+eq(ad.sku, 'BSCGRFT-PLIER-1PC-ITEM030163-ORANGE', 'Advertised product SKU captured');
+eq(ad.start, '2026-07-01', 'min start across the two Date range values');
+eq(ad.end, '2026-07-30', 'max end across the two Date range values');
+eq(ads1.periodDays, 30, 'overall period = 2026-07-01 → 2026-07-30 inclusive = 30 days');
+eq(ads1.start, '2026-07-01', 'overall min start');
+
+describe('parseInventoryReport — real rows: prices, t-horizons, sku, inbound');
+const inv1 = parseInventoryReport([FX_invHdr, FX_invRow1, FX_invRow24], 'inv.csv');
+const iv = inv1.byAsin['B0FQ2HP3Z9'];
+is(!!iv, 'ASIN B0FQ2HP3Z9 parsed');
+eq(iv.sku, 'LANDINGNET-BAITWELLNET-01-24INCH', 'sku captured');
+eq(iv.available, 165, 'available 165');
+eq(iv.yourPrice, 24.95, 'your-price 24.95 (first > 0)');
+eq(iv.salesPrice, 22.9, 'sales-price 22.9 (active sale wins later)');
+eq(iv.u30, 153, 'units-shipped-t30 = 153');
+eq(iv.s30, 3507.8, 'sales-shipped-last-30-days = 3507.80');
+eq(iv.u90, 373, 'units-shipped-t90 = 373');
+eq(iv.inboundQty, 500, 'inbound-quantity = 500');
+eq(iv.snapshotDate, '2026-07-31', 'snapshot-date captured');
+// your-price/sales-price 0.0 means "none"
+const iv0 = inv1.byAsin['B0F315F9P2'];
+eq(iv0.yourPrice, 0, 'your-price "0.0" → 0 (treated as none)');
+eq(iv0.salesPrice, 0, 'sales-price "0.0" → 0 (treated as none)');
+eq(iv0.available, 0, 'available "0" → 0');
+// F5 addendum: realized transaction price = s30/u30 captures deals/coupons
+eq(+(iv.s30 / iv.u30).toFixed(2), 22.93, 'realized30 = s30/u30 = 3507.80/153 ≈ 22.93 (captures the active sale)');
+
+describe('parseDateRangeStr — inclusive day count + invalid');
+const dr = parseDateRangeStr('Jul 06, 2026 - Jul 29, 2026');
+eq(dr.start, '2026-07-06', 'start parsed');
+eq(dr.end, '2026-07-29', 'end parsed');
+eq(dr.days, 24, 'Jul 06 → Jul 29 inclusive = 24 days');
+is(parseDateRangeStr('garbage') === null, 'unparseable → null');
+is(parseDateRangeStr('') === null, 'empty → null');
+eq(parseDateRangeStr('"Jul 01, 2026 - Jul 30, 2026"').days, 30, 'quoted range still parses (30 days)');
+
+describe('endOfMonthYmd — month/year boundaries incl. leap Feb');
+eq(endOfMonthYmd(new Date(2026, 6, 20)), '2026-07-31', 'mid-July → 2026-07-31');
+eq(endOfMonthYmd(new Date(2026, 11, 5)), '2026-12-31', 'December → 2026-12-31 (year boundary)');
+eq(endOfMonthYmd(new Date(2026, 0, 15)), '2026-01-31', 'January → 2026-01-31');
+eq(endOfMonthYmd(new Date(2028, 1, 10)), '2028-02-29', 'Feb 2028 (leap) → 2028-02-29');
+eq(endOfMonthYmd(new Date(2027, 1, 10)), '2027-02-28', 'Feb 2027 (non-leap) → 2027-02-28');
+
+describe('defaultSaleEndYmd — rolls to next month when <3 days remain');
+eq(defaultSaleEndYmd(new Date(2026, 6, 20)), '2026-07-31', 'mid-July → end of July');
+eq(defaultSaleEndYmd(new Date(2026, 6, 29)), '2026-07-31', 'Jul 29 (3 days left) → still end of July');
+eq(defaultSaleEndYmd(new Date(2026, 6, 30)), '2026-08-31', 'Jul 30 (2 days left) → end of August');
+eq(defaultSaleEndYmd(new Date(2026, 6, 31)), '2026-08-31', 'Jul 31 (last day) → end of August');
+eq(defaultSaleEndYmd(new Date(2026, 11, 31)), '2027-01-31', 'Dec 31 → end of January (year boundary)');
+eq(defaultSaleEndYmd(new Date(2027, 1, 27)), '2027-03-31', 'Feb 27 non-leap (2 days left) → end of March');
+eq(ymd(new Date(2026, 6, 3)), '2026-07-03', 'ymd pads month/day and never shifts by timezone');
+
+describe('roundSaleEnding — promo prices end in .90 with $1 floor');
+eq(roundSaleEnding(21.21), 20.90, '21.21 → 20.90');
+eq(roundSaleEnding(19.00), 18.90, '19.00 → 18.90');
+eq(roundSaleEnding(2.30), 1.90, '2.30 → 1.90');
+eq(roundSaleEnding(1.05), 1.05, '1.05 → 1.05 (floor-0.10 would be 0.90 < $1, so fall back)');
+eq(roundSaleEnding(0.50), 0.50, '0.50 → 0.50 (fallback for sub-$1 values)');
+
+describe('suggestSalePrice — every action branch');
+const S = suggestSalePrice;
+eq(S({ yourPrice: 0, available: 10, daysOfCover: 400 }).reason, 'no_price', 'no Your Price → no_data/no_price');
+eq(S({ yourPrice: 20, available: 0, daysOfCover: 400 }).reason, 'no_stock', 'no stock → skip/no_stock');
+eq(S({ yourPrice: 10, available: 5, daysOfCover: 400, breakEvenPrice: 12 }).reason, 'loss_leader', 'Your Price below break-even → skip/loss_leader');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 15, realizedPrice: 12 }).reason, 'below_breakeven_promo', 'realized < break-even while YP ≥ break-even → skip/below_breakeven_promo');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: null }).reason, 'no_velocity', 'no velocity → no_data/no_velocity');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 90, coverThreshold: 120 }).reason, 'healthy', 'cover ≤ threshold → keep/healthy');
+const sInf = S({ yourPrice: 20, available: 5, daysOfCover: Infinity });
+eq(sInf.action, 'sale', 'no sales + stock → sale'); eq(sInf.off, 0.20, 'Infinity cover → 20% rung'); eq(sInf.reason, 'no_sales', 'reason no_sales'); eq(sInf.price, 15.90, 'price 20×0.80 → 15.90');
+const s400 = S({ yourPrice: 20, available: 5, daysOfCover: 400 });
+eq(s400.off, 0.20, '400d cover ≥ 365 → 20% rung'); eq(s400.reason, 'overstock', 'reason overstock');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 200 }).off, 0.12, '200d cover ≥ 180 but < 240 → 12% rung');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 250 }).off, 0.15, '250d cover ≥ 240 → 15% rung');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 130 }).off, 0.08, '130d cover ≥ 120 → 8% rung');
+// 5% badge cap: a sale price is always ≥5% below Your Price
+const s130 = S({ yourPrice: 20, available: 5, daysOfCover: 130 });
+is((20 - s130.price) / 20 >= 0.05, `sale price ${s130.price} is ≥5% off Your Price (badge qualifies)`);
+// break-even floor RAISES the sale price rather than selling at a loss
+const sFloor = S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 17 });
+eq(sFloor.action, 'sale', 'floor case still a sale'); eq(sFloor.price, 17, 'ladder 15.90 < break-even 17 → floored up to 17');
+// blocked when the break-even floor exceeds the 5%-off cap
+const sBlocked = S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 19.5 });
+eq(sBlocked.action, 'blocked', 'break-even 19.5 > 5%-cap 19.0 → blocked'); eq(sBlocked.reason, 'floor_above_5pct', 'reason floor_above_5pct'); eq(sBlocked.floor, 19.5, 'returns the floor');
+
+describe('ZIP structural sanity + CRC-32');
+eq(crc32(_strToBytesXlsx('hello')) >>> 0, 0x3610a686, 'CRC-32 of "hello" = 0x3610a686 (known value)');
+eq(crc32(new Uint8Array(0)) >>> 0, 0, 'CRC-32 of empty input = 0');
+const zbytes = zipStore([{ name: 'a.txt', data: _strToBytesXlsx('one') }, { name: 'b.txt', data: _strToBytesXlsx('two') }]);
+is(zbytes[0] === 0x50 && zbytes[1] === 0x4b, 'ZIP starts with PK local-file signature');
+// EOCD is the last 22 bytes: check its signature 0x06054b50 and entry count = 2
+const zdv = new DataView(zbytes.buffer, zbytes.byteOffset, zbytes.byteLength);
+eq(zdv.getUint32(zbytes.length - 22, true), 0x06054b50, 'EOCD signature present at end');
+eq(zdv.getUint16(zbytes.length - 22 + 10, true), 2, 'EOCD records 2 entries');
+
 // ─────────────────────────────────────────────────────────────────────────────
-// SUMMARY
+// SUMMARY (async tail — XLSX round-trip needs await; summary/exit runs after it)
 // ─────────────────────────────────────────────────────────────────────────────
-const total = passed + failed;
-console.log(`\n${'─'.repeat(56)}`);
-console.log(`  ${total} tests  ·  ${passed} passed  ·  ${failed} failed`);
-if (failed === 0) {
-  console.log('  All tests passed ✓\n');
-} else {
-  console.log(`  ${failed} test(s) FAILED ✗\n`);
-  process.exit(1);
-}
+(async () => {
+  describe('buildPriceFeedXlsx — round-trip through unzip + parseXlsxSheet');
+  try {
+    const xbytes = buildPriceFeedXlsx([{ sku: 'TEST-1', price: 18.9 }, { sku: 'A&B<2>', price: 9.9 }], '2026-07-31', '2026-07-31');
+    is(xbytes.length > 0, 'buildPriceFeedXlsx produced bytes');
+    const files = await unzip(xbytes.buffer);
+    is(!!files['xl/worksheets/sheet1.xml'], 'unzip found xl/worksheets/sheet1.xml');
+    is(!!files['[Content_Types].xml'] && !!files['xl/workbook.xml'] && !!files['xl/styles.xml'], 'all required package parts present');
+    const rows = parseXlsxSheet(new TextDecoder().decode(files['xl/worksheets/sheet1.xml']), []);
+    is(rows[0][0].indexOf('settings=feedType=256') === 0, 'A1 is the verbatim settings string (dataRow=7 layout)');
+    is(rows[0][0].indexOf('labelRow=4&attributeRow=5&dataRow=7') !== -1, 'settings string preserves labelRow=4&attributeRow=5&dataRow=7');
+    eq(rows[3][0], 'SKU', 'label row 4, col A = "SKU"');
+    eq(rows[4][0], 'contribution_sku#1.value', 'attribute row 5, col A = contribution_sku#1.value');
+    eq(rows[4][10], 'purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.value_with_tax', 'attribute row 5, col K = Sale Price attribute');
+    eq(rows[6][0], 'TEST-1', 'data row 7, col A = SKU');
+    eq(rows[6][10], '18.9', 'data row 7, col K = Sale Price (numeric round-trips as "18.9")');
+    eq(rows[6][11], '2026-07-31', 'data row 7, col L = Sale Start Date');
+    eq(rows[6][12], '2026-07-31', 'data row 7, col M = Sale End Date');
+    eq(rows[7][0], 'A&B<2>', 'data row 8, col A round-trips XML-escaped chars (& < >)');
+    eq(rows[7][10], '9.9', 'data row 8, col K = 9.9');
+  } catch (e) {
+    is(false, 'XLSX round-trip threw: ' + e.message);
+  }
+
+  const total = passed + failed;
+  console.log(`\n${'─'.repeat(56)}`);
+  console.log(`  ${total} tests  ·  ${passed} passed  ·  ${failed} failed`);
+  if (failed === 0) {
+    console.log('  All tests passed ✓\n');
+  } else {
+    console.log(`  ${failed} test(s) FAILED ✗\n`);
+    process.exit(1);
+  }
+})();

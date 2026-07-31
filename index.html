@@ -582,6 +582,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
   <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
   <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(event)">
   <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
+  <button class="topbar-btn" id="btn-planner" onclick="toggleSalePlanner()" data-en="Sale Planner" data-zh="促销计划">Sale Planner</button>
   <button class="topbar-btn" id="btn-portfolio" onclick="togglePortfolio()">Portfolio</button>
   <button class="topbar-btn" id="btn-workflows" onclick="toggleWorkflows()">Workflows</button>
   <div class="topbar-divider"></div>
@@ -719,43 +720,56 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
             <div class="card-title" style="margin:0;" data-en="Import from Amazon Seller Central" data-zh="从亚马逊卖家中心导入">Import from Amazon Seller Central</div>
             <button class="topbar-btn" onclick="this.closest('.card').querySelector('#import-guide').classList.toggle('hidden-guide')" data-en="How to export ▾" data-zh="如何导出 ▾">How to export ▾</button>
           </div>
+
+          <!-- Fast path: direct report links -->
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <a href="https://sellercentral.amazon.com/business-reports/ref=xx_sitemetric_dnav_xx#/report?id=102%3ADetailSalesTrafficBySKU&amp;chartCols=&amp;columns=0%2F1%2F2%2F3%2F8%2F9%2F14%2F15%2F20%2F21%2F26%2F27%2F28%2F29%2F30%2F31%2F32%2F33%2F34%2F35%2F36%2F37" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Business Report" data-zh="↗ 业务报告">↗ Business Report</a>
+            <a href="https://advertising.amazon.com/reporting/new?entityId=ENTITY27B6KAMT9RSQT&amp;templateId=advertised_product" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-5b63f7);color:var(--c-818cf8);" data-en="↗ Ads Report (Advertised product)" data-zh="↗ 广告报告（推广商品）">↗ Ads Report (Advertised product)</a>
+            <a href="https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-7a5c00);color:var(--c-fcd34d);" data-en="↗ Inventory Health" data-zh="↗ 库存健康">↗ Inventory Health</a>
+          </div>
+
           <div id="import-guide" class="hidden-guide" style="margin-top:12px;">
             <div class="g3" style="gap:16px;">
               <div>
                 <div style="font-size:0.7rem;font-weight:700;color:var(--c-4ade80);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Business Report → Revenue &amp; Velocity" data-zh="业务报告 → 收入和销售速度">Business Report → Revenue &amp; Velocity</div>
                 <div class="tl" style="padding-left:14px;">
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Seller Central → Reports → Business Reports" data-zh="卖家中心 → 报告 → 业务报告">Seller Central → Reports → Business Reports</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Detail Page Sales and Traffic by ASIN" tab' data-zh='"按ASIN的详情页销售和流量"标签'>"Detail Page Sales and Traffic by ASIN" tab</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Set date range to last 30 days → Download" data-zh="设置日期范围为最近30天 → 下载">Set date range to last 30 days → Download</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;"><a href="https://sellercentral.amazon.com/business-reports/ref=xx_sitemetric_dnav_xx#/report?id=102%3ADetailSalesTrafficBySKU&amp;chartCols=&amp;columns=0%2F1%2F2%2F3%2F8%2F9%2F14%2F15%2F20%2F21%2F26%2F27%2F28%2F29%2F30%2F31%2F32%2F33%2F34%2F35%2F36%2F37" target="_blank" rel="noopener" style="color:var(--c-4ade80);" data-en="Open directly ↗" data-zh="直接打开 ↗">Open directly ↗</a></div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Backup path: Seller Central → Reports → Business Reports" data-zh="备用路径：卖家中心 → 报告 → 业务报告">Backup path: Seller Central → Reports → Business Reports</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Detail Page Sales and Traffic by ASIN"' data-zh='"按ASIN的详情页销售和流量"'>"Detail Page Sales and Traffic by ASIN"</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Adjust date range → Download CSV" data-zh="调整日期范围 → 下载CSV">Adjust date range → Download CSV</div></div>
                 </div>
                 <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Total Revenue, Units Sold, CVR" data-zh=" 总收入，销量，转化率"> Total Revenue, Units Sold, CVR</strong></div>
               </div>
               <div>
                 <div style="font-size:0.7rem;font-weight:700;color:var(--c-818cf8);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Advertising Report → ACoS &amp; Spend" data-zh="广告报告 → ACoS和支出">Advertising Report → ACoS &amp; Spend</div>
                 <div class="tl" style="padding-left:14px;">
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Advertising Console → Reports → Create Report" data-zh="广告控制台 → 报告 → 创建报告">Advertising Console → Reports → Create Report</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='Sponsored Products → "Advertised Product" type' data-zh='赞助商品 → "推广商品"类型'>Sponsored Products → "Advertised Product" type</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Set date range → Request → Download" data-zh="设置日期范围 → 请求 → 下载">Set date range → Request → Download</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;"><a href="https://advertising.amazon.com/reporting/new?entityId=ENTITY27B6KAMT9RSQT&amp;templateId=advertised_product" target="_blank" rel="noopener" style="color:var(--c-818cf8);" data-en="Open directly ↗" data-zh="直接打开 ↗">Open directly ↗</a></div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Backup path: Advertising Console → Reports" data-zh="备用路径：广告控制台 → 报告">Backup path: Advertising Console → Reports</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='Sponsored Products → "Advertised product"' data-zh='赞助商品 → "推广商品"'>Sponsored Products → "Advertised product"</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Adjust date range → Download CSV" data-zh="调整日期范围 → 下载CSV">Adjust date range → Download CSV</div></div>
                 </div>
                 <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" ACoS, Ad Spend, Ad Sales" data-zh=" ACoS，广告花费，广告销售"> ACoS, Ad Spend, Ad Sales</strong></div>
               </div>
               <div>
-                <div style="font-size:0.7rem;font-weight:700;color:var(--c-fcd34d);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Inventory Report → Stock Levels" data-zh="库存报告 → 库存水平">Inventory Report → Stock Levels</div>
+                <div style="font-size:0.7rem;font-weight:700;color:var(--c-fcd34d);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;" data-en="Inventory Health → Stock &amp; Price" data-zh="库存健康 → 库存和价格">Inventory Health → Stock &amp; Price</div>
                 <div class="tl" style="padding-left:14px;">
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Inventory → Manage All Inventory" data-zh="库存 → 管理所有库存">Inventory → Manage All Inventory</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en='"Download Inventory File" (or Fee Preview report)' data-zh='"下载库存文件"（或费用预览报告）'>"Download Inventory File" (or Fee Preview report)</div></div>
-                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Has an Afn Fulfillable Quantity column → Download" data-zh="包含可配送数量列 → 下载">Has an Afn Fulfillable Quantity column → Download</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;"><a href="https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1" target="_blank" rel="noopener" style="color:var(--c-fcd34d);" data-en="Open directly ↗" data-zh="直接打开 ↗">Open directly ↗</a></div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Backup path: Report Central → Inventory Health" data-zh="备用路径：报告中心 → 库存健康">Backup path: Report Central → Inventory Health</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Hamburger menu → Reports → Fulfillment → Inventory Health" data-zh="菜单 → 报告 → 配送 → 库存健康">Hamburger menu → Reports → Fulfillment → Inventory Health</div></div>
+                  <div class="tl-item" style="margin-bottom:8px;"><div class="tl-action" style="font-size:0.75rem;" data-en="Adjust date range → Download CSV" data-zh="调整日期范围 → 下载CSV">Adjust date range → Download CSV</div></div>
                 </div>
-                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Current Inventory (units)" data-zh=" 当前库存（件）"> Current Inventory (units)</strong></div>
+                <div class="pill" style="margin-top:6px;"><span data-en="Fills:" data-zh="填充：">Fills:</span><strong data-en=" Stock (units), Your Price, Sale Price" data-zh=" 库存（件），您的售价，促销价"> Stock (units), Your Price, Sale Price</strong></div>
               </div>
             </div>
-            <div class="alert warn" style="margin-top:10px;font-size:0.73rem;" data-en="⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import each report separately for a complete weekly check-in." data-zh="⚠ 当前价格不在任何亚马逊导出文件中 — 请从您的商品页面手动读取并填写。请分别导入每份报告以完成完整的每周记录。">⚠ Current Price is not in any Amazon export — read it from your listing and enter manually. Import each report separately for a complete weekly check-in.</div>
+            <div class="alert info" style="margin-top:10px;font-size:0.73rem;" data-en="✓ Current Price now auto-fills from the Inventory Health import — the active sale price wins when one is set, otherwise Your Price. Multi-select all 3 CSVs in one go: one check-in is created per product from the whole batch." data-zh="✓ 当前价格现在从库存健康导入自动填充 — 有促销价时优先使用促销价，否则使用您的售价。可一次多选全部3个CSV：整批为每个产品创建一条检查记录。">✓ Current Price now auto-fills from the Inventory Health import — the active sale price wins when one is set, otherwise Your Price. Multi-select all 3 CSVs in one go: one check-in is created per product from the whole batch.</div>
           </div>
-          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
-            <button class="btn primary" onclick="document.getElementById('amz-report-file').click()" data-en="Import Amazon Report CSV" data-zh="导入亚马逊报告CSV">Import Amazon Report CSV</button>
-            <input type="file" id="amz-report-file" accept=".csv,.txt" style="display:none" onchange="importAmazonReport(event)">
-            <span style="font-size:0.72rem;color:var(--c-555870);" data-en="Auto-detects Business, Advertising, or Inventory Report · matches by ASIN" data-zh="自动识别业务、广告或库存报告 · 通过ASIN匹配">Auto-detects Business, Advertising, or Inventory Report · matches by ASIN</span>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+            <button class="btn primary" onclick="document.getElementById('amz-report-file').click()" data-en="Import Amazon Reports (select all 3 CSVs)" data-zh="导入亚马逊报告（选择全部3个CSV）">Import Amazon Reports (select all 3 CSVs)</button>
+            <input type="file" id="amz-report-file" accept=".csv,.txt" multiple style="display:none" onchange="importAmazonReport(event)">
+            <button class="topbar-btn" onclick="document.getElementById('shipments-file').click()" data-en="Optional: Import Incoming Shipments (xlsx)" data-zh="可选：导入在途货件（xlsx）">Optional: Import Incoming Shipments (xlsx)</button>
+            <input type="file" id="shipments-file" accept=".xlsx" style="display:none" onchange="importShipmentsXlsx(event)">
           </div>
+          <div style="font-size:0.72rem;color:var(--c-555870);margin-top:6px;" data-en="Auto-detects Business, Advertising &amp; Inventory Health reports · matches by ASIN. Shipments xlsx (the team's 总体控制表) matches by Merchant SKU." data-zh="自动识别业务、广告和库存健康报告 · 通过ASIN匹配。货件xlsx（团队的总体控制表）通过商家SKU匹配。">Auto-detects Business, Advertising &amp; Inventory Health reports · matches by ASIN. Shipments xlsx (the team's 总体控制表) matches by Merchant SKU.</div>
         </div>
 
         <div class="card">
@@ -939,6 +953,9 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
         </div>
       </div>
     </div>
+
+    <!-- SALE PLANNER VIEW (F5) — all content rendered by renderSalePlanner() -->
+    <div id="planner-view" style="display:none;"></div>
 
     <!-- PORTFOLIO VIEW -->
     <div id="portfolio-view" style="display:none;">
@@ -1457,6 +1474,16 @@ const THEME_KEY = 'amazon_pricing_theme';
 // LOGIC.md Section 10
 const STORAGE_KEY = 'amazon_pricing_tool_v1';
 
+// RULE: Deep links straight to the three Seller-Central / Advertising reports the
+// tool consumes. These are the FAST path; the "How to export" guide is the backup
+// if Amazon changes these URLs. Business Report link is pre-configured with the exact
+// column set (chartCols/columns) this tool parses.
+const AMZ_REPORT_LINKS = {
+  business:  'https://sellercentral.amazon.com/business-reports/ref=xx_sitemetric_dnav_xx#/report?id=102%3ADetailSalesTrafficBySKU&chartCols=&columns=0%2F1%2F2%2F3%2F8%2F9%2F14%2F15%2F20%2F21%2F26%2F27%2F28%2F29%2F30%2F31%2F32%2F33%2F34%2F35%2F36%2F37',
+  ads:       'https://advertising.amazon.com/reporting/new?entityId=ENTITY27B6KAMT9RSQT&templateId=advertised_product',
+  inventory: 'https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1'
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // APP STATE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1468,7 +1495,8 @@ let state = {
   activeProductId: null,
   products: [],
   showPortfolio: false,
-  showWorkflows: false
+  showWorkflows: false,
+  showPlanner: false
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1795,6 +1823,12 @@ function importCSV(event) {
         state.products.push(p);
         created++;
       }
+    }
+    // RULE: Record the cost-data / CIF provenance so the Sale Planner can show how
+    // fresh the underlying COGS figures are. Only stamp it when the file actually
+    // changed something (a pure-error import shouldn't claim to be the cost source).
+    if (created + updated > 0) {
+      state.costDataMeta = { filename: file.name, at: new Date().toISOString(), rows: created + updated };
     }
     saveToStorage();
     renderAll();
@@ -2286,10 +2320,13 @@ function classifyPrice(currentPrice, prices) {
 }
 
 // RULE: Inventory & sales velocity status from weekly check-in data. LOGIC.md Section 8.
-// velocity = units sold per day (last 30d). daysOfCover = current inventory ÷ velocity.
-function getInventoryStatus(inventoryUnits, unitsSold30) {
+// velocity = units sold per day over the report's window. daysOfCover = current inventory ÷ velocity.
+// periodDays defaults to 30 so older 30-day check-ins keep working; imported reports
+// (e.g. an ads report spanning 24 days) pass their real window so velocity isn't distorted.
+function getInventoryStatus(inventoryUnits, unitsSold, periodDays) {
   if (inventoryUnits === undefined || inventoryUnits === null) return null;
-  const velocity = (unitsSold30 || 0) / 30;
+  const days = periodDays > 0 ? periodDays : 30;
+  const velocity = (unitsSold || 0) / days;
   if (velocity <= 0) {
     return { velocity: 0, daysOfCover: null, status: inventoryUnits > 0 ? 'no_sales' : 'unknown' };
   }
@@ -2369,10 +2406,13 @@ function setAppMode(m) {
   state.appMode = m;
   state.showPortfolio = false;
   state.showWorkflows = false;
+  state.showPlanner = false;
   document.getElementById('btn-portfolio').classList.remove('active');
   document.getElementById('btn-workflows').classList.remove('active');
+  document.getElementById('btn-planner').classList.remove('active');
   document.getElementById('portfolio-view').style.display  = 'none';
   document.getElementById('workflows-view').style.display  = 'none';
+  document.getElementById('planner-view').style.display    = 'none';
   document.getElementById('sb-seller').classList.toggle('active', m==='seller');
   document.getElementById('sb-mfg').classList.toggle('active', m==='mfg');
   document.getElementById('product-view').style.display   = m==='seller' && state.activeProductId ? '' : 'none';
@@ -2970,7 +3010,7 @@ function renderCheckinsTab(p) {
     <div class="checkin-list">${sorted.map((ci, i) => {
       const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
       const tacos = ci.totalRevenue && ci.totalAdSpend ? (ci.totalAdSpend/ci.totalRevenue*100) : null;
-      const inv = getInventoryStatus(ci.inventoryUnits, ci.unitsSold30);
+      const inv = getInventoryStatus(ci.inventoryUnits, ci.unitsSold30, ci.periodDays);
       const invMeta = inv ? INVENTORY_STATUS_META[inv.status] : null;
       return `<div class="checkin-item">
         <div class="checkin-header">
@@ -2987,7 +3027,7 @@ function renderCheckinsTab(p) {
           <div class="checkin-cell"><div class="checkin-cell-label">Ad Sales (30d)</div><div class="checkin-cell-val">${ci.adSales !== undefined ? ci.adSales : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">TACoS</div><div class="checkin-cell-val" style="color:${tacos?(tacos<10?'var(--c-4ade80)':tacos<20?'var(--c-f59e0b)':'var(--c-f87171)'):'var(--c-fff)'}">${tacos !== null ? tacos.toFixed(1)+'%' : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">Inventory (units)</div><div class="checkin-cell-val">${ci.inventoryUnits !== undefined ? ci.inventoryUnits : '—'}</div></div>
-          <div class="checkin-cell"><div class="checkin-cell-label">Units Sold (30d)</div><div class="checkin-cell-val">${ci.unitsSold30 !== undefined ? ci.unitsSold30 : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">Units Sold (${ci.periodDays||30}d)</div><div class="checkin-cell-val">${ci.unitsSold30 !== undefined ? ci.unitsSold30 : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">Sales Velocity</div><div class="checkin-cell-val">${inv && inv.velocity ? inv.velocity.toFixed(2)+'/day' : '—'}</div></div>
           <div class="checkin-cell">
             <div class="checkin-cell-label">Days of Cover</div>
@@ -3306,27 +3346,37 @@ function renderAll() {
   const isMfg = state.appMode === 'mfg';
   const isPortfolio = state.showPortfolio;
   const isWorkflows = state.showWorkflows;
-  document.getElementById('empty-state').style.display     = (!hasActive && !isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
-  document.getElementById('product-view').style.display    = (hasActive && !isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
-  document.getElementById('mfg-view').style.display        = (isMfg && !isPortfolio && !isWorkflows) ? '' : 'none';
+  const isPlanner = state.showPlanner;
+  document.getElementById('empty-state').style.display     = (!hasActive && !isMfg && !isPortfolio && !isWorkflows && !isPlanner) ? '' : 'none';
+  document.getElementById('product-view').style.display    = (hasActive && !isMfg && !isPortfolio && !isWorkflows && !isPlanner) ? '' : 'none';
+  document.getElementById('mfg-view').style.display        = (isMfg && !isPortfolio && !isWorkflows && !isPlanner) ? '' : 'none';
   document.getElementById('portfolio-view').style.display  = isPortfolio ? '' : 'none';
   document.getElementById('workflows-view').style.display  = isWorkflows ? '' : 'none';
-  if (hasActive && !isMfg && !isPortfolio && !isWorkflows) renderProductView();
-  if (isMfg && !isPortfolio && !isWorkflows) calcMfg();
+  document.getElementById('planner-view').style.display    = isPlanner ? '' : 'none';
+  if (hasActive && !isMfg && !isPortfolio && !isWorkflows && !isPlanner) renderProductView();
+  if (isMfg && !isPortfolio && !isWorkflows && !isPlanner) calcMfg();
   if (isPortfolio) renderPortfolio();
+  if (isPlanner) renderSalePlanner();
   document.getElementById('btn-portfolio').classList.toggle('active', isPortfolio);
   document.getElementById('btn-workflows').classList.toggle('active', isWorkflows);
+  document.getElementById('btn-planner').classList.toggle('active', isPlanner);
 }
 
 function togglePortfolio() {
   state.showPortfolio = !state.showPortfolio;
-  if (state.showPortfolio) state.showWorkflows = false;
+  if (state.showPortfolio) { state.showWorkflows = false; state.showPlanner = false; }
   renderAll();
 }
 
 function toggleWorkflows() {
   state.showWorkflows = !state.showWorkflows;
-  if (state.showWorkflows) state.showPortfolio = false;
+  if (state.showWorkflows) { state.showPortfolio = false; state.showPlanner = false; }
+  renderAll();
+}
+
+function toggleSalePlanner() {
+  state.showPlanner = !state.showPlanner;
+  if (state.showPlanner) { state.showPortfolio = false; state.showWorkflows = false; }
   renderAll();
 }
 
@@ -3569,115 +3619,368 @@ function parseCSVRow(line) {
   return cols;
 }
 
-function importAmazonReport(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const lines = e.target.result.split('\n').filter(l => l.trim());
-    if (lines.length < 2) { alert('File appears empty or has only one row.'); event.target.value=''; return; }
+// ═══════════════════════════════════════════════════════════════════════════
+// AMAZON REPORT PARSING (F2) — pure functions, mirrored in test.js
+// Three real report formats: Business (Detail Page Sales & Traffic by ASIN),
+// Advertising (Advertised product), Inventory Health. All quote-/guard-tolerant.
+// ═══════════════════════════════════════════════════════════════════════════
 
-    const rawHdrs = parseCSVRow(lines[0]);
-    const hdrs = rawHdrs.map(h => h.trim().toLowerCase().replace(/[()\-_]+/g, ' ').replace(/\s+/g,' ').trim());
+// Normalize raw header cells: lowercase, collapse ()-_ and whitespace to single spaces.
+function normalizeHeaders(rawHdrs) {
+  return rawHdrs.map(h => h.trim().toLowerCase().replace(/[()\-_]+/g, ' ').replace(/\s+/g, ' ').trim());
+}
 
-    // Fuzzy column finder — returns first index where any term is a substring of header
-    const fc = (...terms) => hdrs.findIndex(h => terms.some(t => h.includes(t)));
+// RULE: tolerant Amazon number parse — strips Excel guard (="…"), $, %, commas, quotes, spaces.
+function parseAmzNum(s) {
+  if (s === undefined || s === null) return 0;
+  const cleaned = String(s).replace(/^="?/, '').replace(/"$/, '').replace(/[$%,\s"]/g, '');
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
 
-    const asinCol    = fc('child asin', 'advertised asin', ' asin');  // ' asin' catches bare "ASIN" without matching e.g. "Parent ASIN" first
-    const revenueCol = fc('ordered product sales');                    // Business Report
-    const unitsCol   = fc('units ordered');                            // Business Report — sales velocity
-    const spendCol   = fc('spend');                                    // Ad Report
-    const acosCol    = fc('acos', 'advertising cost of sale');         // Ad Report
-    const adRevCol   = fc('7 day total sales');                        // Ad Report
-    const adUnitCol  = fc('7 day total units', '7 day total orders');  // Ad Report
-    const cvrCol     = fc('unit session percentage', '7 day conversion rate'); // Either
-    const qtyCol     = fc('afn fulfillable quantity', 'fulfillable quantity', 'sellable quantity', 'available quantity'); // Inventory Report
+// Strip Excel guard/quotes from an id/text cell.
+function _amzCell(s) { return (s || '').trim().replace(/^="?/, '').replace(/"$/, ''); }
 
-    // Fall back to any column containing "asin" if specific ones not found
-    const resolvedAsinCol = asinCol !== -1 ? asinCol : hdrs.findIndex(h => h.includes('asin'));
+// RULE: detect which of the three reports a header row belongs to (or null).
+function detectAmazonReport(hdrs) {
+  const has = h => hdrs.indexOf(h) !== -1;
+  const inc = s => hdrs.some(h => h.includes(s));
+  if (inc('ordered product sales')) return 'business';
+  if (has('advertised product id') || (inc('spend') && (inc('acos') || inc('7 day total sales')))) return 'ads';
+  const invQty = has('available') || inc('afn fulfillable quantity') || inc('fulfillable quantity') ||
+                 inc('sellable quantity') || inc('available quantity');
+  if ((has('asin') || has('sku')) && invQty) return 'inventory';
+  return null;
+}
 
-    if (resolvedAsinCol === -1) {
-      alert('Could not find an ASIN column.\n\nPlease upload:\n• Business Reports → Detail Page Sales and Traffic by ASIN\n• Advertising Console → Reports → Sponsored Products → Advertised Product\n• Inventory → Manage All Inventory → Download Inventory File');
-      event.target.value = ''; return;
-    }
+// RULE: local YYYY-MM-DD — NEVER toISOString (that shifts the date in non-UTC timezones).
+function ymd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
-    const isBizReport       = revenueCol !== -1;
-    const isAdReport        = spendCol !== -1 && (acosCol !== -1 || adRevCol !== -1);
-    const isInventoryReport = !isBizReport && !isAdReport && qtyCol !== -1;
+// RULE: sale runs to the LAST DAY OF THE CURRENT MONTH regardless of upload date.
+function endOfMonthYmd(d) {
+  return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+}
 
-    if (!isBizReport && !isAdReport && !isInventoryReport) {
-      alert('Report type not recognised. The file must be one of:\n• Business Report (must have "Ordered Product Sales" column)\n• Advertising Report (must have "Spend" and "ACoS" columns)\n• Inventory Report (must have a "Fulfillable Quantity" / "Available" column)\n\nCheck you downloaded the correct report and are using the CSV export.');
-      event.target.value = ''; return;
-    }
+// RULE: default sale end = end of the current month — unless fewer than 3 days
+// (including today) remain, in which case a "sale until month end" would be uselessly
+// short and the user is really planning NEXT month's sale → roll to end of next month.
+// The date field stays editable either way.
+function defaultSaleEndYmd(d) {
+  const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const remainingDays = eom.getDate() - d.getDate() + 1;
+  if (remainingDays < 3) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  return ymd(eom);
+}
 
-    const parseNum = s => parseFloat((s || '').replace(/[$,%\s]/g, '').replace(/,/g, '')) || 0;
-
-    // Aggregate rows by ASIN (advertising reports have one row per campaign per ASIN;
-    // inventory reports can have one row per fulfillment center, so quantities are summed)
-    const byAsin = {};
-    for (let i = 1; i < lines.length; i++) {
-      const cols = parseCSVRow(lines[i]);
-      const asin = (cols[resolvedAsinCol] || '').trim().replace(/^"|"$/g, '').toUpperCase();
-      if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
-
-      if (!byAsin[asin]) byAsin[asin] = { revenue:0, units:0, spend:0, acosSum:0, acosN:0, adRev:0, adUnits:0, cvrSum:0, cvrN:0, qty:0, qtySeen:false };
-      const d = byAsin[asin];
-
-      if (revenueCol  !== -1) d.revenue  += parseNum(cols[revenueCol]);
-      if (unitsCol    !== -1) d.units    += parseNum(cols[unitsCol]);
-      if (spendCol    !== -1) d.spend    += parseNum(cols[spendCol]);
-      if (adRevCol    !== -1) d.adRev    += parseNum(cols[adRevCol]);
-      if (adUnitCol   !== -1) d.adUnits  += parseNum(cols[adUnitCol]);
-      if (acosCol !== -1) { const v = parseNum(cols[acosCol]); if (v > 0) { d.acosSum += v; d.acosN++; } }
-      if (cvrCol  !== -1) { const v = parseNum(cols[cvrCol]);  if (v > 0) { d.cvrSum  += v; d.cvrN++;  } }
-      if (qtyCol  !== -1) { d.qty += parseNum(cols[qtyCol]); d.qtySeen = true; }
-    }
-
-    let imported = 0, skipped = Object.keys(byAsin).length;
-    for (const [asin, data] of Object.entries(byAsin)) {
-      const product = state.products.find(p => p.asin && p.asin.trim().toUpperCase() === asin);
-      if (!product) continue;
-
-      // Update product CVR from report if available
-      if (data.cvrN > 0) product.inputs.cvr = +(data.cvrSum / data.cvrN).toFixed(1);
-
-      const acos = data.acosN > 0 ? +(data.acosSum / data.acosN).toFixed(1) : undefined;
-      const reportLabel = isBizReport ? 'Business Report' : isAdReport ? 'Advertising Report' : 'Inventory Report';
-      const ci = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-        date: new Date().toISOString(),
-        organicGrowing: 'stable',
-        notes: `Auto-imported from ${reportLabel}. Fill in missing fields below.`
-      };
-      if (data.revenue  > 0)       ci.totalRevenue = +data.revenue.toFixed(2);
-      if (data.units    > 0)       ci.unitsSold30  = Math.round(data.units);
-      if (data.spend    > 0)       ci.totalAdSpend = +data.spend.toFixed(2);
-      if (acos !== undefined)      ci.currentAcos  = acos;
-      if (data.adUnits  > 0)       ci.adSales      = Math.round(data.adUnits);
-      if (data.qtySeen)            ci.inventoryUnits = Math.round(data.qty);
-
-      product.checkins.push(ci);
-      imported++;
-      skipped--;
-    }
-
-    saveToStorage();
-    renderAll();
-
-    if (imported === 0) {
-      const sample = Object.keys(byAsin).slice(0, 3).join(', ');
-      alert(`No products matched.\n\nASINs found in report: ${sample}${Object.keys(byAsin).length > 3 ? '…' : ''}\n\nMake sure each product has its ASIN entered (Edit product → ASIN field). ASINs must match exactly.`);
-    } else {
-      const type = isBizReport ? 'Business Report' : isAdReport ? 'Advertising Report' : 'Inventory Report';
-      const filled = isBizReport ? 'Total Revenue, Units Sold (velocity), CVR' : isAdReport ? 'ACoS, Ad Spend, Ad Sales' : 'Current Inventory';
-      const miss = isBizReport ? 'ACoS + Ad Spend → import Advertising Report next; Inventory → import Inventory Report next'
-        : isAdReport ? 'Total Revenue + Units Sold → import Business Report next; Inventory → import Inventory Report next'
-        : 'Revenue/ACoS/Units Sold → import Business + Advertising Reports next';
-      alert(`✓ Imported check-ins for ${imported} product${imported > 1 ? 's' : ''}.\n\nSource: ${type}\nFilled: ${filled}\nStill needed: ${miss}\n\nCurrent Price is never in any export — enter it manually.`);
-    }
+const _AMZ_MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+// Parse "Jul 06, 2026 - Jul 29, 2026" → { start, end, days (inclusive) } or null.
+function parseDateRangeStr(s) {
+  if (!s) return null;
+  const clean = _amzCell(s);
+  const parts = clean.split(/\s*[-–—]\s*/);
+  if (parts.length !== 2) return null;
+  const parseOne = str => {
+    const m = str.trim().match(/([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})/);
+    if (!m) return null;
+    const mo = _AMZ_MONTHS[m[1].slice(0, 3).toLowerCase()];
+    if (mo === undefined) return null;
+    return new Date(m[3] * 1, mo, m[2] * 1);
   };
-  reader.readAsText(file);
+  const start = parseOne(parts[0]), end = parseOne(parts[1]);
+  if (!start || !end) return null;
+  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1; // inclusive
+  return { start: ymd(start), end: ymd(end), days };
+}
+
+// Business Report → per child-ASIN revenue / units / sessions / cvr / sku.
+function parseBusinessReport(lines, periodDays, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const asinC = idx('child asin', 'asin');
+  const revC  = idx('ordered product sales');
+  const unitsC= idx('units ordered');
+  const sessC = idx('sessions total', 'sessions');
+  const cvrC  = idx('unit session percentage');
+  const skuC  = idx('sku');
+  const byAsin = {};
+  let rowCount = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '' };
+    const d = byAsin[asin];
+    if (revC   !== -1) d.revenue  += parseAmzNum(cols[revC]);
+    if (unitsC !== -1) d.units    += parseAmzNum(cols[unitsC]);
+    if (sessC  !== -1) d.sessions += parseAmzNum(cols[sessC]);
+    if (cvrC   !== -1) { const v = parseAmzNum(cols[cvrC]); if (v > 0) { d.cvr = v; d.cvrSeen = true; } }
+    if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    rowCount++;
+  }
+  for (const a in byAsin) {
+    const d = byAsin[a];
+    if (!d.cvrSeen && d.sessions > 0) d.cvr = +(d.units / d.sessions * 100).toFixed(2);
+  }
+  return { kind: 'business', fileName, periodDays: periodDays || 30, byAsin, rowCount };
+}
+
+// Advertising "Advertised product" report → aggregate per ASIN (one row per campaign).
+function parseAdsReport(lines, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const asinC  = idx('advertised product id', 'advertised asin', 'asin');
+  const spendC = idx('total cost', 'spend');
+  const revC   = idx('sales', '7 day total sales');
+  const unitsC = idx('units sold', '7 day total units', '7 day total orders');
+  const skuC   = idx('advertised product sku', 'sku');
+  const dateC  = idx('date range');
+  const byAsin = {};
+  let rowCount = 0, overallStart = null, overallEnd = null;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { spend: 0, adRev: 0, adUnits: 0, sku: '', start: null, end: null };
+    const d = byAsin[asin];
+    if (spendC !== -1) d.spend   += parseAmzNum(cols[spendC]);
+    if (revC   !== -1) d.adRev   += parseAmzNum(cols[revC]);
+    if (unitsC !== -1) d.adUnits += parseAmzNum(cols[unitsC]);
+    if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (dateC !== -1) {
+      const r = parseDateRangeStr(cols[dateC]);
+      if (r) {
+        if (!d.start || r.start < d.start) d.start = r.start;
+        if (!d.end   || r.end   > d.end)   d.end   = r.end;
+        if (!overallStart || r.start < overallStart) overallStart = r.start;
+        if (!overallEnd   || r.end   > overallEnd)   overallEnd   = r.end;
+      }
+    }
+    rowCount++;
+  }
+  let periodDays = 30;
+  if (overallStart && overallEnd) {
+    periodDays = Math.round((new Date(overallEnd).getTime() - new Date(overallStart).getTime()) / 86400000) + 1;
+  }
+  return { kind: 'ads', fileName, periodDays, byAsin, rowCount, start: overallStart, end: overallEnd };
+}
+
+// Inventory Health report → per ASIN stock / prices / trailing-window units & sales.
+function parseInventoryReport(lines, fileName) {
+  const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+  const idx = (...names) => { for (const n of names) { const i = hdrs.indexOf(n); if (i !== -1) return i; } return -1; };
+  const incIdx = frag => hdrs.findIndex(h => h.includes(frag));
+  const asinC = idx('asin');
+  const skuC  = idx('sku');
+  let availC  = idx('available');
+  if (availC === -1) availC = [incIdx('afn fulfillable quantity'), incIdx('fulfillable quantity'), incIdx('sellable quantity'), incIdx('available quantity')].find(i => i !== -1);
+  if (availC === undefined) availC = -1;
+  const inbC  = idx('inbound quantity');
+  const ypC   = idx('your price');
+  const spC   = idx('sales price');
+  const snapC = idx('snapshot date');
+  const u7C = idx('units shipped t7'), u30C = idx('units shipped t30'), u60C = idx('units shipped t60'), u90C = idx('units shipped t90');
+  const s7C = idx('sales shipped last 7 days'), s30C = idx('sales shipped last 30 days'), s60C = idx('sales shipped last 60 days'), s90C = idx('sales shipped last 90 days');
+  const byAsin = {};
+  let rowCount = 0;
+  for (let i = 1; i < lines.length; i++) {
+    if (asinC === -1) break;
+    const cols = parseCSVRow(lines[i]);
+    const asin = _amzCell(cols[asinC]).toUpperCase();
+    if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
+    if (!byAsin[asin]) byAsin[asin] = { sku: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
+      u7: 0, u30: 0, u60: 0, u90: 0, s7: 0, s30: 0, s60: 0, s90: 0 };
+    const d = byAsin[asin];
+    if (skuC  !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (availC !== -1) d.available += parseAmzNum(cols[availC]);
+    if (inbC   !== -1) d.inboundQty += parseAmzNum(cols[inbC]);
+    if (ypC !== -1 && d.yourPrice <= 0)  { const v = parseAmzNum(cols[ypC]); if (v > 0) d.yourPrice = v; }
+    if (spC !== -1 && d.salesPrice <= 0) { const v = parseAmzNum(cols[spC]); if (v > 0) d.salesPrice = v; }
+    if (snapC !== -1 && !d.snapshotDate) d.snapshotDate = _amzCell(cols[snapC]);
+    if (u7C  !== -1) d.u7  += parseAmzNum(cols[u7C]);
+    if (u30C !== -1) d.u30 += parseAmzNum(cols[u30C]);
+    if (u60C !== -1) d.u60 += parseAmzNum(cols[u60C]);
+    if (u90C !== -1) d.u90 += parseAmzNum(cols[u90C]);
+    if (s7C  !== -1) d.s7  += parseAmzNum(cols[s7C]);
+    if (s30C !== -1) d.s30 += parseAmzNum(cols[s30C]);
+    if (s60C !== -1) d.s60 += parseAmzNum(cols[s60C]);
+    if (s90C !== -1) d.s90 += parseAmzNum(cols[s90C]);
+    rowCount++;
+  }
+  return { kind: 'inventory', fileName, byAsin, rowCount };
+}
+
+// ── F2: multi-file importer (reads all selected CSVs, detects, parses, applies) ──
+function importAmazonReport(event) {
+  const files = [...(event.target.files || [])];
+  if (!files.length) return;
+  const readFile = f => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve({ name: f.name, text: e.target.result });
+    reader.onerror = () => resolve({ name: f.name, text: null });
+    reader.readAsText(f);
+  });
+  Promise.all(files.map(readFile)).then(loaded => {
+    const parsed = [], failures = [];
+    for (const { name, text } of loaded) {
+      if (text == null) { failures.push({ fileName: name, reason: t('could not read file', '无法读取文件') }); continue; }
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) { failures.push({ fileName: name, reason: t('empty or header-only', '文件为空或只有表头') }); continue; }
+      const hdrs = normalizeHeaders(parseCSVRow(lines[0]));
+      const kind = detectAmazonReport(hdrs);
+      if (kind === 'business') {
+        // Business reports carry no dates → ask the user how long the window is.
+        const ans = prompt(t(`"${name}": how many days does this report's date range cover?`, `"${name}"：此报告的日期范围涵盖多少天？`), '30');
+        const pd = parseInt(ans, 10);
+        parsed.push(parseBusinessReport(lines, (pd > 0 ? pd : 30), name));
+      } else if (kind === 'ads') {
+        parsed.push(parseAdsReport(lines, name));
+      } else if (kind === 'inventory') {
+        parsed.push(parseInventoryReport(lines, name));
+      } else {
+        failures.push({ fileName: name, reason: t('unrecognized — expected a Business, Advertising (Advertised product), or Inventory Health CSV', '无法识别 — 应为业务、广告（推广商品）或库存健康CSV') });
+      }
+    }
+    applyAmazonReports(parsed, failures);
+  });
   event.target.value = '';
+}
+
+// ── F2: merge parsed report data into state + create ONE check-in per product per batch ──
+function applyAmazonReports(parsedFiles, failures) {
+  if (!state.reportData) state.reportData = { byAsin: {} };
+  if (!state.reportData.byAsin) state.reportData.byAsin = {};
+  const nowISO = new Date().toISOString();
+  const rd = state.reportData.byAsin;
+
+  // 1) Merge each parsed file's byAsin into the flat per-ASIN report store (overwrite only provided fields).
+  // All files are applied in selection order — if two files of the same kind are selected
+  // (e.g. two Business Reports for different ranges), the later one wins field-by-field.
+  const lastOf = k => { let last = null; for (const f of parsedFiles) if (f.kind === k) last = f; return last; };
+  const bizFile = lastOf('business');
+  const adsFile = lastOf('ads');
+  const invFile = lastOf('inventory');
+
+  const touched = new Set();
+  const merge = (asin, patch) => {
+    const a = asin.toUpperCase();
+    if (!rd[a]) rd[a] = {};
+    Object.assign(rd[a], patch);
+    touched.add(a);
+  };
+  for (const f of parsedFiles) {
+    if (f.kind === 'inventory') for (const [asin, d] of Object.entries(f.byAsin)) {
+      merge(asin, { sku: d.sku, available: d.available, inboundQty: d.inboundQty, yourPrice: d.yourPrice,
+        salesPrice: d.salesPrice, snapshotDate: d.snapshotDate, u7: d.u7, u30: d.u30, u60: d.u60, u90: d.u90,
+        s7: d.s7, s30: d.s30, s60: d.s60, s90: d.s90, invAt: nowISO });
+    }
+    else if (f.kind === 'business') for (const [asin, d] of Object.entries(f.byAsin)) {
+      merge(asin, { bizRevenue: d.revenue, bizUnits: d.units, bizSessions: d.sessions, bizCvr: d.cvr,
+        bizDays: f.periodDays, bizAt: nowISO });
+    }
+    else if (f.kind === 'ads') for (const [asin, d] of Object.entries(f.byAsin)) {
+      merge(asin, { adSpend: d.spend, adRev: d.adRev, adUnits: d.adUnits, adStart: d.start, adEnd: d.end, adAt: nowISO });
+    }
+  }
+
+  // 2) For each ASIN matched to a product: update sku/cvr and create exactly one batch check-in.
+  const kindsLabel = parsedFiles.map(f => {
+    if (f.kind === 'business') return t(`Business (${f.periodDays}d)`, `业务（${f.periodDays}天）`);
+    if (f.kind === 'ads') return t(`Ads (${f.start||'?'}–${f.end||'?'})`, `广告（${f.start||'?'}–${f.end||'?'}）`);
+    return t('Inventory Health', '库存健康');
+  }).join(', ');
+
+  let matchedProducts = 0;
+  for (const p of state.products) {
+    if (!p.asin) continue;
+    const a = p.asin.trim().toUpperCase();
+    if (!touched.has(a)) continue;
+    const r = rd[a] || {};
+    matchedProducts++;
+
+    // Amazon is the source of truth for SKU.
+    if (invFile && r.sku) p.sku = r.sku;
+    // Update CVR from business report when present.
+    if (bizFile && r.bizCvr > 0) p.inputs.cvr = +r.bizCvr.toFixed(1);
+
+    const salesPrice = r.salesPrice || 0, yourPrice = r.yourPrice || 0;
+    const spend = r.adSpend || 0, adRev = r.adRev || 0, adUnits = r.adUnits || 0;
+    const bizRevenue = r.bizRevenue || 0, bizUnits = r.bizUnits || 0;
+    const s30 = r.s30 || 0, u30 = (r.u30 !== undefined ? r.u30 : null), available = (r.available !== undefined ? r.available : null);
+
+    const ci = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      date: nowISO,
+      organicGrowing: 'stable',
+      periodDays: bizFile ? bizFile.periodDays : 30,
+      notes: t(`Imported from: ${kindsLabel}`, `导入自：${kindsLabel}`)
+    };
+    const price = (salesPrice > 0 ? salesPrice : yourPrice) || undefined;
+    if (price !== undefined)                 ci.currentPrice = price;
+    if (adRev > 0)                           ci.currentAcos = +(spend / adRev * 100).toFixed(1);
+    if (adUnits > 0)                         ci.adSales = Math.round(adUnits);
+    const totalRev = bizRevenue > 0 ? +bizRevenue.toFixed(2) : (s30 > 0 ? +s30.toFixed(2) : undefined);
+    if (totalRev !== undefined)              ci.totalRevenue = totalRev;
+    if (spend > 0)                           ci.totalAdSpend = +spend.toFixed(2);
+    const units = bizUnits > 0 ? Math.round(bizUnits) : (u30 != null ? Math.round(u30) : undefined);
+    if (units !== undefined)                 ci.unitsSold30 = units;
+    if (available != null)                   ci.inventoryUnits = Math.round(available);
+
+    p.checkins.push(ci);
+  }
+
+  saveToStorage();
+  renderAll();
+
+  const unmatched = [...touched].filter(a => !state.products.some(p => p.asin && p.asin.trim().toUpperCase() === a));
+  showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched);
+}
+
+// ── F2: rich import summary in the shared import-report-modal ──
+function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched) {
+  const icon = k => k === 'business' ? '📊' : k === 'ads' ? '📣' : '📦';
+  const kindName = k => k === 'business' ? t('Business Report', '业务报告') : k === 'ads' ? t('Advertising Report', '广告报告') : t('Inventory Health', '库存健康');
+  const period = f => f.kind === 'business' ? t(`${f.periodDays}-day window`, `${f.periodDays}天窗口`)
+    : f.kind === 'ads' ? `${f.start || '?'} → ${f.end || '?'}`
+    : t('snapshot', '快照');
+  let body = `<div style="font-size:0.95rem;font-weight:700;color:var(--c-e8eaf0);margin-bottom:10px;">${t('Amazon report import', '亚马逊报告导入')}</div>`;
+
+  if (parsedFiles.length) {
+    body += parsedFiles.map(f =>
+      `<div style="padding:7px 0;border-bottom:1px solid var(--c-1e2130);font-size:0.78rem;color:var(--c-8b8fa8);">
+        ${icon(f.kind)} <strong style="color:var(--c-e8eaf0);">${f.fileName}</strong>
+        <span style="color:var(--c-6b6f8a);"> — ${kindName(f.kind)} · ${Object.keys(f.byAsin).length} ${t('ASINs', '个ASIN')} · ${period(f)}</span>
+      </div>`).join('');
+  } else {
+    body += `<div class="alert warn" style="margin:8px 0;">${t('No recognizable report files were parsed.', '未解析到可识别的报告文件。')}</div>`;
+  }
+
+  body += `<div style="margin-top:10px;font-size:0.82rem;color:var(--c-e8eaf0);">${t(`Matched ${matchedProducts} product${matchedProducts !== 1 ? 's' : ''}`, `匹配到 ${matchedProducts} 个产品`)} · <span style="color:var(--c-4ade80);">${matchedProducts > 0 ? t('one check-in added per product', '每个产品添加一条检查记录') : t('no check-ins added', '未添加检查记录')}</span></div>`;
+
+  if (unmatched.length) {
+    const list = unmatched.map(a => `<span style="display:inline-block;font-family:monospace;font-size:0.72rem;color:var(--c-fca5a5);margin:2px 6px 2px 0;">${a}</span>`).join('');
+    if (unmatched.length > 8) {
+      body += `<button class="topbar-btn" style="margin-top:8px;" onclick="const l=document.getElementById('ir-unmatched');const open=l.style.display!=='none';l.style.display=open?'none':'';this.textContent=(open?'▸ ':'▾ ')+this.dataset.label;"
+        data-label="${t(`${unmatched.length} unmatched ASINs`, `${unmatched.length} 个未匹配的ASIN`)}">▸ ${t(`${unmatched.length} unmatched ASINs`, `${unmatched.length} 个未匹配的ASIN`)}</button>
+        <div id="ir-unmatched" style="display:none;margin-top:6px;max-height:32vh;overflow-y:auto;">${list}<div style="font-size:0.7rem;color:var(--c-6b6f8a);margin-top:6px;">${t('Add these ASINs to products (or import a CSV) to match them.', '将这些ASIN添加到产品（或导入CSV）以进行匹配。')}</div></div>`;
+    } else {
+      body += `<div style="margin-top:8px;font-size:0.75rem;"><span style="color:var(--c-6b6f8a);">${t('Unmatched ASINs:', '未匹配的ASIN：')}</span> ${list}</div>`;
+    }
+  }
+
+  if (failures.length) {
+    body += `<div style="margin-top:10px;">` + failures.map(f =>
+      `<div class="alert bad" style="margin:4px 0;font-size:0.74rem;"><strong>${f.fileName}</strong> — ${f.reason}</div>`).join('') + `</div>`;
+  }
+
+  document.getElementById('ir-body').innerHTML = body;
+  openModalEl('import-report-modal');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3894,11 +4197,11 @@ function exportCheckinsCSV(productId) {
   const p = state.products.find(x => x.id === productId);
   if (!p || !p.checkins.length) return;
   const prices = calcPrices(p.inputs);
-  const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','inventory_units','units_sold_30d','sales_velocity_per_day','days_of_cover','inventory_status','notes'];
+  const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','inventory_units','units_sold_30d','period_days','sales_velocity_per_day','days_of_cover','inventory_status','notes'];
   const rows = p.checkins.map(c => {
     const tacos = c.totalRevenue && c.totalAdSpend ? (c.totalAdSpend/c.totalRevenue*100).toFixed(1) : '';
     const pc = c.currentPrice ? classifyPrice(c.currentPrice, prices) : null;
-    const inv = getInventoryStatus(c.inventoryUnits, c.unitsSold30);
+    const inv = getInventoryStatus(c.inventoryUnits, c.unitsSold30, c.periodDays);
     return [
       new Date(c.date).toISOString().slice(0,10),
       c.currentPrice || '',
@@ -3911,6 +4214,7 @@ function exportCheckinsCSV(productId) {
       c.organicGrowing || '',
       c.inventoryUnits !== undefined ? c.inventoryUnits : '',
       c.unitsSold30 !== undefined ? c.unitsSold30 : '',
+      c.periodDays || 30,
       inv && inv.velocity ? inv.velocity.toFixed(2) : '',
       inv && inv.daysOfCover !== null ? Math.round(inv.daysOfCover) : '',
       inv ? `"${INVENTORY_STATUS_META[inv.status].label}"` : '',
@@ -3925,6 +4229,676 @@ function exportCheckinsCSV(productId) {
   a.download = `${p.name.replace(/[^a-z0-9]/gi,'-').toLowerCase()}-checkins-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// XLSX READER (F4) — zero-dependency ZIP + worksheet parser (regex only, no DOM).
+// Node-compatible so test.js can exercise it; uses DecompressionStream/Blob/Response
+// (global in modern browsers and Node 18+) for DEFLATE entries.
+// ═══════════════════════════════════════════════════════════════════════════
+function _zU16(dv, o) { return dv.getUint16(o, true); }
+function _zU32(dv, o) { return dv.getUint32(o, true); }
+
+async function _amzInflateRaw(bytes) {
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+async function unzip(arrayBuffer) {
+  const bytes = arrayBuffer instanceof Uint8Array ? arrayBuffer : new Uint8Array(arrayBuffer);
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // Scan the last 64KB for the End Of Central Directory record (0x06054b50).
+  let eocd = -1;
+  const minPos = Math.max(0, bytes.length - 65536 - 22);
+  for (let i = bytes.length - 22; i >= minPos; i--) {
+    if (_zU32(dv, i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd === -1) throw new Error('Not a valid ZIP (EOCD not found) — is this really an .xlsx file?');
+  const count = _zU16(dv, eocd + 10);
+  const cdOffset = _zU32(dv, eocd + 16);
+  const entries = {};
+  let p = cdOffset;
+  for (let n = 0; n < count; n++) {
+    if (_zU32(dv, p) !== 0x02014b50) throw new Error('ZIP central directory corrupt');
+    const method = _zU16(dv, p + 10);
+    const compSize = _zU32(dv, p + 20);
+    const nameLen = _zU16(dv, p + 28);
+    const extraLen = _zU16(dv, p + 30);
+    const commentLen = _zU16(dv, p + 32);
+    const localOff = _zU32(dv, p + 42);
+    const name = new TextDecoder().decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    // Re-read the LOCAL header's own name/extra lengths — they can differ from the central dir.
+    if (_zU32(dv, localOff) !== 0x04034b50) throw new Error('ZIP local header corrupt');
+    const lNameLen = _zU16(dv, localOff + 26);
+    const lExtraLen = _zU16(dv, localOff + 28);
+    const dataStart = localOff + 30 + lNameLen + lExtraLen;
+    entries[name] = { method, slice: bytes.subarray(dataStart, dataStart + compSize) };
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  const result = {};
+  for (const name in entries) {
+    const { method, slice } = entries[name];
+    if (method === 0) result[name] = slice.slice();
+    else if (method === 8) result[name] = await _amzInflateRaw(slice);
+    else throw new Error('Unsupported ZIP compression method ' + method + ' for ' + name);
+  }
+  return result;
+}
+
+function _xmlUnescape(s) {
+  return s.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+          .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
+function parseXlsxSharedStrings(xml) {
+  if (!xml) return [];
+  const strings = [];
+  const siRe = /<si\b[^>]*>([\s\S]*?)<\/si>/g;
+  let m;
+  while ((m = siRe.exec(xml)) !== null) {
+    let text = '';
+    const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let tm;
+    while ((tm = tRe.exec(m[1])) !== null) text += _xmlUnescape(tm[1]);
+    strings.push(text);
+  }
+  return strings;
+}
+
+function _colRefToIndex(ref) {
+  const m = ref.match(/^([A-Z]+)/);
+  if (!m) return 0;
+  let col = 0;
+  for (const ch of m[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
+  return col - 1;
+}
+
+function parseXlsxSheet(sheetXml, sharedStrings) {
+  const ss = sharedStrings || [];
+  const rows = [];
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g;
+  let rm;
+  while ((rm = rowRe.exec(sheetXml)) !== null) {
+    const inner = rm[1] || '';
+    const cells = [];
+    const cellRe = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+    let cm;
+    while ((cm = cellRe.exec(inner)) !== null) {
+      const attrs = cm[1] || '', bodyc = cm[2] || '';
+      const refM = attrs.match(/r="([A-Z]+\d+)"/);
+      const tM = attrs.match(/t="([^"]+)"/);
+      const type = tM ? tM[1] : 'n';
+      const colIdx = refM ? _colRefToIndex(refM[1]) : cells.length;
+      let val = '';
+      if (type === 's') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/);
+        if (vM) { const si = parseInt(_xmlUnescape(vM[1]), 10); val = ss[si] !== undefined ? ss[si] : ''; }
+      } else if (type === 'inlineStr') {
+        let txt = ''; const tRe = /<t\b[^>]*>([\s\S]*?)<\/t>/g; let tm;
+        while ((tm = tRe.exec(bodyc)) !== null) txt += _xmlUnescape(tm[1]);
+        val = txt;
+      } else if (type === 'str') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM ? _xmlUnescape(vM[1]) : '';
+      } else if (type === 'b') {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM && vM[1].trim() === '1' ? 'TRUE' : 'FALSE';
+      } else {
+        const vM = bodyc.match(/<v>([\s\S]*?)<\/v>/); val = vM ? _xmlUnescape(vM[1]) : '';
+      }
+      while (cells.length < colIdx) cells.push('');
+      cells[colIdx] = val;
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+
+async function readXlsxFirstSheet(arrayBuffer) {
+  const files = await unzip(arrayBuffer);
+  const dec = new TextDecoder();
+  let sheetName = null;
+  if (files['xl/worksheets/sheet1.xml']) sheetName = 'xl/worksheets/sheet1.xml';
+  else {
+    const names = Object.keys(files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+      .sort((a, b) => (+a.match(/sheet(\d+)/)[1]) - (+b.match(/sheet(\d+)/)[1]));
+    if (names.length) sheetName = names[0];
+  }
+  if (!sheetName) throw new Error('No worksheet found inside the .xlsx file.');
+  const sharedStrings = files['xl/sharedStrings.xml'] ? parseXlsxSharedStrings(dec.decode(files['xl/sharedStrings.xml'])) : [];
+  return parseXlsxSheet(dec.decode(files[sheetName]), sharedStrings);
+}
+
+// ── F4: incoming-shipments xlsx import (matches products by Merchant SKU) ──
+function importShipmentsXlsx(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    let rows;
+    try { rows = await readXlsxFirstSheet(e.target.result); }
+    catch (err) { alert(t('Could not read the xlsx: ', '无法读取xlsx：') + err.message); return; }
+    const hdrIdx = rows.findIndex(r => r.some(c => (c || '').trim() === 'Merchant SKU'));
+    if (hdrIdx === -1) { alert(t('No "Merchant SKU" column found — is this the 总体控制表 spreadsheet?', '未找到"Merchant SKU"列 — 这是总体控制表吗？')); return; }
+    const hdr = rows[hdrIdx].map(c => (c || '').trim());
+    // RULE: "Inbound" must match EXACTLY — a substring/indexOf test would collide with "AWD Inbound".
+    const col = name => hdr.indexOf(name);
+    const num = (r, name) => { const i = col(name); return i === -1 ? 0 : (parseFloat((r[i] || '').toString().replace(/[$,\s]/g, '')) || 0); };
+    const str = (r, name) => { const i = col(name); return i === -1 ? '' : (r[i] || '').toString().trim(); };
+    const bySku = {};
+    let parsedRows = 0;
+    for (let i = hdrIdx + 1; i < rows.length; i++) {
+      const r = rows[i];
+      const sku = str(r, 'Merchant SKU');
+      if (!sku) continue;
+      bySku[sku] = {
+        name: str(r, 'model_name'),
+        units30: num(r, 'Units Sold Last 30 Days'),
+        totalUnits: num(r, 'Total Units'),
+        inbound: num(r, 'Inbound'),
+        available: num(r, 'Available'),
+        awdInbound: num(r, 'AWD Inbound'),
+        awdAvailable: num(r, 'AWD Available'),
+        working: num(r, 'Working'),
+        shipped: num(r, 'Shipped'),
+        receiving: num(r, 'Receiving'),
+        fcTransfer: num(r, 'FC transfer'),
+        fcProcessing: num(r, 'FC Processing'),
+        customerOrder: num(r, 'Customer Order'),
+        recQty: num(r, 'Recommended replenishment qty'),
+        recAction: str(r, 'Recommended action')
+      };
+      parsedRows++;
+    }
+    state.shipments = { importedAt: new Date().toISOString(), filename: file.name, bySku };
+    saveToStorage();
+    renderAll();
+    // Match count: a SKU matches if it equals a product's sku (or reportData sku).
+    const skuSet = new Set();
+    for (const p of state.products) if (p.sku) skuSet.add(p.sku);
+    if (state.reportData && state.reportData.byAsin) for (const a in state.reportData.byAsin) { const s = state.reportData.byAsin[a].sku; if (s) skuSet.add(s); }
+    let matched = 0; for (const s in bySku) if (skuSet.has(s)) matched++;
+    alert(t(`✓ Imported ${parsedRows} shipment rows from "${file.name}".\nMatched ${matched} to known SKUs · ${parsedRows - matched} not yet linked to a product.\n\nThe Sale Planner now shows the inbound pipeline per product.`,
+            `✓ 已从"${file.name}"导入 ${parsedRows} 行货件。\n匹配到 ${matched} 个已知SKU · ${parsedRows - matched} 个尚未关联产品。\n\n促销计划现在显示每个产品的在途库存。`));
+  };
+  reader.onerror = () => alert(t('Could not read the file.', '无法读取文件。'));
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// XLSX WRITER (F5) — pure, zero-dependency. Emits Amazon's PriceAndQuantity feed
+// as a real .xlsx (STORED zip, so no CompressionStream needed). Node-testable.
+// ═══════════════════════════════════════════════════════════════════════════
+function xmlEscapeXlsx(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function colIndexToRef(i) {
+  let s = ''; i = i + 1;
+  while (i > 0) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); }
+  return s;
+}
+function sheetXmlFromRows(rows) {
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  for (let r = 0; r < rows.length; r++) {
+    const cells = rows[r], rowNum = r + 1;
+    let rowXml = `<row r="${rowNum}">`;
+    for (let c = 0; c < cells.length; c++) {
+      const val = cells[c];
+      if (val === '' || val === null || val === undefined) continue;
+      const ref = colIndexToRef(c) + rowNum;
+      if (typeof val === 'number') rowXml += `<c r="${ref}"><v>${val}</v></c>`;
+      else rowXml += `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscapeXlsx(val)}</t></is></c>`;
+    }
+    xml += rowXml + '</row>';
+  }
+  return xml + '</sheetData></worksheet>';
+}
+
+const _CRC_TABLE = (() => {
+  const tbl = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); tbl[n] = c >>> 0; }
+  return tbl;
+})();
+function crc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = _CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function _strToBytesXlsx(str) {
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(str);
+  return Uint8Array.from(Buffer.from(str, 'utf8'));
+}
+// STORED (method 0) zip — no compression so decoding needs no DecompressionStream.
+function zipStore(files) {
+  const enc = files.map(f => ({ nameBytes: _strToBytesXlsx(f.name), data: f.data, crc: crc32(f.data) }));
+  const chunks = []; let offset = 0; const localOffsets = [];
+  const u16 = n => [n & 0xFF, (n >>> 8) & 0xFF];
+  const u32 = n => [n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF];
+  for (const f of enc) {
+    localOffsets.push(offset);
+    const h = Uint8Array.from([].concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(f.crc), u32(f.data.length), u32(f.data.length), u16(f.nameBytes.length), u16(0)));
+    chunks.push(h, f.nameBytes, f.data);
+    offset += h.length + f.nameBytes.length + f.data.length;
+  }
+  const cdStart = offset;
+  for (let i = 0; i < enc.length; i++) {
+    const f = enc[i];
+    const c = Uint8Array.from([].concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+      u32(f.crc), u32(f.data.length), u32(f.data.length), u16(f.nameBytes.length), u16(0), u16(0), u16(0), u16(0),
+      u32(0), u32(localOffsets[i])));
+    chunks.push(c, f.nameBytes);
+    offset += c.length + f.nameBytes.length;
+  }
+  const eocd = Uint8Array.from([].concat(u32(0x06054b50), u16(0), u16(0), u16(enc.length), u16(enc.length),
+    u32(offset - cdStart), u32(cdStart), u16(0)));
+  chunks.push(eocd);
+  let total = 0; for (const c of chunks) total += c.length;
+  const out = new Uint8Array(total); let p = 0; for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+
+// PriceAndQuantity template header rows (VERBATIM from the .xlsm 'Template' sheet).
+const PQ_SETTINGS_ROW1 = 'settings=feedType=256&timestamp=2026-06-30T22%3A06%3A04.523Z&contributorId=amzn1.cr.o.AODBV7DB6KCBN&primaryMarketplaceId=amzn1.mp.o.ATVPDKIKX0DER&contentLanguageTag=en_US&templateIdentifier=39e0163e-fe4b-436f-b663-6bed17e81396&headerLanguageTag=en_US&labelRow=4&attributeRow=5&dataRow=7&flavor=seller-price-quantity&isProcessingSummary=false&isEdit=false&productTypeRequirement=LISTING_OFFER_ONLY&listingsItemRequirement=LISTING_OFFER_ONLY&reportProvenance=false&settingsHasAllDelocalizationData=true&ptds=UFJPRFVDVA%3D%3D&ptdToNamespaceMap=eyJQUk9EVUNUIjoiaW5nZXN0aW9uIn0%3D&browseClassifications=W3sicHJvZHVjdFR5cGUiOiJQUk9EVUNUIiwiYnJvd3NlQ2xhc3NpZmljYXRpb25LZXlzIjpbXX1d&vendorCodes=W10%3D&AttributeDefaultValues=eyJwcm9kdWN0X3R5cGUjMS52YWx1ZSI6IlBST0RVQ1QiLCJyZWNvcmRfYWN0aW9uIzEudmFsdWUiOiJwYXJ0aWFsX3VwZGF0ZSJ9&attributeSettings=W3siYXR0cmlidXRlIjoicHJvZHVjdF90eXBlIzEudmFsdWUiLCJhbGlhc2VzIjp7IlBST0RVQ1QiOiJQUk9EVUNUIn19LHsiYXR0cmlidXRlIjoiZnVsZmlsbG1lbnRfYXZhaWxhYmlsaXR5IzEuaXNfaW52ZW50b3J5X2F2YWlsYWJsZSIsImFsaWFzZXMiOnsiRW5hYmxlZCI6InRydWUiLCJEaXNhYmxlZCI6ImZhbHNlIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbbWFya2V0cGxhY2VfaWQ9QVRWUERLSUtYMERFUl1bYXVkaWVuY2U9QjJCXSMxLnF1YW50aXR5X2Rpc2NvdW50X3BsYW4jMS5zY2hlZHVsZSMxLmRpc2NvdW50X3R5cGUiLCJhbGlhc2VzIjp7IlBlcmNlbnQiOiJwZXJjZW50IiwiRGVsZXRlIFF1YW50aXR5IERpc2NvdW50cyI6ImFtem4xLnZvbHQuY3YuZGVsZXRlX3VtcF90b3BfbGV2ZWxfZmllbGQiLCJGaXhlZCI6ImZpeGVkIn19LHsiYXR0cmlidXRlIjoibWVyY2hhbnRfc2hpcHBpbmdfZ3JvdXAjMS52YWx1ZSIsImFsaWFzZXMiOnsiTWlncmF0ZWQgVGVtcGxhdGUiOiJsZWdhY3ktdGVtcGxhdGUtaWQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclttYXJrZXRwbGFjZV9pZD1BVFZQREtJS1gwREVSXVthdWRpZW5jZT1BTExdIzEub3VyX3ByaWNlIzEuc2NoZWR1bGUjMS52YWx1ZV93aXRoX3RheCIsImFsaWFzZXMiOnsiRGVsZXRlIE9mZmVyIChTZWxsIG9uIEFtYXpvbikiOiJhbXpuMS52b2x0LmN2LmRlbGV0ZV91bXBfdmFyaWFudCJ9fSx7ImF0dHJpYnV0ZSI6InB1cmNoYXNhYmxlX29mZmVyW21hcmtldHBsYWNlX2lkPUFUVlBES0lLWDBERVJdW2F1ZGllbmNlPUFMTF0jMS5hdXRvbWF0ZWRfcHJpY2luZ19tZXJjaGFuZGlzaW5nX3J1bGVfcGxhbiMxLm1lcmNoYW5kaXNpbmdfcnVsZS5ydWxlX2lkIiwiYWxpYXNlcyI6eyJObyBQcmljZSBSdWxlIjoiZW1wdHlfdmFsdWVfbGFiZWwiLCJDb21wZXRpdGl2ZSBQcmljZSBSdWxlIGJ5IEFtYXpvbiI6IjUxMTM0MTU0MTIyLUNPTVBFVElUSVZFX0JVWUJPWCJ9fSx7ImF0dHJpYnV0ZSI6InB1cmNoYXNhYmxlX29mZmVyW2F1ZGllbmNlPUIyQl0jMS5jdXJyZW5jeSIsImFsaWFzZXMiOnsiRkpEIjoiRkpEIiwiTVhOIjoiTVhOIiwiU0NSIjoiU0NSIiwiTFZMIjoiTFZMIiwiQ0RGIjoiQ0RGIiwiR1RRIjoiR1RRIiwiQkJEIjoiQkJEIiwiQ0xQIjoiQ0xQIiwiVUdYIjoiVUdYIiwiSE5MIjoiSE5MIiwiWkFSIjoiWkFSIiwiVE5EIjoiVE5EIiwiU1ROIjoiU1ROIiwiU0xMIjoiU0xMIiwiQlNEIjoiQlNEIiwiU0RHIjoiU0RHIiwiSVFEIjoiSVFEIiwiR01EIjoiR01EIiwiQ1VQIjoiQ1VQIiwiVFdEIjoiVFdEIiwiUlNEIjoiUlNEIiwiRE9QIjoiRE9QIiwiS01GIjoiS01GIiwiTVlSIjoiTVlSIiwiRktQIjoiRktQIiwiWE9GIjoiWE9GIiwiR0VMIjoiR0VMIiwiVVlVIjoiVVlVIiwiTUFEIjoiTUFEIiwiQ1ZFIjoiQ1ZFIiwiVE9QIjoiVE9QIiwiUEdLIjoiUEdLIiwiT01SIjoiT01SIiwiQVpOIjoiQVpOIiwiU0VLIjoiU0VLIiwiS0VTIjoiS0VTIiwiVUFIIjoiVUFIIiwiQlROIjoiQlROIiwiR05GIjoiR05GIiwiTVpOIjoiTVpOIiwiRVJOIjoiRVJOIiwiU1ZDIjoiU1ZDIiwiQVJTIjoiQVJTIiwiUUFSIjoiUUFSIiwiSVJSIjoiSVJSIiwiWFBGIjoiWFBGIiwiVVpTIjoiVVpTIiwiVEhCIjoiVEhCIiwiQ05ZIjoiQ05ZIiwiTVJVIjoiTVJVIiwiQkRUIjoiQkRUIiwiTFlEIjoiTFlEIiwiQk1EIjoiQk1EIiwiUEhQIjoiUEhQIiwiS1dEIjoiS1dEIiwiUlVCIjoiUlVCIiwiUFlHIjoiUFlHIiwiSk1EIjoiSk1EIiwiSVNLIjoiSVNLIiwiQkVGIjoiQkVGIiwiRVNQIjoiRVNQIiwiQ09QIjoiQ09QIiwiVVNEIjoiVVNEIiwiTUtEIjoiTUtEIiwiRFpEIjoiRFpEIiwiUEFCIjoiUEFCIiwiU0dEIjoiU0dEIiwiR0dQIjoiR0dQIiwiRVRCIjoiRVRCIiwiSkVQIjoiSkVQIiwiVlVWIjoiVlVWIiwiVkVGIjoiVkVGIiwiU09TIjoiU09TIiwiS0dTIjoiS0dTIiwiTEFLIjoiTEFLIiwiQk5EIjoiQk5EIiwiWEFGIjoiWEFGIiwiTFJEIjoiTFJEIiwiSVRMIjoiSVRMIiwiSFJLIjoiSFJLIiwiQ0hGIjoiQ0hGIiwiQVRTIjoiQVRTIiwiREpGIjoiREpGIiwiQUxMIjoiQUxMIiwiWk1XIjoiWk1XIiwiVkVTIjoiVkVTIiwiVFpTIjoiVFpTIiwiVk5EIjoiVk5EIiwiQVVEIjoiQVVEIiwiSUxTIjoiSUxTIiwiS1BXIjoiS1BXIiwiR1lEIjoiR1lEIiwiR0hTIjoiR0hTIiwiTURMIjoiTURMIiwiS0hSIjoiS0hSIiwiQk9CIjoiQk9CIiwiSURSIjoiSURSIiwiS1lEIjoiS1lEIiwiQU1EIjoiQU1EIiwiVFJZIjoiVFJZIiwiU0hQIjoiU0hQIiwiQldQIjoiQldQIiwiTEJQIjoiTEJQIiwiVEpTIjoiVEpTIiwiSk9EIjoiSk9EIiwiUldGIjoiUldGIiwiSEtEIjoiSEtEIiwiQUVEIjoiQUVEIiwiRVVSIjoiRVVSIiwiTFNMIjoiTFNMIiwiREtLIjoiREtLIiwiQ0FEIjoiQ0FEIiwiQkdOIjoiQkdOIiwiTU1LIjoiTU1LIiwiRUVLIjoiRUVLIiwiU1lQIjoiU1lQIiwiTk9LIjoiTk9LIiwiTVVSIjoiTVVSIiwiSU1QIjoiSU1QIiwiR0lQIjoiR0lQIiwiUk9OIjoiUk9OIiwiTEtSIjoiTEtSIiwiTkdOIjoiTkdOIiwiQ1pLIjoiQ1pLIiwiQ1JDIjoiQ1JDIiwiUEtSIjoiUEtSIiwiWENEIjoiWENEIiwiR1JEIjoiR1JEIiwiSFRHIjoiSFRHIiwiQU5HIjoiQU5HIiwiQkhEIjoiQkhEIiwiUFRFIjoiUFRFIiwiU1pMIjoiU1pMIiwiU1JEIjoiU1JEIiwiS1pUIjoiS1pUIiwiVFREIjoiVFREIiwiU0FSIjoiU0FSIiwiTFRMIjoiTFRMIiwiWUVSIjoiWUVSIiwiTVZSIjoiTVZSIiwiQUZOIjoiQUZOIiwiSU5SIjoiSU5SIiwiTlBSIjoiTlBSIiwiS1JXIjoiS1JXIiwiQVdHIjoiQVdHIiwiTU5UIjoiTU5UIiwiSlBZIjoiSlBZIiwiUExOIjoiUExOIiwiQU9BIjoiQU9BIiwiU0JEIjoiU0JEIiwiR0JQIjoiR0JQIiwiQ1NEIjoiQ1NEIiwiQllOIjoiQllOIiwiSFVGIjoiSFVGIiwiQllSIjoiQllSIiwiTFVGIjoiTFVGIiwiQklGIjoiQklGIiwiTVdLIjoiTVdLIiwiTUdBIjoiTUdBIiwiRklNIjoiRklNIiwiREVNIjoiREVNIiwiQlpEIjoiQlpEIiwiQkFNIjoiQkFNIiwiTU9QIjoiTU9QIiwiRUdQIjoiRUdQIiwiTkFEIjoiTkFEIiwiU1NQIjoiU1NQIiwiU0tLIjoiU0tLIiwiTklPIjoiTklPIiwiUEVOIjoiUEVOIiwiV1NUIjoiV1NUIiwiTlpEIjoiTlpEIiwiVE1UIjoiVE1UIiwiRlJGIjoiRlJGIiwiQlJMIjoiQlJMIn19LHsiYXR0cmlidXRlIjoibWVyY2hhbnRfc2hpcHBpbmdfZ3JvdXBbbWFya2V0cGxhY2VfaWQ9QVRWUERLSUtYMERFUl0jMS52YWx1ZSIsImFsaWFzZXMiOnsiTWlncmF0ZWQgVGVtcGxhdGUiOiJsZWdhY3ktdGVtcGxhdGUtaWQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclttYXJrZXRwbGFjZV9pZD1BVFZQREtJS1gwREVSXVthdWRpZW5jZT1CMkJdIzEub3VyX3ByaWNlIzEuc2NoZWR1bGUjMS52YWx1ZV93aXRoX3RheCIsImFsaWFzZXMiOnsiRGVsZXRlIE9mZmVyIChBbWF6b24gQnVzaW5lc3MgKEIyQikpIjoiYW16bjEudm9sdC5jdi5kZWxldGVfdW1wX3ZhcmlhbnQifX0seyJhdHRyaWJ1dGUiOiJwdXJjaGFzYWJsZV9vZmZlclthdWRpZW5jZT1CMkJdIzEucXVhbnRpdHlfZGlzY291bnRfcGxhbiMxLnNjaGVkdWxlIzEuZGlzY291bnRfdHlwZSIsImFsaWFzZXMiOnsiUGVyY2VudCI6InBlcmNlbnQiLCJGaXhlZCI6ImZpeGVkIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbYXVkaWVuY2U9QUxMXSMxLmF1dG9tYXRlZF9wcmljaW5nX21lcmNoYW5kaXNpbmdfcnVsZV9wbGFuIzEubWVyY2hhbmRpc2luZ19ydWxlLnJ1bGVfaWQiLCJhbGlhc2VzIjp7Ik5vIFByaWNlIFJ1bGUiOiJlbXB0eV92YWx1ZV9sYWJlbCIsIkNvbXBldGl0aXZlIFByaWNlIFJ1bGUgYnkgQW1hem9uIjoiNTExMzQxNTQxMjItQ09NUEVUSVRJVkVfQlVZQk9YIn19LHsiYXR0cmlidXRlIjoiZnVsZmlsbG1lbnRfYXZhaWxhYmlsaXR5IzEuZnVsZmlsbG1lbnRfY2hhbm5lbF9jb2RlIiwiYWxpYXNlcyI6eyJBTUFaT05fVVMyTVhfUkFGTiI6IkFNQVpPTl9VUzJNWF9SQUZOIiwiRnVsZmlsbG1lbnQgYnkgTWVyY2hhbnQgKERlZmF1bHQpIjoiREVGQVVMVCIsIjhjZDZhZTEzLTlhNGQtNDBhMS1iOGZmLTBkZjg0ZWQyYTRiZCI6IjhjZDZhZTEzLTlhNGQtNDBhMS1iOGZmLTBkZjg0ZWQyYTRiZCIsIkZ1bGZpbGxtZW50IGJ5IEFtYXpvbiAoTkEpIjoiQU1BWk9OX05BIn19LHsiYXR0cmlidXRlIjoicHVyY2hhc2FibGVfb2ZmZXJbYXVkaWVuY2U9QUxMXSMxLmN1cnJlbmN5IiwiYWxpYXNlcyI6eyJGSkQiOiJGSkQiLCJNWE4iOiJNWE4iLCJTQ1IiOiJTQ1IiLCJMVkwiOiJMVkwiLCJDREYiOiJDREYiLCJHVFEiOiJHVFEiLCJCQkQiOiJCQkQiLCJDTFAiOiJDTFAiLCJVR1giOiJVR1giLCJITkwiOiJITkwiLCJaQVIiOiJaQVIiLCJUTkQiOiJUTkQiLCJTVE4iOiJTVE4iLCJTTEwiOiJTTEwiLCJCU0QiOiJCU0QiLCJTREciOiJTREciLCJJUUQiOiJJUUQiLCJHTUQiOiJHTUQiLCJDVVAiOiJDVVAiLCJUV0QiOiJUV0QiLCJSU0QiOiJSU0QiLCJET1AiOiJET1AiLCJLTUYiOiJLTUYiLCJNWVIiOiJNWVIiLCJGS1AiOiJGS1AiLCJYT0YiOiJYT0YiLCJHRUwiOiJHRUwiLCJVWVUiOiJVWVUiLCJNQUQiOiJNQUQiLCJDVkUiOiJDVkUiLCJUT1AiOiJUT1AiLCJQR0siOiJQR0siLCJPTVIiOiJPTVIiLCJBWk4iOiJBWk4iLCJTRUsiOiJTRUsiLCJLRVMiOiJLRVMiLCJVQUgiOiJVQUgiLCJCVE4iOiJCVE4iLCJHTkYiOiJHTkYiLCJNWk4iOiJNWk4iLCJFUk4iOiJFUk4iLCJTVkMiOiJTVkMiLCJBUlMiOiJBUlMiLCJRQVIiOiJRQVIiLCJJUlIiOiJJUlIiLCJYUEYiOiJYUEYiLCJVWlMiOiJVWlMiLCJUSEIiOiJUSEIiLCJDTlkiOiJDTlkiLCJNUlUiOiJNUlUiLCJCRFQiOiJCRFQiLCJMWUQiOiJMWUQiLCJCTUQiOiJCTUQiLCJQSFAiOiJQSFAiLCJLV0QiOiJLV0QiLCJSVUIiOiJSVUIiLCJQWUciOiJQWUciLCJKTUQiOiJKTUQiLCJJU0siOiJJU0siLCJCRUYiOiJCRUYiLCJFU1AiOiJFU1AiLCJDT1AiOiJDT1AiLCJVU0QiOiJVU0QiLCJNS0QiOiJNS0QiLCJEWkQiOiJEWkQiLCJQQUIiOiJQQUIiLCJTR0QiOiJTR0QiLCJHR1AiOiJHR1AiLCJFVEIiOiJFVEIiLCJKRVAiOiJKRVAiLCJWVVYiOiJWVVYiLCJWRUYiOiJWRUYiLCJTT1MiOiJTT1MiLCJLR1MiOiJLR1MiLCJMQUsiOiJMQUsiLCJCTkQiOiJCTkQiLCJYQUYiOiJYQUYiLCJMUkQiOiJMUkQiLCJJVEwiOiJJVEwiLCJIUksiOiJIUksiLCJDSEYiOiJDSEYiLCJBVFMiOiJBVFMiLCJESkYiOiJESkYiLCJBTEwiOiJBTEwiLCJaTVciOiJaTVciLCJWRVMiOiJWRVMiLCJUWlMiOiJUWlMiLCJWTkQiOiJWTkQiLCJBVUQiOiJBVUQiLCJJTFMiOiJJTFMiLCJLUFciOiJLUFciLCJHWUQiOiJHWUQiLCJHSFMiOiJHSFMiLCJNREwiOiJNREwiLCJLSFIiOiJLSFIiLCJCT0IiOiJCT0IiLCJJRFIiOiJJRFIiLCJLWUQiOiJLWUQiLCJBTUQiOiJBTUQiLCJUUlkiOiJUUlkiLCJTSFAiOiJTSFAiLCJCV1AiOiJCV1AiLCJMQlAiOiJMQlAiLCJUSlMiOiJUSlMiLCJKT0QiOiJKT0QiLCJSV0YiOiJSV0YiLCJIS0QiOiJIS0QiLCJBRUQiOiJBRUQiLCJFVVIiOiJFVVIiLCJMU0wiOiJMU0wiLCJES0siOiJES0siLCJDQUQiOiJDQUQiLCJCR04iOiJCR04iLCJNTUsiOiJNTUsiLCJFRUsiOiJFRUsiLCJTWVAiOiJTWVAiLCJOT0siOiJOT0siLCJNVVIiOiJNVVIiLCJJTVAiOiJJTVAiLCJHSVAiOiJHSVAiLCJST04iOiJST04iLCJMS1IiOiJMS1IiLCJOR04iOiJOR04iLCJDWksiOiJDWksiLCJDUkMiOiJDUkMiLCJQS1IiOiJQS1IiLCJYQ0QiOiJYQ0QiLCJHUkQiOiJHUkQiLCJIVEciOiJIVEciLCJBTkciOiJBTkciLCJCSEQiOiJCSEQiLCJQVEUiOiJQVEUiLCJTWkwiOiJTWkwiLCJTUkQiOiJTUkQiLCJLWlQiOiJLWlQiLCJUVEQiOiJUVEQiLCJTQVIiOiJTQVIiLCJMVEwiOiJMVEwiLCJZRVIiOiJZRVIiLCJNVlIiOiJNVlIiLCJBRk4iOiJBRk4iLCJJTlIiOiJJTlIiLCJOUFIiOiJOUFIiLCJLUlciOiJLUlciLCJBV0ciOiJBV0ciLCJNTlQiOiJNTlQiLCJKUFkiOiJKUFkiLCJQTE4iOiJQTE4iLCJBT0EiOiJBT0EiLCJTQkQiOiJTQkQiLCJHQlAiOiJHQlAiLCJDU0QiOiJDU0QiLCJCWU4iOiJCWU4iLCJIVUYiOiJIVUYiLCJCWVIiOiJCWVIiLCJMVUYiOiJMVUYiLCJCSUYiOiJCSUYiLCJNV0siOiJNV0siLCJNR0EiOiJNR0EiLCJGSU0iOiJGSU0iLCJERU0iOiJERU0iLCJCWkQiOiJCWkQiLCJCQU0iOiJCQU0iLCJNT1AiOiJNT1AiLCJFR1AiOiJFR1AiLCJOQUQiOiJOQUQiLCJTU1AiOiJTU1AiLCJTS0siOiJTS0siLCJOSU8iOiJOSU8iLCJQRU4iOiJQRU4iLCJXU1QiOiJXU1QiLCJOWkQiOiJOWkQiLCJUTVQiOiJUTVQiLCJGUkYiOiJGUkYiLCJCUkwiOiJCUkwifX1d&TemplateType=unified&Version=2026.0630&TemplateSignature=UFJPRFVDVA==&umpVersion=MS41Mi40NQ==';
+const PQ_INSTRUCTION_ROW2 = '     Use ENGLISH to fill this template. DO NOT modify or delete the colored header rows. To expand all optional columns, click the "2" button on the top left.';
+const PQ_GROUP_ROW3 = ['Listing Identity', 'Offer (US) - (Sell on Amazon), (US) - (Amazon Business (B2B))'];
+const PQ_LABELS_ROW4 = ['SKU','Fulfillment Channel Code (US)','Quantity (US)','Handling Time (US)','Restock Date (US)','Inventory Always Available (US)','Your Price USD (Sell on Amazon, US)','Pricing Rule (Sell on Amazon, US)','Minimum Seller Allowed Price (Sell on Amazon, US)','Maximum Seller Allowed Price (Sell on Amazon, US)','Sale Price USD (Sell on Amazon, US)','Sale Start Date (Sell on Amazon, US)','Sale End Date (Sell on Amazon, US)','Offering Release Date (Sell on Amazon, US)','Stop Selling Date (Sell on Amazon, US)','Your Price USD (Amazon Business (B2B), US)','Minimum Seller Allowed Price (Amazon Business (B2B), US)','Maximum Seller Allowed Price (Amazon Business (B2B), US)','Offering Release Date (Amazon Business (B2B), US)','Stop Selling Date (Amazon Business (B2B), US)','Quantity Price Type (Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Quantity Threshold (Lower Bound, Amazon Business (B2B), US)','Quantity Price (Fixed Price/Percentage Discount, Amazon Business (B2B), US)','Shipping Template (US)'];
+const PQ_ATTR_ROW5 = ['contribution_sku#1.value','fulfillment_availability#1.fulfillment_channel_code','fulfillment_availability#1.quantity','fulfillment_availability#1.lead_time_to_ship_max_days','fulfillment_availability#1.restock_date','fulfillment_availability#1.is_inventory_available','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.our_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.automated_pricing_merchandising_rule_plan#1.merchandising_rule.rule_id','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.minimum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.maximum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.start_at','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.discounted_price#1.schedule#1.end_at','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.start_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=ALL]#1.end_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.our_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.minimum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.maximum_seller_allowed_price#1.schedule#1.value_with_tax','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.start_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.end_at.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.discount_type','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#1.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#1.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#2.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#2.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#3.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#3.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#4.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#4.value','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#5.lower_bound','purchasable_offer[marketplace_id=ATVPDKIKX0DER][audience=B2B]#1.quantity_discount_plan#1.schedule#1.levels#5.value','merchant_shipping_group[marketplace_id=ATVPDKIKX0DER]#1.value'];
+const PQ_NCOLS = 32;
+function _padPQRow(arr) { const r = arr.slice(); while (r.length < PQ_NCOLS) r.push(''); return r; }
+
+function buildPriceFeedXlsx(items, startYmd, endYmd) {
+  const rows = [
+    _padPQRow([PQ_SETTINGS_ROW1]), _padPQRow([PQ_INSTRUCTION_ROW2]), _padPQRow(PQ_GROUP_ROW3),
+    _padPQRow(PQ_LABELS_ROW4), _padPQRow(PQ_ATTR_ROW5), _padPQRow([])
+  ];
+  for (const it of items) {
+    const r = new Array(PQ_NCOLS).fill('');
+    r[0] = String(it.sku);      // col A — SKU
+    r[10] = Number(it.price);   // col K — Sale Price USD (numeric)
+    r[11] = startYmd;           // col L — Sale Start Date
+    r[12] = endYmd;             // col M — Sale End Date
+    rows.push(r);
+  }
+  const sheetXml = sheetXmlFromRows(rows);
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    '</Types>';
+  const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheets><sheet name="Template" sheetId="1" r:id="rId1"/></sheets></workbook>';
+  const workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+    '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  return zipStore([
+    { name: '[Content_Types].xml', data: _strToBytesXlsx(contentTypes) },
+    { name: '_rels/.rels', data: _strToBytesXlsx(rootRels) },
+    { name: 'xl/workbook.xml', data: _strToBytesXlsx(workbook) },
+    { name: 'xl/_rels/workbook.xml.rels', data: _strToBytesXlsx(workbookRels) },
+    { name: 'xl/styles.xml', data: _strToBytesXlsx(styles) },
+    { name: 'xl/worksheets/sheet1.xml', data: _strToBytesXlsx(sheetXml) }
+  ]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SALE PLANNER (F5) — month-end discounting on slow movers.
+// Pure decision logic (roundSaleEnding + suggestSalePrice) mirrored in test.js.
+// ═══════════════════════════════════════════════════════════════════════════
+// RULE: discount ladder by days-of-cover severity (steeper overstock → deeper cut)
+const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ];
+const SALE_MIN_OFF = 0.05;   // RULE: Amazon needs ≥5% off Your Price to show the sale badge
+const PLANNER_COVER_THRESHOLD_DEFAULT = 120; // RULE: >120d cover = "needs faster sales" (aged surcharge starts at 181d — act before it)
+
+// RULE: promo prices end in .90 → Math.floor(x)-0.10, but never below $1; else fall back to x.toFixed(2)
+function roundSaleEnding(x) {
+  if (!(x > 0)) return +(x).toFixed(2);
+  const candidate = Math.floor(x) - 0.10;
+  if (candidate < 1) return +(x).toFixed(2);
+  return +candidate.toFixed(2);
+}
+
+// RULE: given price/stock/cover, suggest a month-end sale price anchored on Your Price,
+// floored at break-even. See LOGIC for the full action/reason taxonomy.
+function suggestSalePrice(o) {
+  const yourPrice = o.yourPrice, available = o.available, daysOfCover = o.daysOfCover;
+  const threshold = o.coverThreshold > 0 ? o.coverThreshold : PLANNER_COVER_THRESHOLD_DEFAULT;
+  const be = (o.breakEvenPrice !== undefined && o.breakEvenPrice !== null) ? o.breakEvenPrice : null;
+  const realizedPrice = (o.realizedPrice !== undefined && o.realizedPrice !== null) ? o.realizedPrice : null;
+  if (!(yourPrice > 0)) return { action: 'no_data', reason: 'no_price' };
+  if (!(available > 0)) return { action: 'skip', reason: 'no_stock' };
+  // RULE: Your Price below break-even = deliberate loss leader; never deepen the loss
+  if (be !== null && yourPrice < be) return { action: 'skip', reason: 'loss_leader' };
+  // RULE: realized transaction price already below break-even (via deals/coupons) even though
+  // Your Price sits above it — promos are already eroding margin; do NOT auto-mark a deeper sale.
+  if (be !== null && realizedPrice !== null && realizedPrice > 0 && realizedPrice < be && yourPrice >= be)
+    return { action: 'skip', reason: 'below_breakeven_promo' };
+  if (daysOfCover === null || daysOfCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
+  if (daysOfCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  let off = SALE_MIN_OFF;
+  for (const rung of SALE_LADDER) { if (daysOfCover >= rung.cover) { off = rung.off; break; } }
+  const cap = +(yourPrice * (1 - SALE_MIN_OFF)).toFixed(2); // highest sale price still ≥5% off
+  let price = roundSaleEnding(yourPrice * (1 - off));
+  if (price > cap) price = cap;
+  const reason = daysOfCover === Infinity ? 'no_sales' : 'overstock';
+  if (be !== null) {
+    if (price < be) {
+      const floored = +Math.max(be, 0).toFixed(2);
+      if (floored > cap) return { action: 'blocked', reason: 'floor_above_5pct', off, floor: floored };
+      return { action: 'sale', reason, off, price: floored, floor: be };
+    }
+    return { action: 'sale', reason, off, price, floor: be };
+  }
+  return { action: 'sale', reason, off, price };
+}
+
+// Build one planner row per product from all imported data sources.
+function plannerRows() {
+  const threshold = (state.planner && state.planner.coverThreshold > 0) ? state.planner.coverThreshold : PLANNER_COVER_THRESHOLD_DEFAULT;
+  const rdAll = (state.reportData && state.reportData.byAsin) ? state.reportData.byAsin : {};
+  const ships = (state.shipments && state.shipments.bySku) ? state.shipments.bySku : {};
+  return state.products.map(p => {
+    const asin = (p.asin || '').trim().toUpperCase();
+    const rd = asin ? rdAll[asin] : null;
+    const sku = p.sku || (rd && rd.sku) || '';
+    const ship = sku ? ships[sku] : null;
+    const lastCi = p.checkins && p.checkins.length ? p.checkins[p.checkins.length - 1] : null;
+
+    const yourPrice = (rd && rd.yourPrice > 0) ? rd.yourPrice : (lastCi && lastCi.currentPrice) || 0;
+    const activeSale = (rd && rd.salesPrice > 0) ? rd.salesPrice : null;
+
+    // velocity priority: inventory u30/30 → business units/days → last check-in
+    let velocity = null;
+    if (rd && rd.u30 !== undefined && rd.u30 !== null) velocity = rd.u30 / 30;
+    else if (rd && rd.bizUnits > 0 && rd.bizDays > 0) velocity = rd.bizUnits / rd.bizDays;
+    else if (lastCi && lastCi.unitsSold30 !== undefined) velocity = lastCi.unitsSold30 / (lastCi.periodDays || 30);
+
+    let available = null;
+    if (rd && rd.available !== undefined && rd.available !== null) available = rd.available;
+    else if (lastCi && lastCi.inventoryUnits !== undefined) available = lastCi.inventoryUnits;
+
+    let daysOfCover = null;
+    if (velocity !== null && available !== null) {
+      if (velocity <= 0) daysOfCover = available > 0 ? Infinity : null;
+      else daysOfCover = available / velocity;
+    }
+
+    const breakEvenPrice = p.inputs.cogs > 0 ? solveMinPriceRaw({ ...p.inputs, margin: 0 }) : null;
+    const marginAtYP = (p.inputs.cogs > 0 && yourPrice > 0) ? feeWaterfall(p.inputs, yourPrice).netPct : null;
+
+    // realized (actual transaction) price captures deals/coupons that yourPrice can't.
+    const realized30 = (rd && rd.u30 > 0) ? rd.s30 / rd.u30 : null;
+    const marginAtRealized = (p.inputs.cogs > 0 && realized30 > 0) ? feeWaterfall(p.inputs, realized30).netPct : null;
+
+    const trendAt = (s, u) => (rd && rd[u] > 0) ? rd[s] / rd[u] : null;
+    const priceTrend = [ trendAt('s90', 'u90'), trendAt('s60', 'u60'), trendAt('s30', 'u30'), trendAt('s7', 'u7') ];
+
+    let inbound = null;
+    if (ship) inbound = (ship.inbound || 0) + (ship.awdInbound || 0) + (ship.awdAvailable || 0);
+    else if (rd && rd.inboundQty !== undefined && rd.inboundQty !== null) inbound = rd.inboundQty;
+
+    const sug = suggestSalePrice({ yourPrice, available, daysOfCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+
+    return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, breakEvenPrice,
+      marginAtYP, realized30, marginAtRealized, priceTrend, inbound, recAction: ship ? ship.recAction : '', sug, hasRd: !!rd };
+  });
+}
+// ── planner override + control mutators ──
+function _plannerEnsure() { if (!state.planner) state.planner = { coverThreshold: PLANNER_COVER_THRESHOLD_DEFAULT, overrides: {} }; if (!state.planner.overrides) state.planner.overrides = {}; return state.planner; }
+function plannerSetThreshold(v) { const pl = _plannerEnsure(); const n = parseInt(v, 10); pl.coverThreshold = (n > 0 ? n : PLANNER_COVER_THRESHOLD_DEFAULT); saveToStorage(); renderSalePlanner(); }
+function plannerSetInclude(pid, checked) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; pl.overrides[pid].include = !!checked; saveToStorage(); renderSalePlanner(); }
+function plannerSetPrice(pid, val) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; const n = parseFloat(val); pl.overrides[pid].price = (n > 0 ? +n.toFixed(2) : undefined); saveToStorage(); renderSalePlanner(); }
+
+function plannerFreshness() {
+  const rdAll = (state.reportData && state.reportData.byAsin) ? state.reportData.byAsin : {};
+  let bizAt = null, bizDays = null, adStart = null, adEnd = null, adAt = null, snap = null, invAt = null;
+  for (const a in rdAll) {
+    const r = rdAll[a];
+    if (r.bizAt && (!bizAt || r.bizAt > bizAt)) { bizAt = r.bizAt; bizDays = r.bizDays; }
+    if (r.adAt && (!adAt || r.adAt > adAt)) adAt = r.adAt;
+    if (r.adStart && (!adStart || r.adStart < adStart)) adStart = r.adStart;
+    if (r.adEnd && (!adEnd || r.adEnd > adEnd)) adEnd = r.adEnd;
+    if (r.snapshotDate && (!snap || r.snapshotDate > snap)) snap = r.snapshotDate;
+    if (r.invAt && (!invAt || r.invAt > invAt)) invAt = r.invAt;
+  }
+  return { bizAt, bizDays, adStart, adEnd, adAt, snap, invAt };
+}
+
+function renderSalePlanner() {
+  const el = document.getElementById('planner-view');
+  if (!el) return;
+  const pl = _plannerEnsure();
+  const today = new Date();
+  const rows = plannerRows();
+  const anyRd = state.reportData && state.reportData.byAsin && Object.keys(state.reportData.byAsin).length > 0;
+
+  const linkBtns = `
+    <a href="${AMZ_REPORT_LINKS.business}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);">↗ ${t('Business', '业务')}</a>
+    <a href="${AMZ_REPORT_LINKS.ads}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-5b63f7);color:var(--c-818cf8);">↗ ${t('Ads', '广告')}</a>
+    <a href="${AMZ_REPORT_LINKS.inventory}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-7a5c00);color:var(--c-fcd34d);">↗ ${t('Inventory Health', '库存健康')}</a>`;
+
+  const header = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:1.1rem;font-weight:800;color:var(--c-fff);">${t('Sale Planner — month-end sale on slow movers', '促销计划 — 月末清理滞销库存')}</div>
+      <div style="font-size:0.75rem;color:var(--c-555870);margin-top:2px;">${t('Combines Inventory Health (stock + price), Business (revenue/velocity), Ads (spend), and the optional shipments xlsx. Suggestions anchor on Your Price and are floored at break-even.', '综合库存健康（库存+价格）、业务（收入/销售速度）、广告（花费）和可选的货件xlsx。建议以您的售价为基准，并以盈亏平衡价为下限。')}</div>
+    </div>`;
+
+  // Empty state
+  if (!anyRd) {
+    el.innerHTML = header + `
+      <div class="card" style="text-align:center;padding:36px 20px;">
+        <div style="font-size:0.9rem;color:var(--c-e8eaf0);font-weight:700;margin-bottom:6px;">${t('No Amazon data imported yet', '尚未导入亚马逊数据')}</div>
+        <div style="font-size:0.78rem;color:var(--c-555870);max-width:520px;margin:0 auto 16px;">${t('Import the three Seller-Central reports to populate stock levels, prices, velocity and margins. Open them directly:', '导入三份卖家中心报告以填充库存、价格、销售速度和利润。直接打开：')}</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">${linkBtns}</div>
+        <button class="btn primary" onclick="document.getElementById('amz-report-file').click()">${t('⬆ Import Amazon Reports', '⬆ 导入亚马逊报告')}</button>
+      </div>`;
+    return;
+  }
+
+  const fr = plannerFreshness();
+  const shipMeta = state.shipments || null;
+  const costMeta = state.costDataMeta || null;
+  const pill = (label, value, ok) =>
+    `<div class="pill${ok ? '' : ' warn'}"><span>${label}</span><strong style="${ok ? '' : 'color:var(--c-f59e0b);'}">${value}</strong></div>`;
+  const dOnly = iso => iso ? new Date(iso).toLocaleDateString() : null;
+  const freshnessRow = `
+    <div class="pills" style="margin-bottom:10px;">
+      ${pill(t('Business', '业务'), fr.bizAt ? `${dOnly(fr.bizAt)} · ${fr.bizDays||30}d` : t('missing', '缺失'), !!fr.bizAt)}
+      ${pill(t('Ads', '广告'), (fr.adStart && fr.adEnd) ? `${fr.adStart}→${fr.adEnd}` : t('missing', '缺失'), !!fr.adStart)}
+      ${pill(t('Inventory', '库存'), fr.snap || t('missing', '缺失'), !!fr.snap)}
+      ${pill(t('Shipments', '货件'), shipMeta ? `${shipMeta.filename} · ${dOnly(shipMeta.importedAt)}` : t('not imported — optional', '未导入 — 可选'), !!shipMeta)}
+      ${pill(t('Cost data / CIF', '成本数据 / CIF'), costMeta ? `${costMeta.filename} · ${dOnly(costMeta.at)}` : t('using product COGS', '使用产品COGS'), !!costMeta)}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="topbar-btn" onclick="document.getElementById('amz-report-file').click()">${t('⬆ Import Amazon Reports', '⬆ 导入亚马逊报告')}</button>
+      <button class="topbar-btn" onclick="document.getElementById('shipments-file').click()">${t('⬆ Shipments xlsx (optional)', '⬆ 货件xlsx（可选）')}</button>
+      ${linkBtns}
+    </div>`;
+
+  const startDefault = ymd(today);
+  const endDefault = defaultSaleEndYmd(today);
+  const controls = `
+    <div class="card">
+      <div class="g3" style="gap:12px;">
+        <div class="inp"><label>${t('Sale start date', '促销开始日期')}</label><input type="date" id="sp-start" value="${startDefault}"></div>
+        <div class="inp"><label>${t('Sale end date (month end)', '促销结束日期（月末）')}</label><input type="date" id="sp-end" value="${endDefault}"></div>
+        <div class="inp"><label>${t('Days-of-cover threshold', '库存覆盖天数阈值')}</label><input type="number" id="sp-threshold" min="1" step="1" value="${pl.coverThreshold}" onchange="plannerSetThreshold(this.value)"></div>
+      </div>
+      <div class="hint" style="margin-top:4px;">${t('Suggestions anchor on Your Price. Products with COGS get a break-even floor; without COGS = easy mode, ladder only.', '建议以您的售价为基准。有COGS的产品设盈亏平衡下限；无COGS = 简易模式，仅使用折扣阶梯。')}</div>
+    </div>`;
+
+  // ── summary chips ──
+  let cOnSale = 0, cHealthy = 0, cLoss = 0, cBlocked = 0, cNoData = 0;
+  for (const r of rows) {
+    const a = r.sug.action, why = r.sug.reason;
+    if (a === 'sale') cOnSale++;
+    else if (a === 'keep') cHealthy++;
+    else if (a === 'blocked') cBlocked++;
+    else if (a === 'skip' && (why === 'loss_leader' || why === 'below_breakeven_promo')) cLoss++;
+    else cNoData++;
+  }
+  const chip = (n, label, col) => `<div class="pill" style="border-color:${col};"><strong style="color:${col};">${n}</strong> <span>${label}</span></div>`;
+  const chips = `<div class="pills" style="margin:14px 0 6px;">
+    ${chip(cOnSale, t('to put on sale', '待促销'), 'var(--c-f59e0b)')}
+    ${chip(cHealthy, t('healthy', '健康'), 'var(--c-4ade80)')}
+    ${chip(cLoss, t('loss leader / promo skips', '亏本引流/促销跳过'), 'var(--c-f87171)')}
+    ${chip(cBlocked, t('blocked', '受阻'), 'var(--c-f87171)')}
+    ${chip(cNoData, t('no data', '无数据'), 'var(--c-555870)')}
+  </div>`;
+
+  // ── sort: sale candidates first (cover desc), then blocked, keep, skip/no_data last ──
+  const rank = r => { const a = r.sug.action; return a === 'sale' ? 0 : a === 'blocked' ? 1 : a === 'keep' ? 2 : 3; };
+  const coverVal = r => r.daysOfCover === Infinity ? 1e9 : (r.daysOfCover == null ? -1 : r.daysOfCover);
+  const sorted = [...rows].sort((x, y) => rank(x) - rank(y) || coverVal(y) - coverVal(x));
+
+  // ── suggestion badge ──
+  const REASON_TXT = {
+    overstock: t('overstock', '库存过剩'), no_sales: t('no sales', '零销量'),
+    healthy: t('healthy cover', '库存健康'), no_stock: t('out of stock', '无库存'),
+    loss_leader: t('loss leader', '亏本引流'), below_breakeven_promo: t('already selling below break-even via promos', '已通过促销低于盈亏平衡价销售'),
+    floor_above_5pct: t('break-even above 5%-off floor', '盈亏平衡价高于5%折扣下限'),
+    no_price: t('no price', '无价格'), no_velocity: t('no velocity', '无销售速度')
+  };
+  const sugBadge = sug => {
+    let cls = 'inv-overstock', label = REASON_TXT[sug.reason] || sug.reason;
+    if (sug.action === 'sale') { cls = 'inv-reorder'; label = `${t('SALE', '促销')} −${Math.round((sug.off||0)*100)}% · ${REASON_TXT[sug.reason]||''}`; }
+    else if (sug.action === 'keep') cls = 'inv-healthy';
+    else if (sug.action === 'blocked') cls = 'inv-urgent';
+    else if (sug.action === 'skip') cls = 'inv-overstock';
+    else cls = 'inv-overstock';
+    return `<span class="price-match ${cls}" style="font-size:0.6rem;">${label}</span>`;
+  };
+  const coverBadge = r => {
+    if (r.daysOfCover == null) return '—';
+    if (r.daysOfCover === Infinity) return `<span style="color:var(--c-f87171);">∞</span>`;
+    const dv = Math.round(r.daysOfCover);
+    const st = getInventoryStatus(r.available, r.velocity * 30, 30); // reuse status colouring
+    const cls = st ? INVENTORY_STATUS_META[st.status].cls : '';
+    return `${dv}d ${cls ? `<span class="price-match ${cls}" style="font-size:0.55rem;">${INVENTORY_STATUS_META[st.status].label}</span>` : ''}`;
+  };
+  const fmtTrend = arr => arr.map(v => v == null ? '·' : v.toFixed(1)).join(' → ');
+  const marginCell = r => {
+    if (r.marginAtYP == null) return '—';
+    const col = v => v < 0 ? 'var(--c-f87171)' : v < 10 ? 'var(--c-f59e0b)' : 'var(--c-4ade80)';
+    let out = `<span style="color:${col(r.marginAtYP)};">${r.marginAtYP.toFixed(0)}%</span>`;
+    if (r.marginAtRealized != null && Math.abs(r.marginAtRealized - r.marginAtYP) > 2) {
+      out += `<div style="font-size:0.62rem;color:var(--c-6b6f8a);">${t('realized', '成交')} ${fmtC(r.realized30)}: <span style="color:${col(r.marginAtRealized)};">${r.marginAtRealized.toFixed(0)}%</span></div>`;
+    }
+    return out;
+  };
+
+  const bodyRows = sorted.map(r => {
+    const ov = pl.overrides[r.p.id] || {};
+    const effInclude = (ov.include !== undefined) ? ov.include : (r.sug.action === 'sale');
+    const effPrice = (ov.price !== undefined && ov.price !== null) ? ov.price : (r.sug.price || (r.sug.floor) || '');
+    const dealWarn = (r.realized30 > 0 && !r.activeSale && r.realized30 < r.yourPrice * 0.97)
+      ? `<div style="margin-top:3px;"><span class="price-match inv-reorder" style="font-size:0.55rem;">${t('selling below Your Price — deal/coupon?', '实际成交价低于标准价 — 促销/优惠券?')}</span></div>` : '';
+    const inbTxt = r.inbound == null ? '—' : `${Math.round(r.inbound)}${r.recAction ? `<div style="font-size:0.6rem;color:var(--c-6b6f8a);">${r.recAction}</div>` : ''}`;
+    return `<tr>
+      <td class="pt-name" style="cursor:default;">${r.p.name}${r.sku ? `<div style="font-size:0.62rem;color:var(--c-555870);font-weight:400;">${r.sku}</div>` : ''}</td>
+      <td class="pt-num">${r.yourPrice > 0 ? fmtC(r.yourPrice) : '—'}${r.activeSale ? `<div style="font-size:0.6rem;color:var(--c-f59e0b);">${t('sale @', '促销@')} ${fmtC(r.activeSale)}</div>` : ''}${dealWarn}</td>
+      <td class="pt-num" style="font-size:0.68rem;color:var(--c-8b8fa8);white-space:nowrap;">${fmtTrend(r.priceTrend)}</td>
+      <td class="pt-num">${r.velocity == null ? '—' : r.velocity.toFixed(2)}</td>
+      <td class="pt-num">${r.available == null ? '—' : Math.round(r.available)}</td>
+      <td class="pt-num">${coverBadge(r)}</td>
+      <td class="pt-num">${inbTxt}</td>
+      <td class="pt-num">${marginCell(r)}</td>
+      <td>${sugBadge(r.sug)}</td>
+      <td class="pt-num"><input type="number" min="0" step="0.01" value="${effPrice}" style="width:76px;background:var(--c-0f1219);border:1px solid var(--c-252836);border-radius:5px;color:var(--c-fff);padding:4px 6px;font-size:0.78rem;text-align:right;" onchange="plannerSetPrice('${r.p.id}', this.value)"></td>
+      <td style="text-align:center;"><input type="checkbox" ${effInclude ? 'checked' : ''} onchange="plannerSetInclude('${r.p.id}', this.checked)"></td>
+    </tr>`;
+  }).join('');
+
+  const table = `
+    <div style="overflow-x:auto;margin-top:8px;">
+      <table class="ptable">
+        <thead><tr>
+          <th>${t('Product', '产品')}</th>
+          <th style="text-align:right;">${t('Your Price', '您的售价')}</th>
+          <th style="text-align:right;">${t('Avg price 90/60/30/7d', '平均价 90/60/30/7天')}</th>
+          <th style="text-align:right;">${t('Vel/day', '速度/天')}</th>
+          <th style="text-align:right;">${t('Stock', '库存')}</th>
+          <th style="text-align:right;">${t('Cover', '覆盖')}</th>
+          <th style="text-align:right;">${t('Inbound', '在途')}</th>
+          <th style="text-align:right;">${t('Margin@price', '利润@售价')}</th>
+          <th>${t('Suggestion', '建议')}</th>
+          <th style="text-align:right;">${t('Sale Price $', '促销价 $')}</th>
+          <th style="text-align:center;">${t('On sale', '促销')}</th>
+        </tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+
+  const exportCard = `
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <button class="btn primary" onclick="exportPriceFile()">${t('⬇ Export Amazon Price File (.xlsx)', '⬇ 导出亚马逊价格文件（.xlsx）')}</button>
+        <div style="font-size:0.74rem;color:var(--c-555870);max-width:520px;">${t(`Uploads via Seller Central → Add Products via Upload. Sets Sale Price + start/end dates. Sale ends ${endDefault}.`, `通过卖家中心 → 批量上传商品上传。设置促销价及起止日期。促销结束于 ${endDefault}。`)}</div>
+      </div>
+    </div>`;
+
+  el.innerHTML = header + freshnessRow + controls + chips + table + exportCard;
+}
+
+// ── F5: build + download the PriceAndQuantity .xlsx from checked planner rows ──
+function exportPriceFile() {
+  const pl = _plannerEnsure();
+  const rows = plannerRows();
+  const start = (document.getElementById('sp-start') || {}).value || ymd(new Date());
+  const end = (document.getElementById('sp-end') || {}).value || defaultSaleEndYmd(new Date());
+  if (start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+
+  const items = [], noSku = [], subFivePct = [];
+  for (const r of rows) {
+    const ov = pl.overrides[r.p.id] || {};
+    const include = (ov.include !== undefined) ? ov.include : (r.sug.action === 'sale');
+    if (!include) continue;
+    const price = (ov.price !== undefined && ov.price !== null) ? ov.price : (r.sug.price || r.sug.floor);
+    if (!(price > 0)) continue;
+    if (!r.sku) { noSku.push(r.p.name); continue; }
+    items.push({ sku: r.sku, price: +Number(price).toFixed(2) });
+    if (r.yourPrice > 0 && price > r.yourPrice * 0.95) subFivePct.push(r.sku);
+  }
+
+  if (!items.length) {
+    const msg = noSku.length
+      ? t(`No exportable rows. ${noSku.length} checked product(s) have no SKU — import the Inventory Health report first.`, `没有可导出的行。${noSku.length} 个勾选的产品没有SKU — 请先导入库存健康报告。`)
+      : t('No rows are checked for sale. Tick "On sale" on the products you want to discount.', '没有勾选任何促销行。请在要打折的产品上勾选"促销"。');
+    alert(msg);
+    return;
+  }
+
+  const bytes = buildPriceFeedXlsx(items, start, end);
+  const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `PriceUpdate-Sale-${end}.xlsx`; a.click();
+  URL.revokeObjectURL(url);
+
+  let summary = t(`✓ Exported ${items.length} SKU${items.length !== 1 ? 's' : ''} to PriceUpdate-Sale-${end}.xlsx\nSale window: ${start} → ${end}\n\nUpload via Seller Central → Catalog → Add Products via Upload.`,
+                  `✓ 已导出 ${items.length} 个SKU至 PriceUpdate-Sale-${end}.xlsx\n促销周期：${start} → ${end}\n\n通过卖家中心 → 商品目录 → 批量上传商品上传。`);
+  if (noSku.length) summary += '\n\n' + t(`Skipped (no SKU): ${noSku.join(', ')}`, `已跳过（无SKU）：${noSku.join(', ')}`);
+  if (subFivePct.length) summary += '\n\n' + t(`Note: ${subFivePct.length} SKU(s) are <5% off Your Price — Amazon may not show a sale badge for these.`, `注意：${subFivePct.length} 个SKU折扣低于5% — 亚马逊可能不显示促销徽章。`);
+  alert(summary);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

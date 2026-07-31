@@ -7,6 +7,56 @@ Releases are named after the edit round rather than semantic versions. The app
 remains a single self-contained `index.html` — vanilla JS, no dependencies,
 no build step.
 
+## [Weekly Ops Round] — 2026-07-31
+
+### Added
+- **Direct report links** — the three weekly Amazon exports (Business Report,
+  Advertising "Advertised product", Inventory Health) are now one click away
+  from the import card and the Sale Planner; the step-by-step navigation guide
+  is kept as a collapsible backup in case Amazon changes the URLs.
+- **Multi-select Amazon report import** — select all 3 CSVs in one file dialog;
+  each file's type is auto-detected from its real 2026 export headers
+  (`(Child) ASIN`/`Ordered Product Sales`, `Advertised product ID`/`Total cost`,
+  `your-price`/`units-shipped-tN`). One merged check-in per product per batch.
+  Old single-report formats still import.
+- **Flexible report dates** — the Advertising report's per-row `Date range` is
+  parsed (min start / max end across campaigns); Business Reports carry no dates
+  so the app asks how many days the range covers (default 30); check-ins store
+  `periodDays` and velocity/days-of-cover are computed over the real window.
+- **Price auto-fill from Inventory Health** — `your-price` / active `sales-price`
+  now pre-fill the check-in price (the old "price is never in any export" note
+  was true only of the legacy inventory file). ASIN→SKU mapping is captured for
+  the price-feed export and shipments matching.
+- **Realized-price tracking** — average actual transaction price per 7/30/60/90-day
+  window (`sales-shipped ÷ units-shipped`) shown as a trend in the Sale Planner;
+  flags products selling below Your Price with no sale set ("deal/coupon?") and
+  refuses to deepen discounts on anything already selling below break-even via promos.
+- **Optional incoming-shipments import** — the team's 总体控制表 `.xlsx` uploads
+  directly (zero-dependency ZIP/XLSX reader using `DecompressionStream`); matched
+  by Merchant SKU; feeds the planner's inbound-pipeline column and the
+  recommended-action hints.
+- **Sale Planner** — new top-bar view: per-product Your Price, realized price
+  trend, velocity, stock, days of cover, inbound pipeline, margin; suggests
+  month-end sale prices anchored on Your Price with a days-of-cover discount
+  ladder (5% > 120d cover up to 20% > 365d / no-sales), floored at break-even
+  when COGS is known (easy mode = no COGS: ladder only). Loss leaders
+  (Your Price below break-even) are excluded by default. Prices/inclusion
+  editable per row; threshold configurable.
+- **Amazon price-feed export** — generates a real `.xlsx` (zero-dependency
+  STORED-zip writer) cloning the PriceAndQuantity template byte-for-byte
+  (settings row, label row 4 / attribute row 5 / data row 7): SKU + Sale Price
+  + start/end dates, ready for Seller Central → Add Products via Upload.
+  Sale end defaults to the last day of the current month — rolling to next
+  month's end when fewer than 3 days remain.
+- **Cost-data record** — the latest products/CIF CSV import (filename, date,
+  rows) is recorded and displayed in the Sale Planner freshness row.
+
+### Changed
+- `getInventoryStatus()` takes a `periodDays` argument (default 30); check-in
+  history and CSV export show the actual period.
+
+Tests: 332 → **440** (`npm test`).
+
 ## [Fable Edit 1.1] — 2026-07-07
 
 ### Added
