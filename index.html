@@ -4566,6 +4566,11 @@ function buildPriceFeedXlsx(items, startYmd, endYmd) {
 // ═══════════════════════════════════════════════════════════════════════════
 // RULE: discount ladder by days-of-cover severity (steeper overstock → deeper cut)
 const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ];
+// RULE: minimum days of SELLABLE cover required to start a sale — a month-end sale
+// window is ~31 days and discounting accelerates velocity, so anything under 45 days
+// of on-hand stock would likely stock out before inbound shipments land. Such rows
+// get action 'wait' (wait for inbound, then discount) instead of 'sale'.
+const SALE_MIN_RUNWAY_DAYS = 45;
 const SALE_MIN_OFF = 0.05;   // RULE: Amazon needs ≥5% off Your Price to show the sale badge
 const PLANNER_COVER_THRESHOLD_DEFAULT = 120; // RULE: >120d cover = "needs faster sales" (aged surcharge starts at 181d — act before it)
 
@@ -4592,14 +4597,21 @@ function suggestSalePrice(o) {
   // Your Price sits above it — promos are already eroding margin; do NOT auto-mark a deeper sale.
   if (be !== null && realizedPrice !== null && realizedPrice > 0 && realizedPrice < be && yourPrice >= be)
     return { action: 'skip', reason: 'below_breakeven_promo' };
-  if (daysOfCover === null || daysOfCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
-  if (daysOfCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  // decisionCover drives the ladder AND the >threshold test: pipeline cover when supplied
+  // (sellable + inbound), else sellable cover. daysOfCover keeps meaning SELLABLE cover.
+  const decisionCover = (o.pipelineCover !== undefined && o.pipelineCover !== null) ? o.pipelineCover : daysOfCover;
+  if (decisionCover === null || decisionCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
+  if (decisionCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  // RULE: pipeline qualified the row for a sale, but if on-hand SELLABLE stock is under
+  // SALE_MIN_RUNWAY_DAYS it would stock out before inbound lands — wait, don't discount now.
+  if (daysOfCover !== null && daysOfCover !== undefined && daysOfCover < SALE_MIN_RUNWAY_DAYS)
+    return { action: 'wait', reason: 'thin_stock_inbound' };
   let off = SALE_MIN_OFF;
-  for (const rung of SALE_LADDER) { if (daysOfCover >= rung.cover) { off = rung.off; break; } }
+  for (const rung of SALE_LADDER) { if (decisionCover >= rung.cover) { off = rung.off; break; } }
   const cap = +(yourPrice * (1 - SALE_MIN_OFF)).toFixed(2); // highest sale price still ≥5% off
   let price = roundSaleEnding(yourPrice * (1 - off));
   if (price > cap) price = cap;
-  const reason = daysOfCover === Infinity ? 'no_sales' : 'overstock';
+  const reason = decisionCover === Infinity ? 'no_sales' : 'overstock';
   if (be !== null) {
     if (price < be) {
       const floored = +Math.max(be, 0).toFixed(2);
@@ -4656,9 +4668,19 @@ function plannerRows() {
     if (ship) inbound = (ship.inbound || 0) + (ship.awdInbound || 0) + (ship.awdAvailable || 0);
     else if (rd && rd.inboundQty !== undefined && rd.inboundQty !== null) inbound = rd.inboundQty;
 
-    const sug = suggestSalePrice({ yourPrice, available, daysOfCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+    // RULE: pipeline cover = (sellable + inbound + AWD) ÷ velocity — how long ALL known
+    // stock lasts. Decides HOW MUCH must move; the SALE_MIN_RUNWAY_DAYS guard on sellable
+    // cover decides whether a sale can start now without stocking out first.
+    let pipelineCover = null;
+    if (velocity !== null && available !== null) {
+      const pipeUnits = available + (inbound || 0);
+      if (velocity <= 0) pipelineCover = pipeUnits > 0 ? Infinity : null;
+      else pipelineCover = pipeUnits / velocity;
+    }
 
-    return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, breakEvenPrice,
+    const sug = suggestSalePrice({ yourPrice, available, daysOfCover, pipelineCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+
+    return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, pipelineCover, breakEvenPrice,
       marginAtYP, realized30, marginAtRealized, priceTrend, inbound, recAction: ship ? ship.recAction : '', sug, hasRd: !!rd };
   });
 }
@@ -4743,15 +4765,16 @@ function renderSalePlanner() {
         <div class="inp"><label>${t('Sale end date (month end)', '促销结束日期（月末）')}</label><input type="date" id="sp-end" value="${endDefault}"></div>
         <div class="inp"><label>${t('Days-of-cover threshold', '库存覆盖天数阈值')}</label><input type="number" id="sp-threshold" min="1" step="1" value="${pl.coverThreshold}" onchange="plannerSetThreshold(this.value)"></div>
       </div>
-      <div class="hint" style="margin-top:4px;">${t('Suggestions anchor on Your Price. Products with COGS get a break-even floor; without COGS = easy mode, ladder only.', '建议以您的售价为基准。有COGS的产品设盈亏平衡下限；无COGS = 简易模式，仅使用折扣阶梯。')}</div>
+      <div class="hint" style="margin-top:4px;">${t('Suggestions anchor on Your Price. Products with COGS get a break-even floor; without COGS = easy mode, ladder only. Cover counts sellable + inbound stock (pipeline); rows with under 45 days of on-hand stock wait for inbound instead of discounting.', '建议以您的售价为基准。有COGS的产品设盈亏平衡下限；无COGS = 简易模式，仅使用折扣阶梯。库存覆盖天数计入可售+在途库存（管道）；现有可售库存不足45天的产品将等待到货，而非立即促销。')}</div>
     </div>`;
 
   // ── summary chips ──
-  let cOnSale = 0, cHealthy = 0, cLoss = 0, cBlocked = 0, cNoData = 0;
+  let cOnSale = 0, cHealthy = 0, cWait = 0, cLoss = 0, cBlocked = 0, cNoData = 0;
   for (const r of rows) {
     const a = r.sug.action, why = r.sug.reason;
     if (a === 'sale') cOnSale++;
     else if (a === 'keep') cHealthy++;
+    else if (a === 'wait') cWait++;
     else if (a === 'blocked') cBlocked++;
     else if (a === 'skip' && (why === 'loss_leader' || why === 'below_breakeven_promo')) cLoss++;
     else cNoData++;
@@ -4760,13 +4783,14 @@ function renderSalePlanner() {
   const chips = `<div class="pills" style="margin:14px 0 6px;">
     ${chip(cOnSale, t('to put on sale', '待促销'), 'var(--c-f59e0b)')}
     ${chip(cHealthy, t('healthy', '健康'), 'var(--c-4ade80)')}
+    ${chip(cWait, t('wait for inbound', '等待到货'), 'var(--c-f59e0b)')}
     ${chip(cLoss, t('loss leader / promo skips', '亏本引流/促销跳过'), 'var(--c-f87171)')}
     ${chip(cBlocked, t('blocked', '受阻'), 'var(--c-f87171)')}
     ${chip(cNoData, t('no data', '无数据'), 'var(--c-555870)')}
   </div>`;
 
   // ── sort: sale candidates first (cover desc), then blocked, keep, skip/no_data last ──
-  const rank = r => { const a = r.sug.action; return a === 'sale' ? 0 : a === 'blocked' ? 1 : a === 'keep' ? 2 : 3; };
+  const rank = r => { const a = r.sug.action; return a === 'sale' ? 0 : a === 'wait' ? 1 : a === 'blocked' ? 2 : a === 'keep' ? 3 : 4; };
   const coverVal = r => r.daysOfCover === Infinity ? 1e9 : (r.daysOfCover == null ? -1 : r.daysOfCover);
   const sorted = [...rows].sort((x, y) => rank(x) - rank(y) || coverVal(y) - coverVal(x));
 
@@ -4779,21 +4803,24 @@ function renderSalePlanner() {
     no_price: t('no price', '无价格'), no_velocity: t('no velocity', '无销售速度')
   };
   const sugBadge = sug => {
-    let cls = 'inv-overstock', label = REASON_TXT[sug.reason] || sug.reason;
+    let cls = 'inv-overstock', label = REASON_TXT[sug.reason] || sug.reason, extra = '';
     if (sug.action === 'sale') { cls = 'inv-reorder'; label = `${t('SALE', '促销')} −${Math.round((sug.off||0)*100)}% · ${REASON_TXT[sug.reason]||''}`; }
+    else if (sug.action === 'wait') { cls = ''; extra = 'background:var(--c-78350f);color:var(--c-f59e0b);'; label = t('WAIT — inbound landing, discount after', '等待 — 到货后再促销'); }
     else if (sug.action === 'keep') cls = 'inv-healthy';
     else if (sug.action === 'blocked') cls = 'inv-urgent';
     else if (sug.action === 'skip') cls = 'inv-overstock';
     else cls = 'inv-overstock';
-    return `<span class="price-match ${cls}" style="font-size:0.6rem;">${label}</span>`;
+    return `<span class="price-match ${cls}" style="font-size:0.6rem;${extra}">${label}</span>`;
   };
   const coverBadge = r => {
     if (r.daysOfCover == null) return '—';
-    if (r.daysOfCover === Infinity) return `<span style="color:var(--c-f87171);">∞</span>`;
+    const pipeLine = (r.pipelineCover != null && r.inbound > 0)
+      ? `<div style="font-size:0.6rem;color:var(--c-6b6f8a);">${t('+inbound:','+在途:')} ${r.pipelineCover === Infinity ? '∞' : Math.round(r.pipelineCover)+'d'}</div>` : '';
+    if (r.daysOfCover === Infinity) return `<span style="color:var(--c-f87171);">∞</span>${pipeLine}`;
     const dv = Math.round(r.daysOfCover);
     const st = getInventoryStatus(r.available, r.velocity * 30, 30); // reuse status colouring
     const cls = st ? INVENTORY_STATUS_META[st.status].cls : '';
-    return `${dv}d ${cls ? `<span class="price-match ${cls}" style="font-size:0.55rem;">${INVENTORY_STATUS_META[st.status].label}</span>` : ''}`;
+    return `${dv}d ${cls ? `<span class="price-match ${cls}" style="font-size:0.55rem;">${INVENTORY_STATUS_META[st.status].label}</span>` : ''}${pipeLine}`;
   };
   const fmtTrend = arr => arr.map(v => v == null ? '·' : v.toFixed(1)).join(' → ');
   const marginCell = r => {

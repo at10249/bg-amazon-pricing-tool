@@ -196,6 +196,9 @@ price?" from the imported reports:
 - Suggestions anchor on **Your Price** with a days-of-cover discount ladder
   (5% beyond the threshold — default 120 days — up to 20% at 365+ days or zero sales),
   rounded to a `.90` ending and always ≥5% off so Amazon shows the sale badge.
+- Cover is **pipeline-aware**: the sale decision counts sellable + inbound stock, but a
+  row with under 45 days of on-hand stock gets a **wait for inbound** status instead of
+  a discount, so it isn't pushed into a stockout before the shipment lands.
 - Products with COGS get a **break-even floor**; products whose Your Price is already
   below break-even are flagged as deliberate **loss leaders** and excluded by default.
   Products with no COGS work in **easy mode** — ladder only, no margin data needed.

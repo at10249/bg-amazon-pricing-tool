@@ -55,7 +55,20 @@ no build step.
 - `getInventoryStatus()` takes a `periodDays` argument (default 30); check-in
   history and CSV export show the actual period.
 
-Tests: 332 → **440** (`npm test`).
+### Changed (same day)
+- **Pipeline-aware Sale Planner cover** — the sale decision now reads *pipeline
+  cover* `(sellable + inbound + AWD) ÷ velocity`, not just on-hand stock, so
+  fat-inbound items are no longer under-discounted (real-data analysis missed
+  ~31 candidates). The discount ladder rung is chosen from pipeline depth.
+- **Runway guard (`SALE_MIN_RUNWAY_DAYS` = 45)** — a row that only qualifies for
+  a sale because of its inbound pipeline but has under 45 days of *on-hand*
+  sellable stock now gets a new `wait/thin_stock_inbound` action ("wait for
+  inbound, then discount") instead of being discounted into a stockout. The
+  Cover column shows an `+inbound: Nd` line, there's an amber WAIT badge and a
+  "wait for inbound" summary chip, and wait rows sort just below sale candidates.
+  Rows with no inbound pipeline are byte-identical to the previous model.
+
+Tests: 332 → **454** (`npm test`).
 
 ## [Fable Edit 1.1] — 2026-07-07
 

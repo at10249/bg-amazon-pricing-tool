@@ -536,6 +536,7 @@ function parseInventoryReport(lines, fileName) {
   return { kind: 'inventory', fileName, byAsin, rowCount };
 }
 const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ];
+const SALE_MIN_RUNWAY_DAYS = 45;
 const SALE_MIN_OFF = 0.05;
 const PLANNER_COVER_THRESHOLD_DEFAULT = 120;
 function roundSaleEnding(x) {
@@ -554,14 +555,17 @@ function suggestSalePrice(o) {
   if (be !== null && yourPrice < be) return { action: 'skip', reason: 'loss_leader' };
   if (be !== null && realizedPrice !== null && realizedPrice > 0 && realizedPrice < be && yourPrice >= be)
     return { action: 'skip', reason: 'below_breakeven_promo' };
-  if (daysOfCover === null || daysOfCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
-  if (daysOfCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  const decisionCover = (o.pipelineCover !== undefined && o.pipelineCover !== null) ? o.pipelineCover : daysOfCover;
+  if (decisionCover === null || decisionCover === undefined) return { action: 'no_data', reason: 'no_velocity' };
+  if (decisionCover <= threshold) return { action: 'keep', reason: 'healthy' };
+  if (daysOfCover !== null && daysOfCover !== undefined && daysOfCover < SALE_MIN_RUNWAY_DAYS)
+    return { action: 'wait', reason: 'thin_stock_inbound' };
   let off = SALE_MIN_OFF;
-  for (const rung of SALE_LADDER) { if (daysOfCover >= rung.cover) { off = rung.off; break; } }
+  for (const rung of SALE_LADDER) { if (decisionCover >= rung.cover) { off = rung.off; break; } }
   const cap = +(yourPrice * (1 - SALE_MIN_OFF)).toFixed(2);
   let price = roundSaleEnding(yourPrice * (1 - off));
   if (price > cap) price = cap;
-  const reason = daysOfCover === Infinity ? 'no_sales' : 'overstock';
+  const reason = decisionCover === Infinity ? 'no_sales' : 'overstock';
   if (be !== null) {
     if (price < be) {
       const floored = +Math.max(be, 0).toFixed(2);
@@ -1620,6 +1624,27 @@ eq(sFloor.action, 'sale', 'floor case still a sale'); eq(sFloor.price, 17, 'ladd
 // blocked when the break-even floor exceeds the 5%-off cap
 const sBlocked = S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 19.5 });
 eq(sBlocked.action, 'blocked', 'break-even 19.5 > 5%-cap 19.0 → blocked'); eq(sBlocked.reason, 'floor_above_5pct', 'reason floor_above_5pct'); eq(sBlocked.floor, 19.5, 'returns the floor');
+
+describe('suggestSalePrice — pipeline-aware cover + runway guard');
+// backward compat: pipelineCover absent → decisionCover falls back to daysOfCover, identical results
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 400 }).off, 0.20, 'no pipelineCover: 400d → 20% (unchanged)');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 400 }).reason, 'overstock', 'no pipelineCover: reason overstock (unchanged)');
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 90, coverThreshold: 120 }).reason, 'healthy', 'no pipelineCover: 90 ≤ 120 → healthy (unchanged)');
+// fat pipeline promotes a sellable-healthy row to a sale, ladder read from pipeline cover
+const sPipe = S({ yourPrice: 20, available: 100, daysOfCover: 100, pipelineCover: 400 });
+eq(sPipe.action, 'sale', 'sellable 100d healthy alone, pipeline 400d → sale'); eq(sPipe.off, 0.20, 'ladder rung from pipelineCover 400 → 20%');
+// thin sellable stock behind a fat pipeline → wait for inbound, do not discount now
+const sWait = S({ yourPrice: 20, available: 5, daysOfCover: 30, pipelineCover: 300, coverThreshold: 120 });
+eq(sWait.action, 'wait', 'sellable 30d < 45 runway but pipeline 300d qualifies → wait'); eq(sWait.reason, 'thin_stock_inbound', 'reason thin_stock_inbound');
+// guard must NOT fire when pipeline itself is healthy (≤ threshold)
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 30, pipelineCover: 100 }).reason, 'healthy', 'thin sellable but pipeline 100 ≤ 120 → keep/healthy (guard not reached)');
+// infinite pipeline (no velocity all through the pipe) still lands a 20% no_sales sale
+const sPipeInf = S({ yourPrice: 20, available: 200, daysOfCover: 200, pipelineCover: Infinity });
+eq(sPipeInf.action, 'sale', 'pipelineCover Infinity → sale'); eq(sPipeInf.off, 0.20, 'Infinity pipeline → 20% rung'); eq(sPipeInf.reason, 'no_sales', 'reason no_sales'); eq(sPipeInf.price, 15.90, 'price 20×0.80 → 15.90');
+// loss_leader gate runs before any cover logic — big pipeline cannot override it
+eq(S({ yourPrice: 10, available: 5, daysOfCover: 30, pipelineCover: 400, breakEvenPrice: 12 }).reason, 'loss_leader', 'Your Price < break-even wins over fat pipeline → skip/loss_leader');
+// boundary: decisionCover exactly at threshold → keep (not a sale)
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 120, pipelineCover: 120, coverThreshold: 120 }).action, 'keep', 'decisionCover == threshold → keep (boundary)');
 
 describe('ZIP structural sanity + CRC-32');
 eq(crc32(_strToBytesXlsx('hello')) >>> 0, 0x3610a686, 'CRC-32 of "hello" = 0x3610a686 (known value)');

@@ -802,8 +802,8 @@ FBA Fee Preview export.
 ## 19. SALE PLANNER
 
 **CODE LOCATION:** `index.html` → `renderSalePlanner()`, `plannerRows()`,
-`suggestSalePrice(o)`, `roundSaleEnding(x)`, `SALE_LADDER`, `SALE_MIN_OFF`,
-`PLANNER_COVER_THRESHOLD_DEFAULT`, `defaultSaleEndYmd(d)`, `exportPriceFile()`
+`suggestSalePrice(o)`, `roundSaleEnding(x)`, `SALE_LADDER`, `SALE_MIN_RUNWAY_DAYS`,
+`SALE_MIN_OFF`, `PLANNER_COVER_THRESHOLD_DEFAULT`, `defaultSaleEndYmd(d)`, `exportPriceFile()`
 
 Portfolio-wide view (top bar) answering: *which ASINs need faster sales in the next
 month, and at what sale price?*
@@ -821,19 +821,37 @@ month, and at what sale price?*
 - **Inbound pipeline**: shipments xlsx (`inbound + awdInbound + awdAvailable`) →
   Inventory Health `inbound-quantity`.
 
+**Two cover measures (`plannerRows`):**
+- **Sellable cover** (`daysOfCover`) = on-hand `available ÷ velocity`. What can stock
+  out *now*.
+- **Pipeline cover** (`pipelineCover`) = `(available + inbound) ÷ velocity` — how long
+  ALL known stock (on-hand + inbound + AWD) lasts. `velocity ≤ 0` with stock in the pipe
+  → `Infinity`; no stock → `null`. RULE: pipeline decides HOW MUCH must move; sellable
+  cover decides WHETHER a sale can start now without stocking out first.
+
 ### 19.2 Suggestion taxonomy (`suggestSalePrice`)
 RULE: suggestions anchor on **Your Price**; margin data only adds guardrails
 ("easy mode" = no COGS = ladder only, no floor).
+
+**`decisionCover`** = `pipelineCover` when supplied (else `daysOfCover`). Both the
+`> threshold` sale test AND the discount-ladder rung read `decisionCover`, so a row with
+a fat inbound pipeline is discounted on total pipeline depth, not just on-hand stock.
+When `pipelineCover` is absent behaviour is byte-identical to the pre-pipeline model.
 
 1. No price → `no_data/no_price`; no sellable stock → `skip/no_stock`.
 2. Your Price < break-even (`solveMinPriceRaw` at margin 0) → `skip/loss_leader`
    (RULE: a Your Price below break-even is a deliberate loss leader — never deepen it).
 3. Realized price < break-even while Your Price ≥ break-even →
    `skip/below_breakeven_promo` (promos already erode margin past zero).
-4. No velocity data → `no_data/no_velocity`; days of cover ≤ threshold
+4. No `decisionCover` → `no_data/no_velocity`; `decisionCover` ≤ threshold
    (default 120, editable) → `keep/healthy`.
    RULE: 120 because the aged-inventory surcharge starts at 181 days — act before it.
-5. Otherwise `sale`: discount ladder by days-of-cover — ≥365d (or ∞ = stock with zero
+5. Pipeline qualified the row but sellable `daysOfCover < SALE_MIN_RUNWAY_DAYS` (45) →
+   `wait/thin_stock_inbound`. RULE: a month-end sale window is ~31 days and discounting
+   accelerates velocity, so under 45 days of on-hand stock would likely stock out before
+   inbound lands — wait for the shipment, then discount. (Sellable cover < 45 can never
+   exceed a threshold ≥ 45, so this only ever fires when pipeline promoted the row.)
+6. Otherwise `sale`: discount ladder by `decisionCover` — ≥365d (or ∞ = stock with zero
    sales) 20%, ≥240d 15%, ≥180d 12%, ≥120d 8%, else 5%. Price = `roundSaleEnding`
    (ends in .90 — promo signal), capped at ≥5% off (`SALE_MIN_OFF`, Amazon badge
    minimum), floored at break-even. Floor above the 5%-off cap → `blocked/floor_above_5pct`.
