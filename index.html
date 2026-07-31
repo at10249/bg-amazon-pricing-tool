@@ -4810,6 +4810,9 @@ function renderSalePlanner() {
     const ov = pl.overrides[r.p.id] || {};
     const effInclude = (ov.include !== undefined) ? ov.include : (r.sug.action === 'sale');
     const effPrice = (ov.price !== undefined && ov.price !== null) ? ov.price : (r.sug.price || (r.sug.floor) || '');
+    // Rows without a suggested price show the 5%-off value as a placeholder hint — a
+    // manually-ticked healthy row needs a typed price or it is skipped at export.
+    const priceHint = (effPrice === '' && r.yourPrice > 0) ? roundSaleEnding(r.yourPrice * (1 - SALE_MIN_OFF)) : '';
     const dealWarn = (r.realized30 > 0 && !r.activeSale && r.realized30 < r.yourPrice * 0.97)
       ? `<div style="margin-top:3px;"><span class="price-match inv-reorder" style="font-size:0.55rem;">${t('selling below Your Price — deal/coupon?', '实际成交价低于标准价 — 促销/优惠券?')}</span></div>` : '';
     const inbTxt = r.inbound == null ? '—' : `${Math.round(r.inbound)}${r.recAction ? `<div style="font-size:0.6rem;color:var(--c-6b6f8a);">${r.recAction}</div>` : ''}`;
@@ -4823,7 +4826,7 @@ function renderSalePlanner() {
       <td class="pt-num">${inbTxt}</td>
       <td class="pt-num">${marginCell(r)}</td>
       <td>${sugBadge(r.sug)}</td>
-      <td class="pt-num"><input type="number" min="0" step="0.01" value="${effPrice}" style="width:76px;background:var(--c-0f1219);border:1px solid var(--c-252836);border-radius:5px;color:var(--c-fff);padding:4px 6px;font-size:0.78rem;text-align:right;" onchange="plannerSetPrice('${r.p.id}', this.value)"></td>
+      <td class="pt-num"><input type="number" min="0" step="0.01" value="${effPrice}" placeholder="${priceHint}" style="width:76px;background:var(--c-0f1219);border:1px solid var(--c-252836);border-radius:5px;color:var(--c-fff);padding:4px 6px;font-size:0.78rem;text-align:right;" onchange="plannerSetPrice('${r.p.id}', this.value)"></td>
       <td style="text-align:center;"><input type="checkbox" ${effInclude ? 'checked' : ''} onchange="plannerSetInclude('${r.p.id}', this.checked)"></td>
     </tr>`;
   }).join('');
@@ -4867,13 +4870,15 @@ function exportPriceFile() {
   const end = (document.getElementById('sp-end') || {}).value || defaultSaleEndYmd(new Date());
   if (start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
 
-  const items = [], noSku = [], subFivePct = [];
+  const items = [], noSku = [], noPrice = [], subFivePct = [];
   for (const r of rows) {
     const ov = pl.overrides[r.p.id] || {};
     const include = (ov.include !== undefined) ? ov.include : (r.sug.action === 'sale');
     if (!include) continue;
     const price = (ov.price !== undefined && ov.price !== null) ? ov.price : (r.sug.price || r.sug.floor);
-    if (!(price > 0)) continue;
+    // RULE: a checked row is never dropped silently — it is reported as skipped
+    // (no price typed, or no SKU yet) so the exported count matches expectations.
+    if (!(price > 0)) { noPrice.push(r.p.name); continue; }
     if (!r.sku) { noSku.push(r.p.name); continue; }
     items.push({ sku: r.sku, price: +Number(price).toFixed(2) });
     if (r.yourPrice > 0 && price > r.yourPrice * 0.95) subFivePct.push(r.sku);
@@ -4882,6 +4887,8 @@ function exportPriceFile() {
   if (!items.length) {
     const msg = noSku.length
       ? t(`No exportable rows. ${noSku.length} checked product(s) have no SKU — import the Inventory Health report first.`, `没有可导出的行。${noSku.length} 个勾选的产品没有SKU — 请先导入库存健康报告。`)
+      : noPrice.length
+      ? t(`No exportable rows. ${noPrice.length} checked product(s) have no sale price — type a price in the Sale Price column.`, `没有可导出的行。${noPrice.length} 个勾选的产品没有促销价 — 请在促销价列中输入价格。`)
       : t('No rows are checked for sale. Tick "On sale" on the products you want to discount.', '没有勾选任何促销行。请在要打折的产品上勾选"促销"。');
     alert(msg);
     return;
@@ -4897,6 +4904,7 @@ function exportPriceFile() {
   let summary = t(`✓ Exported ${items.length} SKU${items.length !== 1 ? 's' : ''} to PriceUpdate-Sale-${end}.xlsx\nSale window: ${start} → ${end}\n\nUpload via Seller Central → Catalog → Add Products via Upload.`,
                   `✓ 已导出 ${items.length} 个SKU至 PriceUpdate-Sale-${end}.xlsx\n促销周期：${start} → ${end}\n\n通过卖家中心 → 商品目录 → 批量上传商品上传。`);
   if (noSku.length) summary += '\n\n' + t(`Skipped (no SKU): ${noSku.join(', ')}`, `已跳过（无SKU）：${noSku.join(', ')}`);
+  if (noPrice.length) summary += '\n\n' + t(`Skipped (checked but no sale price typed): ${noPrice.join(', ')}`, `已跳过（已勾选但未输入促销价）：${noPrice.join(', ')}`);
   if (subFivePct.length) summary += '\n\n' + t(`Note: ${subFivePct.length} SKU(s) are <5% off Your Price — Amazon may not show a sale badge for these.`, `注意：${subFivePct.length} 个SKU折扣低于5% — 亚马逊可能不显示促销徽章。`);
   alert(summary);
 }
