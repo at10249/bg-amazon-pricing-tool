@@ -51,6 +51,20 @@ no build step.
 - **Cost-data record** — the latest products/CIF CSV import (filename, date,
   rows) is recorded and displayed in the Sale Planner freshness row.
 
+### Added (2026-08-02) — zero-setup catalog bootstrap
+- **Auto-create missing products from reports** — the weekly import now offers to
+  create products for ASINs it can't match (names/SKUs come straight from the
+  reports' `Title` / `product-name` columns; COGS starts at 0 so the Sale Planner
+  runs them in easy mode until CIF costs are imported). An empty catalog no longer
+  blocks the weekly routine.
+- **⚡ Load my catalog** — one-click button (empty state, import card, Sale Planner)
+  that loads the bundled CIF seed CSV shipped with the app (works on the deployed
+  site; falls back to Import CSV guidance when opened from disk).
+- **Fee Preview catalog-export link** — direct Seller Central link (Report Central →
+  Fee Preview) surfaced in the import card, Workflows catalog setup, the planner
+  empty state, and the import summary's unmatched-ASIN section, feeding the existing
+  ⬆ Import Inventory stub-creation flow.
+
 ### Changed
 - `getInventoryStatus()` takes a `periodDays` argument (default 30); check-in
   history and CSV export show the actual period.
@@ -68,7 +82,7 @@ no build step.
   "wait for inbound" summary chip, and wait rows sort just below sale candidates.
   Rows with no inbound pipeline are byte-identical to the previous model.
 
-Tests: 332 → **454** (`npm test`).
+Tests: 332 → **466** (`npm test`).
 
 ## [Fable Edit 1.1] — 2026-07-07
 

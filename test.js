@@ -436,6 +436,7 @@ function parseBusinessReport(lines, periodDays, fileName) {
   const sessC = idx('sessions total', 'sessions');
   const cvrC  = idx('unit session percentage');
   const skuC  = idx('sku');
+  const titleC= idx('title'); // RULE: capture the listing Title so a fresh catalog can auto-name stubs
   const byAsin = {};
   let rowCount = 0;
   for (let i = 1; i < lines.length; i++) {
@@ -443,13 +444,14 @@ function parseBusinessReport(lines, periodDays, fileName) {
     const cols = parseCSVRow(lines[i]);
     const asin = _amzCell(cols[asinC]).toUpperCase();
     if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
-    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '' };
+    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '', name: '' };
     const d = byAsin[asin];
     if (revC   !== -1) d.revenue  += parseAmzNum(cols[revC]);
     if (unitsC !== -1) d.units    += parseAmzNum(cols[unitsC]);
     if (sessC  !== -1) d.sessions += parseAmzNum(cols[sessC]);
     if (cvrC   !== -1) { const v = parseAmzNum(cols[cvrC]); if (v > 0) { d.cvr = v; d.cvrSeen = true; } }
     if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (titleC !== -1 && !d.name) d.name = _amzCell(cols[titleC]); // first non-empty Title wins
     rowCount++;
   }
   for (const a in byAsin) { const d = byAsin[a]; if (!d.cvrSeen && d.sessions > 0) d.cvr = +(d.units / d.sessions * 100).toFixed(2); }
@@ -498,6 +500,7 @@ function parseInventoryReport(lines, fileName) {
   const incIdx = frag => hdrs.findIndex(h => h.includes(frag));
   const asinC = idx('asin');
   const skuC  = idx('sku');
+  const nameC = idx('product name'); // RULE: 'product-name' normalizes to 'product name' — auto-name stubs from it
   let availC  = idx('available');
   if (availC === -1) availC = [incIdx('afn fulfillable quantity'), incIdx('fulfillable quantity'), incIdx('sellable quantity'), incIdx('available quantity')].find(i => i !== -1);
   if (availC === undefined) availC = -1;
@@ -514,10 +517,11 @@ function parseInventoryReport(lines, fileName) {
     const cols = parseCSVRow(lines[i]);
     const asin = _amzCell(cols[asinC]).toUpperCase();
     if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
-    if (!byAsin[asin]) byAsin[asin] = { sku: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
+    if (!byAsin[asin]) byAsin[asin] = { sku: '', name: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
       u7: 0, u30: 0, u60: 0, u90: 0, s7: 0, s30: 0, s60: 0, s90: 0 };
     const d = byAsin[asin];
     if (skuC  !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (nameC !== -1 && !d.name) d.name = _amzCell(cols[nameC]); // first non-empty product-name wins
     if (availC !== -1) d.available += parseAmzNum(cols[availC]);
     if (inbC   !== -1) d.inboundQty += parseAmzNum(cols[inbC]);
     if (ypC !== -1 && d.yourPrice <= 0)  { const v = parseAmzNum(cols[ypC]); if (v > 0) d.yourPrice = v; }
@@ -534,6 +538,43 @@ function parseInventoryReport(lines, fileName) {
     rowCount++;
   }
   return { kind: 'inventory', fileName, byAsin, rowCount };
+}
+// ── product model + report-stub factory (mirrored from app) ──
+function createDefaultProduct(overrides = {}) {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+    name: 'New Product',
+    asin: '',
+    createdAt: new Date().toISOString(),
+    lifecycle: 'PRE_LAUNCH',
+    stageStartDates: {},
+    checkins: [],
+    notes: '',
+    inputs: {
+      category: '15', sizetier: 'ss', weight: 8,
+      cogs: 6, margin: 30,
+      inbound: 0.50, placement: 0, prep: 0.25, storage: 0.10, q4storage: 0,
+      ppc: 1.50, returns: 0.30, other: 0.20,
+      vine: false, vineUnits: 20, annualUnits: 500,
+      tacos: 25, lacos: 60, cvr: 12,
+      couponAmt: 0, couponVol: 0,
+      monthlyOverhead: 0,
+      surcharge: true
+    },
+    ...overrides
+  };
+}
+// RULE: a stub auto-created from Amazon reports keeps cogs:0 (incomplete-setup banner);
+// name falls back to `Product <ASIN>`, sku defaults to '' — `rd` is the per-ASIN record.
+function buildReportStub(asin, rd) {
+  const a = (asin || '').toUpperCase();
+  const r = rd || {};
+  const p = createDefaultProduct();
+  p.name = r.name || `Product ${a}`;
+  p.asin = a;
+  p.sku = r.sku || '';
+  p.inputs.cogs = 0;
+  return p;
 }
 const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ];
 const SALE_MIN_RUNWAY_DAYS = 45;
@@ -1529,6 +1570,7 @@ eq(bd.units, 683, 'Units Ordered 683 (non-B2B column, not the B2B 5)');
 eq(bd.sessions, 12131, 'Sessions - Total "12,131" → 12131');
 eq(bd.cvr, 5.63, 'Unit Session Percentage 5.63% → 5.63');
 eq(bd.sku, '5K-SC4U-PO06', 'SKU column captured');
+eq(bd.name, 'BasicGear Cast Net, Zinc Iron, 3ft Radius, 3/8 in Mesh, for Bait Fish', 'Title column captured as name (for auto-created stubs)');
 eq(biz1.periodDays, 30, 'periodDays passed through');
 // CVR recompute path (report missing Unit Session Percentage → units/sessions*100)
 const bizNoCvr = parseBusinessReport(['child asin,sessions - total,units ordered,ordered product sales', 'B012345678,200,20,100'], 30, 'x');
@@ -1552,6 +1594,7 @@ const inv1 = parseInventoryReport([FX_invHdr, FX_invRow1, FX_invRow24], 'inv.csv
 const iv = inv1.byAsin['B0FQ2HP3Z9'];
 is(!!iv, 'ASIN B0FQ2HP3Z9 parsed');
 eq(iv.sku, 'LANDINGNET-BAITWELLNET-01-24INCH', 'sku captured');
+eq(iv.name, 'BasicGear Medium Baitwell Landing Net, 8x10 in Hoop, 24 in', 'product-name column captured as name (for auto-created stubs)');
 eq(iv.available, 165, 'available 165');
 eq(iv.yourPrice, 24.95, 'your-price 24.95 (first > 0)');
 eq(iv.salesPrice, 22.9, 'sales-price 22.9 (active sale wins later)');
@@ -1567,6 +1610,21 @@ eq(iv0.salesPrice, 0, 'sales-price "0.0" → 0 (treated as none)');
 eq(iv0.available, 0, 'available "0" → 0');
 // F5 addendum: realized transaction price = s30/u30 captures deals/coupons
 eq(+(iv.s30 / iv.u30).toFixed(2), 22.93, 'realized30 = s30/u30 = 3507.80/153 ≈ 22.93 (captures the active sale)');
+
+describe('buildReportStub — auto-create a catalog product from report data');
+const stubFull = buildReportStub('b096mcmdpl', { name: 'BasicGear Cast Net 3ft', sku: '5K-SC4U-PO06' });
+eq(stubFull.name, 'BasicGear Cast Net 3ft', 'name comes from report data');
+eq(stubFull.asin, 'B096MCMDPL', 'asin is upper-cased');
+eq(stubFull.sku, '5K-SC4U-PO06', 'sku comes from report data');
+eq(stubFull.inputs.cogs, 0, 'cogs === 0 (stub → incomplete-setup banner)');
+is(Array.isArray(stubFull.checkins) && stubFull.checkins.length === 0, 'starts with an empty checkins array');
+const stubBare = buildReportStub('B0FQ2HP3Z9', {});
+eq(stubBare.name, 'Product B0FQ2HP3Z9', 'name falls back to `Product <ASIN>` when report has none');
+eq(stubBare.sku, '', 'sku defaults to empty string');
+eq(stubBare.inputs.cogs, 0, 'bare stub also has cogs 0');
+const stubNoRd = buildReportStub('B012345678');
+eq(stubNoRd.name, 'Product B012345678', 'missing rd arg → still name-falls-back safely');
+eq(stubNoRd.sku, '', 'missing rd arg → sku empty');
 
 describe('parseDateRangeStr — inclusive day count + invalid');
 const dr = parseDateRangeStr('Jul 06, 2026 - Jul 29, 2026');

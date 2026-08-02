@@ -183,6 +183,25 @@ Optionally, upload the team's incoming-shipments spreadsheet (总体控制表 `.
 the inbound pipeline per product — matched by Merchant SKU, which the Inventory Health
 import captures automatically.
 
+### Zero-setup start (empty catalog)
+
+A brand-new browser has no products, so nothing would match by ASIN. You are never
+blocked:
+
+- **Auto-create from reports** — when the import finds report ASINs that aren't in your
+  catalog yet, it offers to create them automatically. Names come from the Business
+  `Title` / Inventory `product-name` columns, SKUs from the reports; costs start empty
+  (COGS 0), so each new product shows the yellow incomplete-setup dot until you add costs.
+  The Sale Planner still works for them immediately in easy mode (ladder only, no floor).
+- **Load my catalog (CIF seed)** — a one-click button (app empty state, Check-ins import
+  card, Sale Planner empty state, and the import summary) loads the bundled
+  `cif-seed-2026-07-18.csv` (173 products with real landed costs). Works on the deployed
+  site; when opening `index.html` directly from disk, use **Import CSV** in the top bar
+  instead.
+- **Fee Preview (catalog export)** — a direct link to Seller Central's Fee Preview report,
+  which exports your **full** catalog (ASIN, name, size tier, weight) even for ASINs with
+  no sales or stock. Import it with the **⬆ Import Inventory** button.
+
 ---
 
 ## Sale Planner & Amazon price-feed export

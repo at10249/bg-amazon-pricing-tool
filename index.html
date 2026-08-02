@@ -660,6 +660,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px;">
         <button class="empty-btn" onclick="openAddModal()" data-en="+ Add first product" data-zh="+ 添加第一个产品">+ Add first product</button>
+        <button class="empty-btn" style="background:var(--c-1a2a1a);border:1px solid var(--c-166534);color:var(--c-4ade80);" onclick="loadBundledCatalog()" data-en="⚡ Load my catalog (CIF seed, 173 products)" data-zh="⚡ 加载我的目录（CIF种子，173个产品）">⚡ Load my catalog (CIF seed, 173 products)</button>
         <button class="empty-btn" style="background:var(--c-1a2a1a);border:1px solid var(--c-166534);color:var(--c-4ade80);" onclick="loadExampleProduct()" data-en="Load sample product — Cast Net 5ft" data-zh="加载示例产品 — 5英尺撒网">Load sample product — Cast Net 5ft</button>
       </div>
     </div>
@@ -726,6 +727,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
             <a href="https://sellercentral.amazon.com/business-reports/ref=xx_sitemetric_dnav_xx#/report?id=102%3ADetailSalesTrafficBySKU&amp;chartCols=&amp;columns=0%2F1%2F2%2F3%2F8%2F9%2F14%2F15%2F20%2F21%2F26%2F27%2F28%2F29%2F30%2F31%2F32%2F33%2F34%2F35%2F36%2F37" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Business Report" data-zh="↗ 业务报告">↗ Business Report</a>
             <a href="https://advertising.amazon.com/reporting/new?entityId=ENTITY27B6KAMT9RSQT&amp;templateId=advertised_product" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-5b63f7);color:var(--c-818cf8);" data-en="↗ Ads Report (Advertised product)" data-zh="↗ 广告报告（推广商品）">↗ Ads Report (Advertised product)</a>
             <a href="https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-7a5c00);color:var(--c-fcd34d);" data-en="↗ Inventory Health" data-zh="↗ 库存健康">↗ Inventory Health</a>
+            <a href="https://sellercentral.amazon.com/reportcentral/FEE_PREVIEW/1" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);" title="exports your full catalog (ASIN, name, size, weight) — import it with the ⬆ Import Inventory button" data-en="↗ Fee Preview (catalog export)" data-zh="↗ 费用预览（目录导出）">↗ Fee Preview (catalog export)</a>
           </div>
 
           <div id="import-guide" class="hidden-guide" style="margin-top:12px;">
@@ -766,6 +768,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
           <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
             <button class="btn primary" onclick="document.getElementById('amz-report-file').click()" data-en="Import Amazon Reports (select all 3 CSVs)" data-zh="导入亚马逊报告（选择全部3个CSV）">Import Amazon Reports (select all 3 CSVs)</button>
             <input type="file" id="amz-report-file" accept=".csv,.txt" multiple style="display:none" onchange="importAmazonReport(event)">
+            <button class="topbar-btn" style="background:var(--c-1a2a1a);border-color:var(--c-166534);color:var(--c-4ade80);" onclick="loadBundledCatalog()" data-en="⚡ Load my catalog (CIF seed, 173 products)" data-zh="⚡ 加载我的目录（CIF种子，173个产品）">⚡ Load my catalog (CIF seed, 173 products)</button>
             <button class="topbar-btn" onclick="document.getElementById('shipments-file').click()" data-en="Optional: Import Incoming Shipments (xlsx)" data-zh="可选：导入在途货件（xlsx）">Optional: Import Incoming Shipments (xlsx)</button>
             <input type="file" id="shipments-file" accept=".xlsx" style="display:none" onchange="importShipmentsXlsx(event)">
           </div>
@@ -1013,6 +1016,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
               <div class="wf-step-desc">Download the FBA Fee Preview report — it contains every ASIN, product name, size tier and weight for your whole catalog.</div>
               <div class="wf-step-path"><strong>Seller Central →</strong> Reports → Fulfillment → Fee Preview → Download</div>
               <div class="wf-actions">
+                <a href="https://sellercentral.amazon.com/reportcentral/FEE_PREVIEW/1" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Fee Preview (catalog export)" data-zh="↗ 费用预览（目录导出）">↗ Fee Preview (catalog export)</a>
                 <button class="topbar-btn" style="background:var(--c-1a2a1a);border-color:var(--c-166534);color:var(--c-4ade80);" onclick="document.getElementById('wf-inv-file').click()">⬆ Import Inventory</button>
                 <input type="file" id="wf-inv-file" accept=".csv,.txt,.tsv" style="display:none" onchange="importFBAFeePreview(event)">
                 <span style="font-size:0.71rem;color:var(--c-555870);">Creates a stub for each ASIN</span>
@@ -1481,7 +1485,11 @@ const STORAGE_KEY = 'amazon_pricing_tool_v1';
 const AMZ_REPORT_LINKS = {
   business:  'https://sellercentral.amazon.com/business-reports/ref=xx_sitemetric_dnav_xx#/report?id=102%3ADetailSalesTrafficBySKU&chartCols=&columns=0%2F1%2F2%2F3%2F8%2F9%2F14%2F15%2F20%2F21%2F26%2F27%2F28%2F29%2F30%2F31%2F32%2F33%2F34%2F35%2F36%2F37',
   ads:       'https://advertising.amazon.com/reporting/new?entityId=ENTITY27B6KAMT9RSQT&templateId=advertised_product',
-  inventory: 'https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1'
+  inventory: 'https://sellercentral.amazon.com/reportcentral/MANAGE_INVENTORY_HEALTH/1',
+  // RULE: Fee Preview exports the FULL catalog (ASIN, name, size tier, weight) even for
+  // ASINs with zero sales/stock — the reliable way to seed a fresh catalog. Import it via
+  // the "⬆ Import Inventory" button (importFBAFeePreview), which creates cogs:0 stubs.
+  feePreview: 'https://sellercentral.amazon.com/reportcentral/FEE_PREVIEW/1'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1721,8 +1729,15 @@ function importCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
-    const lines = e.target.result.split('\n').filter(l => l.trim());
+  reader.onload = (e) => { importProductsCSVText(e.target.result, file.name); };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// RULE: pure text→state import extracted from importCSV so the bundled-catalog fetch()
+// path (loadBundledCatalog) and the FileReader path share ONE parser/validator + report.
+function importProductsCSVText(text, filename) {
+    const lines = text.split('\n').filter(l => l.trim());
     if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
     const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
     const has = col => headers.includes(col);
@@ -1828,15 +1843,22 @@ function importCSV(event) {
     // fresh the underlying COGS figures are. Only stamp it when the file actually
     // changed something (a pure-error import shouldn't claim to be the cost source).
     if (created + updated > 0) {
-      state.costDataMeta = { filename: file.name, at: new Date().toISOString(), rows: created + updated };
+      state.costDataMeta = { filename: filename, at: new Date().toISOString(), rows: created + updated };
     }
     saveToStorage();
     renderAll();
     // RULE: Always show the import validation report — never skip rows silently
     showImportReport(created, updated, skippedRows);
-  };
-  reader.readAsText(file);
-  event.target.value = '';
+}
+
+// RULE: the repo ships the user's CIF seed next to index.html; fetch() works when the
+// app is served over http(s) (Vercel/localhost) but NOT from file:// — fail with a
+// helpful fallback pointing at the Import CSV button.
+function loadBundledCatalog() {
+  fetch('cif-seed-2026-07-18.csv')
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+    .then(text => importProductsCSVText(text, 'cif-seed-2026-07-18.csv'))
+    .catch(() => alert(t('Could not load the bundled catalog file (this works on the deployed site, not when opening index.html directly from disk). Use Import CSV in the top bar and select your CIF file instead.','无法加载内置目录文件（部署站点上可用，直接从磁盘打开 index.html 时不可用）。请使用顶栏的"导入CSV"并选择您的CIF文件。')));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1865,6 +1887,21 @@ function createDefaultProduct(overrides = {}) {
     },
     ...overrides
   };
+}
+
+// RULE: a product auto-created from Amazon reports is a STUB — cogs stays 0 so the
+// incomplete-setup banner nudges the user to import CIF costs; the Sale Planner still
+// works immediately in easy mode (anchors on your-price, no floor). `rd` is the
+// per-ASIN record from state.reportData.byAsin[asin].
+function buildReportStub(asin, rd) {
+  const a = (asin || '').toUpperCase();
+  const r = rd || {};
+  const p = createDefaultProduct();
+  p.name = r.name || `Product ${a}`;
+  p.asin = a;
+  p.sku = r.sku || '';
+  p.inputs.cogs = 0;
+  return p;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3707,6 +3744,7 @@ function parseBusinessReport(lines, periodDays, fileName) {
   const sessC = idx('sessions total', 'sessions');
   const cvrC  = idx('unit session percentage');
   const skuC  = idx('sku');
+  const titleC= idx('title'); // RULE: capture the listing Title so a fresh catalog can auto-name stubs
   const byAsin = {};
   let rowCount = 0;
   for (let i = 1; i < lines.length; i++) {
@@ -3714,13 +3752,14 @@ function parseBusinessReport(lines, periodDays, fileName) {
     const cols = parseCSVRow(lines[i]);
     const asin = _amzCell(cols[asinC]).toUpperCase();
     if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
-    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '' };
+    if (!byAsin[asin]) byAsin[asin] = { revenue: 0, units: 0, sessions: 0, cvr: 0, cvrSeen: false, sku: '', name: '' };
     const d = byAsin[asin];
     if (revC   !== -1) d.revenue  += parseAmzNum(cols[revC]);
     if (unitsC !== -1) d.units    += parseAmzNum(cols[unitsC]);
     if (sessC  !== -1) d.sessions += parseAmzNum(cols[sessC]);
     if (cvrC   !== -1) { const v = parseAmzNum(cols[cvrC]); if (v > 0) { d.cvr = v; d.cvrSeen = true; } }
     if (skuC   !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (titleC !== -1 && !d.name) d.name = _amzCell(cols[titleC]); // first non-empty Title wins
     rowCount++;
   }
   for (const a in byAsin) {
@@ -3778,6 +3817,7 @@ function parseInventoryReport(lines, fileName) {
   const incIdx = frag => hdrs.findIndex(h => h.includes(frag));
   const asinC = idx('asin');
   const skuC  = idx('sku');
+  const nameC = idx('product name'); // RULE: 'product-name' normalizes to 'product name' — auto-name stubs from it
   let availC  = idx('available');
   if (availC === -1) availC = [incIdx('afn fulfillable quantity'), incIdx('fulfillable quantity'), incIdx('sellable quantity'), incIdx('available quantity')].find(i => i !== -1);
   if (availC === undefined) availC = -1;
@@ -3794,10 +3834,11 @@ function parseInventoryReport(lines, fileName) {
     const cols = parseCSVRow(lines[i]);
     const asin = _amzCell(cols[asinC]).toUpperCase();
     if (!asin || asin.length < 5 || asin === 'TOTAL') continue;
-    if (!byAsin[asin]) byAsin[asin] = { sku: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
+    if (!byAsin[asin]) byAsin[asin] = { sku: '', name: '', available: 0, inboundQty: 0, yourPrice: 0, salesPrice: 0, snapshotDate: '',
       u7: 0, u30: 0, u60: 0, u90: 0, s7: 0, s30: 0, s60: 0, s90: 0 };
     const d = byAsin[asin];
     if (skuC  !== -1 && !d.sku) d.sku = _amzCell(cols[skuC]);
+    if (nameC !== -1 && !d.name) d.name = _amzCell(cols[nameC]); // first non-empty product-name wins
     if (availC !== -1) d.available += parseAmzNum(cols[availC]);
     if (inbC   !== -1) d.inboundQty += parseAmzNum(cols[inbC]);
     if (ypC !== -1 && d.yourPrice <= 0)  { const v = parseAmzNum(cols[ypC]); if (v > 0) d.yourPrice = v; }
@@ -3889,6 +3930,43 @@ function applyAmazonReports(parsedFiles, failures) {
     }
   }
 
+  // RULE: merge the product NAME from the reports so a fresh catalog can auto-name stubs.
+  // Inventory Health's product-name wins over the Business Title (it's the canonical listing
+  // name); an empty name never overwrites a good one.
+  for (const f of parsedFiles) {
+    if (f.kind !== 'business' && f.kind !== 'inventory') continue;
+    for (const [asin, d] of Object.entries(f.byAsin)) {
+      if (!d.name) continue;
+      const a = asin.toUpperCase();
+      if (!rd[a]) rd[a] = {};
+      if (f.kind === 'inventory' || !rd[a].name) { rd[a].name = d.name; touched.add(a); }
+    }
+  }
+
+  // 1b) RULE: auto-create stubs for report ASINs with no catalog product, so a fresh browser
+  // (empty catalog) importing the 3 reports isn't a dead end. Names/SKUs come from the reports;
+  // cogs stays 0 (incomplete-setup banner nudges a CIF import). Created BEFORE the matching loop
+  // below so the same loop naturally gives each new stub its one check-in.
+  const unmatchedBefore = [...touched].filter(a => !state.products.some(p => p.asin && p.asin.trim().toUpperCase() === a));
+  let createdCount = 0;
+  if (unmatchedBefore.length) {
+    const n = unmatchedBefore.length;
+    if (confirm(t(
+      `${n} product(s) in these reports aren't in your catalog yet. Add them automatically? Names and SKUs come from the reports. Costs start empty — import your CIF file later to enable break-even floors.`,
+      `这些报告中有 ${n} 个产品尚未在您的目录中。是否自动添加？名称和SKU来自报告。成本从空开始 — 稍后导入CIF文件以启用盈亏平衡下限。`
+    ))) {
+      for (const a of unmatchedBefore) {
+        const stub = buildReportStub(a, rd[a] || {});
+        stub.notes = t(
+          'Auto-created from an Amazon report. Import your CIF file (or open Edit) to add COGS and enable break-even floors.',
+          '从亚马逊报告自动创建。请导入CIF文件（或打开编辑）以添加货物成本并启用盈亏平衡下限。'
+        );
+        state.products.push(stub);
+        createdCount++;
+      }
+    }
+  }
+
   // 2) For each ASIN matched to a product: update sku/cvr and create exactly one batch check-in.
   const kindsLabel = parsedFiles.map(f => {
     if (f.kind === 'business') return t(`Business (${f.periodDays}d)`, `业务（${f.periodDays}天）`);
@@ -3939,11 +4017,12 @@ function applyAmazonReports(parsedFiles, failures) {
   renderAll();
 
   const unmatched = [...touched].filter(a => !state.products.some(p => p.asin && p.asin.trim().toUpperCase() === a));
-  showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched);
+  showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched, createdCount);
 }
 
 // ── F2: rich import summary in the shared import-report-modal ──
-function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched) {
+function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched, createdCount) {
+  createdCount = createdCount || 0;
   const icon = k => k === 'business' ? '📊' : k === 'ads' ? '📣' : '📦';
   const kindName = k => k === 'business' ? t('Business Report', '业务报告') : k === 'ads' ? t('Advertising Report', '广告报告') : t('Inventory Health', '库存健康');
   const period = f => f.kind === 'business' ? t(`${f.periodDays}-day window`, `${f.periodDays}天窗口`)
@@ -3961,17 +4040,32 @@ function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched) 
     body += `<div class="alert warn" style="margin:8px 0;">${t('No recognizable report files were parsed.', '未解析到可识别的报告文件。')}</div>`;
   }
 
-  body += `<div style="margin-top:10px;font-size:0.82rem;color:var(--c-e8eaf0);">${t(`Matched ${matchedProducts} product${matchedProducts !== 1 ? 's' : ''}`, `匹配到 ${matchedProducts} 个产品`)} · <span style="color:var(--c-4ade80);">${matchedProducts > 0 ? t('one check-in added per product', '每个产品添加一条检查记录') : t('no check-ins added', '未添加检查记录')}</span></div>`;
+  // RULE: "Matched" counts pre-existing products; auto-created stubs are reported separately
+  // as "created N new" so the two figures don't double-count the same check-ins.
+  const existingMatched = Math.max(0, matchedProducts - createdCount);
+  const createdBit = createdCount > 0
+    ? ` · <span style="color:var(--c-4ade80);">${t(`created ${createdCount} new from reports`, `从报告新建 ${createdCount} 个`)}</span>`
+    : '';
+  body += `<div style="margin-top:10px;font-size:0.82rem;color:var(--c-e8eaf0);">${t(`Matched ${existingMatched} product${existingMatched !== 1 ? 's' : ''}`, `匹配到 ${existingMatched} 个产品`)}${createdBit} · <span style="color:var(--c-4ade80);">${matchedProducts > 0 ? t('one check-in each', '每个一条检查记录') : t('no check-ins added', '未添加检查记录')}</span></div>`;
 
   if (unmatched.length) {
     const list = unmatched.map(a => `<span style="display:inline-block;font-family:monospace;font-size:0.72rem;color:var(--c-fca5a5);margin:2px 6px 2px 0;">${a}</span>`).join('');
     if (unmatched.length > 8) {
       body += `<button class="topbar-btn" style="margin-top:8px;" onclick="const l=document.getElementById('ir-unmatched');const open=l.style.display!=='none';l.style.display=open?'none':'';this.textContent=(open?'▸ ':'▾ ')+this.dataset.label;"
         data-label="${t(`${unmatched.length} unmatched ASINs`, `${unmatched.length} 个未匹配的ASIN`)}">▸ ${t(`${unmatched.length} unmatched ASINs`, `${unmatched.length} 个未匹配的ASIN`)}</button>
-        <div id="ir-unmatched" style="display:none;margin-top:6px;max-height:32vh;overflow-y:auto;">${list}<div style="font-size:0.7rem;color:var(--c-6b6f8a);margin-top:6px;">${t('Add these ASINs to products (or import a CSV) to match them.', '将这些ASIN添加到产品（或导入CSV）以进行匹配。')}</div></div>`;
+        <div id="ir-unmatched" style="display:none;margin-top:6px;max-height:32vh;overflow-y:auto;">${list}</div>`;
     } else {
       body += `<div style="margin-top:8px;font-size:0.75rem;"><span style="color:var(--c-6b6f8a);">${t('Unmatched ASINs:', '未匹配的ASIN：')}</span> ${list}</div>`;
     }
+    // RULE: never a dead end — give the user three concrete ways to get these ASINs into the catalog.
+    body += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--c-1e2130);font-size:0.75rem;color:var(--c-8b8fa8);">
+        <div style="margin-bottom:8px;color:var(--c-e8eaf0);font-weight:700;">${t('Get these products into your catalog', '将这些产品加入目录')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+          <button class="btn primary" onclick="closeModalEl('import-report-modal');loadBundledCatalog();">${t('⚡ Load my catalog (CIF seed, 173 products)', '⚡ 加载我的目录（CIF种子，173个产品）')}</button>
+          <a href="${AMZ_REPORT_LINKS.feePreview}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);">↗ ${t('Fee Preview (catalog export)', '费用预览（目录导出）')}</a>
+        </div>
+        <div style="font-size:0.72rem;color:var(--c-6b6f8a);">${t('The Fee Preview report exports your full catalog (ASIN, name, size, weight) — import it with the ⬆ Import Inventory button in the top bar. Or import a CIF/products CSV to match by ASIN.', '费用预览报告导出完整目录（ASIN、名称、尺寸、重量）— 用顶栏的"⬆ 导入库存"按钮导入。或导入CIF/产品CSV以通过ASIN匹配。')}</div>
+      </div>`;
   }
 
   if (failures.length) {
@@ -4716,7 +4810,8 @@ function renderSalePlanner() {
   const linkBtns = `
     <a href="${AMZ_REPORT_LINKS.business}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);">↗ ${t('Business', '业务')}</a>
     <a href="${AMZ_REPORT_LINKS.ads}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-5b63f7);color:var(--c-818cf8);">↗ ${t('Ads', '广告')}</a>
-    <a href="${AMZ_REPORT_LINKS.inventory}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-7a5c00);color:var(--c-fcd34d);">↗ ${t('Inventory Health', '库存健康')}</a>`;
+    <a href="${AMZ_REPORT_LINKS.inventory}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-7a5c00);color:var(--c-fcd34d);">↗ ${t('Inventory Health', '库存健康')}</a>
+    <a href="${AMZ_REPORT_LINKS.feePreview}" target="_blank" rel="noopener" class="topbar-btn" style="border-color:var(--c-166534);color:var(--c-4ade80);">↗ ${t('Fee Preview (catalog export)', '费用预览（目录导出）')}</a>`;
 
   const header = `
     <div style="margin-bottom:16px;">
@@ -4731,7 +4826,11 @@ function renderSalePlanner() {
         <div style="font-size:0.9rem;color:var(--c-e8eaf0);font-weight:700;margin-bottom:6px;">${t('No Amazon data imported yet', '尚未导入亚马逊数据')}</div>
         <div style="font-size:0.78rem;color:var(--c-555870);max-width:520px;margin:0 auto 16px;">${t('Import the three Seller-Central reports to populate stock levels, prices, velocity and margins. Open them directly:', '导入三份卖家中心报告以填充库存、价格、销售速度和利润。直接打开：')}</div>
         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">${linkBtns}</div>
-        <button class="btn primary" onclick="document.getElementById('amz-report-file').click()">${t('⬆ Import Amazon Reports', '⬆ 导入亚马逊报告')}</button>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn primary" onclick="document.getElementById('amz-report-file').click()">${t('⬆ Import Amazon Reports', '⬆ 导入亚马逊报告')}</button>
+          <button class="topbar-btn" style="background:var(--c-1a2a1a);border-color:var(--c-166534);color:var(--c-4ade80);" onclick="loadBundledCatalog()">${t('⚡ Load my catalog (CIF seed, 173 products)', '⚡ 加载我的目录（CIF种子，173个产品）')}</button>
+        </div>
+        <div style="font-size:0.72rem;color:var(--c-6b6f8a);margin-top:12px;max-width:520px;margin-left:auto;margin-right:auto;">${t('No products yet? Importing the reports will offer to auto-create them. The Fee Preview link above exports your full catalog (ASIN, name, size, weight) for the ⬆ Import Inventory button.', '还没有产品？导入报告时会提示自动创建。上方的费用预览链接可导出完整目录（ASIN、名称、尺寸、重量），供"⬆ 导入库存"按钮使用。')}</div>
       </div>`;
     return;
   }

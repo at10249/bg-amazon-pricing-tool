@@ -781,6 +781,20 @@ only fields present in the batch are overwritten) — this feeds the Sale Planne
 (Section 19). Dates are formatted with a local `ymd()` helper, never
 `toISOString()` (timezone-shift bug).
 
+**Auto-create of missing products (zero-setup path).** The parsers also capture the
+product name per ASIN (Business `Title`, Inventory Health `product-name` — inventory
+wins). RULE: an empty catalog must never block the weekly import — when the batch
+contains ASINs with no matching product, the user is asked once (`confirm()`) whether
+to add them automatically. On OK, `buildReportStub(asin, rd)` creates one product per
+ASIN via `createDefaultProduct()` with the report's name/SKU/ASIN and `cogs: 0` —
+the zero COGS deliberately triggers the incomplete-setup banner as the nudge to import
+CIF costs later. Stubs are created BEFORE the check-in loop so the same batch also
+gives them their first check-in. If the user declines, the import summary lists the
+unmatched ASINs alongside three recovery actions: the Fee Preview catalog-export link
+(`AMZ_REPORT_LINKS.feePreview`), the "⬆ Import Inventory" flow (18.1), and the
+bundled-catalog loader (`loadBundledCatalog()` — fetches the CIF seed CSV shipped
+next to index.html; works over http(s), not file://).
+
 ### 18.3 Size tier string mapping
 **CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
 
@@ -831,7 +845,9 @@ month, and at what sale price?*
 
 ### 19.2 Suggestion taxonomy (`suggestSalePrice`)
 RULE: suggestions anchor on **Your Price**; margin data only adds guardrails
-("easy mode" = no COGS = ladder only, no floor).
+("easy mode" = no COGS = ladder only, no floor). Products auto-created from
+Amazon reports (18.2 stubs, `cogs: 0`) therefore work in the planner immediately —
+they simply run in easy mode until CIF costs are imported.
 
 **`decisionCover`** = `pipelineCover` when supplied (else `daysOfCover`). Both the
 `> threshold` sale test AND the discount-ladder rung read `decisionCover`, so a row with
