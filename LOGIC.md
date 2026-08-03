@@ -887,6 +887,55 @@ date (`defaultSaleEndYmd`) — but rolls to the end of NEXT month when fewer tha
 (including today) remain, because a 1–2 day "month-end sale" is never the intent.
 Rows discounted <5% are exported but the summary warns Amazon may not show a badge.
 
+### 19.4 Proposal review report
+**CODE LOCATION:** `index.html` → `collectPlanItems()`, `buildProposalModel()`,
+`buildProposalReportHtml()`, `escHtml()`, `openProposalReport()`
+
+Every price plan ships with a polished, self-contained HTML **Month-End Sale Proposal**
+document that a human reviews or shares.
+
+RULE: `collectPlanItems()` is the **single source of truth** for which planner rows ship
+and at what effective price — effective include = `override.include ?? (suggestion action
+is 'sale')`, effective price = `override.price ?? (suggested price || break-even floor)`.
+Both the `.xlsx` export (`exportPriceFile`) and the report (`buildProposalModel`) derive
+their item list from it, so the report can never describe a different set of SKUs than the
+upload file. It reads state, so it is not a pure function and is not mirrored in `test.js`
+(the include/price rule it encodes is covered through the `suggestSalePrice` + XLSX
+round-trip tests).
+
+`buildProposalModel(start, end)` (impure, untested) assembles a plain model from state:
+`window`, `generatedAt`, `lang`, `threshold`, `ladder`/`minRunwayDays`/`minOffPct` (copied
+from the code constants so the document never drifts), `included` (per shipped row: sku,
+name, yourPrice, activeSale, realized30, newPrice — the effective post-override price —
+offPct, marginAtNew via `feeWaterfall` when COGS>0 else null, coverSellable, coverPipeline,
+inbound, and the flags `floored` / `overridden` / `aboveActiveSale` / `atCost` /
+`reasonRung`), `waits` (rows with `wait` action), `excludedCounts` + `excludedExamples`
+(loss-leader / promo-eroded / blocked / healthy / no-data buckets, ≤5 example SKUs each),
+`freshness` (business/ads/inventory dates + optional shipments and CIF file+date), plus
+counts and `avgOffPct`.
+
+`buildProposalReportHtml(model)` is **PURE** (mirrored + tested): it returns a complete
+standalone `<!doctype html>` document string. Report language follows `model.lang` via a
+local `L(en, zh)` dictionary — the app's `t()` is **not** called inside it. All user data
+(product names, SKUs) is escaped through `escHtml()` (`& < > " '`). The document embeds the
+reference palette CSS (stat strip, striped tables, callouts, print CSS). RULE: **hex colours
+are allowed inside this returned string** — it is a standalone exported artifact, not app UI,
+so the "colours via `var(--c-*)` only" house rule does not apply to the report; the report's
+own `:root` defines `--ink/--acc/--mut/…`. A sticky print **toolbar** (🖨 Save as PDF →
+`window.print()`, hidden by `@media print`) is the delivery mechanism to PDF.
+
+**Delivery.** Shared helper `deliverProposalReport(html, fileName)`: opens the report
+via `URL.createObjectURL(new Blob([html],{type:'text/html'}))` + `window.open(url,'_blank')`
+from the direct user gesture (not popup-blocked); if `window.open` returns null it falls
+back to an anchor download of `PriceUpdate-Sale-<end>-report.html`. Blob URLs are revoked
+on a 60s timer so the new tab can finish loading. RULE: `exportPriceFile()` must use the
+tab (not a download) for the report — a second programmatic download in the same click as
+the `.xlsx` is silently dropped by Chromium's multiple-download policy (observed in
+testing: the alert claimed a file that never arrived). The summary alert words the
+delivery accordingly ('opened in a new tab' vs 'also saved'). Callers:
+`openProposalReport()` (📄 Review Report button) and `exportPriceFile()`. The planner
+**empty state** shows no report button (nothing to report).
+
 ## 20. ZERO-DEPENDENCY XLSX READ / WRITE
 
 ### 20.1 Reader (incoming shipments, F4)

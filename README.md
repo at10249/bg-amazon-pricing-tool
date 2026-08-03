@@ -228,6 +228,13 @@ template format (Sale Price + Sale Start/End dates per SKU). Upload it via Selle
 Central → Catalog → **Add Products via Upload**. The sale end date defaults to the last
 day of the current month (rolling to next month's end when fewer than 3 days remain).
 
+**📄 Review Report** opens a polished, self-contained HTML "Month-End Sale Proposal"
+that explains every proposed price — the three prices, the discount ladder and guardrails,
+per-row reasoning, the "wait for inbound" holds, and the data sources — and exporting the
+price file automatically saves the matching report next to the `.xlsx`. Open the report and
+use your browser's **Save as PDF** (a print toolbar in the report offers it) to share it as
+a document.
+
 ---
 
 ## Modifying Business Rules

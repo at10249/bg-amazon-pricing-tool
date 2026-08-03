@@ -618,6 +618,223 @@ function suggestSalePrice(o) {
   return { action: 'sale', reason, off, price };
 }
 
+// ── Proposal review report (mirrored from app) ──
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildProposalReportHtml(model) {
+  const L = (en, zh) => model.lang === 'zh' ? zh : en;
+  const money = v => '$' + (Number(v) || 0).toFixed(2);
+  const dayW = L('days', '天');
+  const covOne = v => (v === null || v === undefined) ? '—' : ((v === Infinity || v > 1e8) ? '∞' : Math.round(v) + 'd');
+  const coverTxt = (sc, pc) => `${covOne(sc)} → ${covOne(pc)}`;
+  const uploadFile = `PriceUpdate-Sale-${model.window.end}.xlsx`;
+  const c = model.counts;
+
+  const propRows = model.included.map(it => {
+    let past;
+    if (it.activeSale > 0) past = `${money(it.activeSale)} <span class="tag tag-jul">${L('active sale', '当前促销')}</span>`;
+    else if (it.realized30 && Math.abs(it.realized30 - it.yourPrice) > 0.25) past = `${money(it.realized30)} <span class="tag tag-real">${L('avg. paid', '实际成交')}</span>`;
+    else past = money(it.realized30 || it.yourPrice);
+
+    let mgnTxt = '—', mgnCls = '';
+    if (it.marginAtNew !== null && it.marginAtNew !== undefined) {
+      if (it.atCost) { mgnTxt = L('at cost', '按成本'); mgnCls = 'warn'; }
+      else { mgnTxt = Math.round(it.marginAtNew) + '%'; mgnCls = it.marginAtNew <= 3 ? 'warn' : ''; }
+    }
+
+    const dc = (it.coverPipeline !== null && it.coverPipeline !== undefined) ? it.coverPipeline : it.coverSellable;
+    const noSales = (dc === Infinity || dc > 1e8);
+    const base = (noSales ? L('no sales, stock sitting', '零销量，库存滞留')
+      : `${Math.round(dc)} ${L('days of stock incl. inbound', '天库存（含在途）')}`) + ` → ${it.reasonRung}% ${L('rung', '档')}`;
+    const bits = [base];
+    if (it.floored) bits.push(L('raised to break-even floor — sells at cost, moves stock without losing money', '已提升至盈亏平衡下限 — 按成本价销售，清库存不亏损'));
+    if (it.aboveActiveSale) bits.push(`⚠ ${L('above the currently running sale price', '高于当前促销价')} (${money(it.activeSale)})`);
+    if (it.overridden) bits.push(L('manually adjusted', '手动调整'));
+
+    return `<tr>
+      <td><strong>${escHtml(it.name)}</strong><div class="sku">${escHtml(it.sku)}</div></td>
+      <td class="num">${money(it.yourPrice)}</td>
+      <td class="num">${past}</td>
+      <td class="num new">${money(it.newPrice)}</td>
+      <td class="num">−${it.offPct}%</td>
+      <td class="num ${mgnCls}">${mgnTxt}</td>
+      <td class="num">${coverTxt(it.coverSellable, it.coverPipeline)}</td>
+      <td class="why">${bits.join('; ')}</td>
+    </tr>`;
+  }).join('');
+
+  const waitRows = model.waits.map(w => `<tr>
+      <td><strong>${escHtml(w.name)}</strong><div class="sku">${escHtml(w.sku)}</div></td>
+      <td class="num">${covOne(w.coverSellable)}</td>
+      <td class="num">${covOne(w.coverPipeline)}</td>
+      <td class="why">${L('On-hand stock is too thin to survive a sale — discounting now risks a stockout before the inbound shipment lands. Re-run the planner once it arrives.', '现有可售库存太少，不足以支撑促销 — 现在打折可能在到货前售罄。到货后重新运行计划。')}</td>
+    </tr>`).join('');
+
+  const asc = [...model.ladder].sort((a, b) => a.cover - b.cover);
+  let ladderRows = `<tr><td>≤ ${model.threshold} ${dayW}</td><td>${L('none — healthy, no sale', '无 — 健康，不促销')}</td></tr>`;
+  asc.forEach((rg, i) => {
+    const isLast = i === asc.length - 1;
+    const label = isLast ? `&gt; ${rg.cover} ${dayW}, ${L('or stock with zero sales', '或零销量库存')}` : `&gt; ${rg.cover} ${dayW}`;
+    ladderRows += `<tr><td>${label}</td><td>${rg.off}%</td></tr>`;
+  });
+
+  const atCostList = model.included.filter(it => it.atCost);
+  const aboveList = model.included.filter(it => it.aboveActiveSale);
+  const ovList = model.included.filter(it => it.overridden);
+  let flags = '';
+  if (atCostList.length) {
+    flags += `<div class="callout amber"><strong>${atCostList.length} ${L('SKU(s) sell at cost.', '个SKU按成本价销售。')}</strong><ul>` +
+      atCostList.map(it => `<li><strong>${escHtml(it.name)}</strong> (${escHtml(it.sku)}) — ${money(it.newPrice)} ${L('is landed cost + Amazon fees. The cost floor stopped a deeper cut; selling at ~$0 profit clears stock and avoids the aged-inventory surcharge — untick it in the planner if at-cost is not acceptable.', '为到岸成本 + 亚马逊费用。成本下限阻止了更深的折扣；以约$0利润销售可清库存并避免陈旧库存附加费 — 如不接受成本价，请在计划中取消勾选。')}</li>`).join('') +
+      `</ul></div>`;
+  }
+  if (aboveList.length) {
+    flags += `<div class="callout amber"><strong>${aboveList.length} ${L('SKU(s) price ABOVE the currently running sale.', '个SKU定价高于当前促销价。')}</strong> ${L('The ladder anchors on the normal price, not promo history:', '折扣阶梯以标准价为基准，而非促销历史：')}<ul>` +
+      aboveList.map(it => `<li><strong>${escHtml(it.name)}</strong> — ${L('buyers currently pay', '买家当前支付')} ${money(it.activeSale)}; ${L('the new sale is', '新促销价为')} ${money(it.newPrice)}. ${L('Still below the', '仍低于')} ${money(it.yourPrice)} ${L('normal price; stepping a promo back up rebuilds margin and the price anchor — but expect some velocity loss.', '标准价；将促销价上调可重建利润和价格锚点 — 但预计销售速度会有所下降。')}</li>`).join('') +
+      `</ul></div>`;
+  }
+  if (ovList.length) {
+    flags += `<div class="callout"><strong>${ovList.length} ${L('SKU(s) were manually adjusted.', '个SKU经手动调整。')}</strong> ${L('These prices were changed by hand in the planner, overriding the tool suggestion:', '这些价格在计划中被手动更改，覆盖了工具建议：')}<ul>` +
+      ovList.map(it => `<li><strong>${escHtml(it.name)}</strong> (${escHtml(it.sku)}) — ${money(it.newPrice)}</li>`).join('') +
+      `</ul></div>`;
+  }
+  if (!flags) flags = `<div class="callout green">${L('No rows need human judgment — every proposal cleared the guardrails cleanly.', '没有需要人工判断的行 — 每项建议都顺利通过了所有防护规则。')}</div>`;
+
+  const f = model.freshness;
+  const prodBits = [];
+  if (f.business) prodBits.push(`<li><strong>${L('Business Report', '业务报告')}</strong> — ${escHtml(f.business)} (${f.businessDays} ${dayW})</li>`);
+  if (f.adsRange) prodBits.push(`<li><strong>${L('Advertised Product report', '广告产品报告')}</strong> — ${escHtml(f.adsRange)}</li>`);
+  if (f.inventorySnapshot) prodBits.push(`<li><strong>${L('Inventory Health report', '库存健康报告')}</strong> — ${escHtml(f.inventorySnapshot)}</li>`);
+  if (f.shipments) prodBits.push(`<li><strong>${L('Shipment control sheet', '货件控制表')}</strong> — ${escHtml(f.shipments.file)} (${escHtml(f.shipments.date)})</li>`);
+  else prodBits.push(`<li>${L('No shipment control sheet uploaded — inbound counts use Amazon\'s own numbers.', '未上传货件控制表 — 在途数量使用亚马逊自身的数据。')}</li>`);
+  if (f.costData) prodBits.push(`<li><strong>${L('CIF landed-cost file', 'CIF到岸成本文件')}</strong> — ${escHtml(f.costData.file)} (${escHtml(f.costData.date)}) — ${L('supplies the break-even floors', '提供盈亏平衡下限')}</li>`);
+  else prodBits.push(`<li>${L('No CIF cost file — margins use each product\'s stored COGS ("easy mode": floors are off where COGS is absent).', '无CIF成本文件 — 利润使用每个产品存储的COGS（"简易模式"：无COGS时关闭下限）。')}</li>`);
+
+  const CSS = `
+  :root { --ink:#1a2233; --mut:#5c6577; --line:#e3e7ee; --acc:#0f62fe; --ok:#0e8345; --warn:#b45309; --bad:#c0392b; --bg:#f7f8fa; }
+  body { font: 15px/1.55 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--ink); margin: 0; background: var(--bg); }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 40px 28px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 40px 0 10px; border-bottom: 2px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: .95rem; margin: 22px 0 6px; }
+  .sub { color: var(--mut); margin-bottom: 22px; }
+  .strip { display: flex; gap: 14px; flex-wrap: wrap; margin: 22px 0; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px; min-width: 130px; }
+  .stat b { display: block; font-size: 1.45rem; }
+  .stat span { font-size: .78rem; color: var(--mut); }
+  table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: .84rem; }
+  .tablewrap { overflow-x: auto; }
+  th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); padding: 9px 10px; background: #eef1f6; }
+  td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfd; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .new { font-weight: 700; color: var(--acc); }
+  .warn { color: var(--warn); font-weight: 600; }
+  .sku { font-size: .68rem; color: var(--mut); font-family: ui-monospace, Menlo, monospace; }
+  .why { font-size: .76rem; color: var(--mut); min-width: 230px; }
+  .tag { font-size: .62rem; padding: 1px 6px; border-radius: 8px; font-weight: 600; vertical-align: 1px; }
+  .tag-jul { background: #fff3e0; color: #b45309; }
+  .tag-real { background: #e8f0fe; color: #1a56b0; }
+  .callout { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--acc); border-radius: 8px; padding: 14px 18px; margin: 14px 0; }
+  .callout.amber { border-left-color: var(--warn); }
+  .callout.green { border-left-color: var(--ok); }
+  ol li, ul li { margin: 6px 0; }
+  .rules td:first-child { font-weight: 600; white-space: nowrap; }
+  .foot { margin-top: 44px; font-size: .78rem; color: var(--mut); border-top: 1px solid var(--line); padding-top: 14px; }
+  code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: .82em; }
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff; border-bottom: 1px solid var(--line); padding: 12px 28px; }
+  .toolbar button { font: inherit; font-weight: 700; cursor: pointer; background: var(--acc); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; }
+  .toolbar .hint { font-size: .78rem; color: var(--mut); }
+  @media print { body { background: #fff; } .wrap { padding: 0; } .toolbar { display: none; } .stat, table, .callout { break-inside: avoid; } }`;
+
+  const body = `
+  <div class="toolbar">
+    <button onclick="window.print()">🖨 ${L('Save as PDF', '保存为PDF')}</button>
+    <span class="hint">${L("Use your browser's Save-as-PDF destination to share this as a document.", '使用浏览器打印对话框中的"另存为PDF"来分享此文档。')}</span>
+  </div>
+  <div class="wrap">
+  <h1>${L('Month-End Sale Proposal', '月末促销方案')}</h1>
+  <div class="sub">${L('Generated by the Amazon FBA Pricing Tool', '由亚马逊FBA定价工具生成')} · ${L('Sale window', '促销周期')}: <strong>${model.window.start} → ${model.window.end}</strong> · ${L('generated', '生成于')} ${model.generatedAt} · ${L('Upload file', '上传文件')}: <code>${escHtml(uploadFile)}</code></div>
+
+  <div class="strip">
+    <div class="stat"><b>${c.proposed}</b><span>${L('SKUs proposed for sale', '待促销SKU')}</span></div>
+    <div class="stat"><b>${c.held}</b><span>${L('held — "wait for inbound"', '暂缓 — "等待到货"')}</span></div>
+    <div class="stat"><b>${c.excludedGuardrails}</b><span>${L('excluded by guardrails', '被防护规则排除')}</span></div>
+    <div class="stat"><b>${c.healthy}</b><span>${L('healthy — left untouched', '健康 — 不作调整')}</span></div>
+    <div class="stat"><b>−${model.avgOffPct}%</b><span>${L('average discount off normal', '相对标准价平均折扣')}</span></div>
+  </div>
+
+  <h2>${L('1 · The three prices, defined', '1 · 三种价格的定义')}</h2>
+  <ul>
+    <li><strong>${L('Normal price', '标准价')}</strong> — ${L("the standard listing price on Amazon right now (Amazon's your-price, pulled from the Inventory Health report, never typed by hand).", '亚马逊当前的标准挂牌价（亚马逊的your-price，取自库存健康报告，从不手动输入）。')}</li>
+    <li><strong>${L('Past price', '过往价')}</strong> — ${L('what buyers were actually paying: the active sale price where one is running, otherwise the realized 30-day average (actual sales dollars ÷ units — this catches deals and coupons the normal price cannot show).', '买家实际支付的价格：正在进行促销时取当前促销价，否则取30天实际成交均价（实际销售额 ÷ 销量 — 可捕捉标准价看不到的优惠和优惠券）。')}</li>
+    <li><strong>${L('New price', '新价格')}</strong> — ${L(`the proposed sale price, live from upload until ${model.window.end}, after which everything reverts to the normal price automatically.`, `建议的促销价，从上传起生效至 ${model.window.end}，之后自动恢复标准价。`)}</li>
+  </ul>
+
+  <h2>${L('2 · How each new price was decided', '2 · 每个新价格如何确定')}</h2>
+  <p>${L('Every proposal is anchored on the normal price and sized by how badly the product needs faster sales, measured in days of cover — how long current stock lasts at the actual sales speed of the last 30 days. Cover counts sellable stock plus everything inbound (factory shipments on the water, AWD), so a slow product with a large shipment arriving is treated as more urgent than its shelf count suggests.', '每项建议都以标准价为基准，并根据产品需要加速销售的紧迫程度来确定折扣幅度，以库存覆盖天数衡量 — 即按过去30天的实际销售速度，当前库存能维持多久。覆盖天数计入可售库存加上所有在途库存（海运中的工厂货件、AWD），因此有大批货件即将到货的滞销品会被视为比其货架数量所显示的更紧迫。')}</p>
+  <div class="tablewrap"><table class="rules">
+    <tr><th>${L('Days of cover (incl. inbound)', '库存覆盖天数（含在途）')}</th><th>${L('Discount off normal price', '相对标准价的折扣')}</th></tr>
+    ${ladderRows}
+  </table></div>
+  <p>${L(`Prices are rounded to a .90 ending (promotional signal) and kept at least ${model.minOffPct}% below normal so Amazon shows the sale badge. Then four guardrails apply, using real CIF landed costs and Amazon's fee tables:`, `价格四舍五入至 .90 结尾（促销信号），并保持至少低于标准价 ${model.minOffPct}%，以便亚马逊显示促销徽章。随后应用四条防护规则，使用真实的CIF到岸成本和亚马逊费用表：`)}</p>
+  <ol>
+    <li><strong>${L('Break-even floor', '盈亏平衡下限')}</strong> — ${L('no sale price below landed cost + Amazon fees. Where the floor bites, the product sells exactly at cost (marked "at cost").', '促销价不低于到岸成本 + 亚马逊费用。当下限生效时，产品恰好按成本价销售（标记为"按成本"）。')}</li>
+    <li><strong>${L('Loss leaders excluded', '排除亏本引流品')}</strong> — ${L(`products whose normal price is already below break-even are priced that way deliberately; the tool never deepens the loss (${model.excludedCounts.lossLeader} SKU(s)).`, `标准价已低于盈亏平衡的产品是有意为之的定价；工具绝不加深亏损（${model.excludedCounts.lossLeader} 个SKU）。`)}</li>
+    <li><strong>${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> — ${L(`products already selling below break-even through deals/coupons are not pushed further (${model.excludedCounts.promoEroded} SKU(s)).`, `已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压（${model.excludedCounts.promoEroded} 个SKU）。`)}</li>
+    <li><strong>${L('Stockout guard', '缺货防护')}</strong> — ${L(`anything with under ${model.minRunwayDays} days of on-hand stock is held as "wait for inbound" rather than discounted, so a sale can never sell a product out before its replenishment lands (${c.held} SKU(s), section 4).`, `现有库存不足 ${model.minRunwayDays} 天的产品会被暂缓为"等待到货"而非打折，这样促销绝不会在补货到达前把产品卖光（${c.held} 个SKU，见第4节）。`)}</li>
+  </ol>
+  <p>${L('The tool needs no target margins to run: with no cost data it anchors purely on the normal price ("easy mode"); with CIF costs — as here — it adds the floors above.', '工具无需目标利润率即可运行：无成本数据时纯粹以标准价为基准（"简易模式"）；有CIF成本时（如本例）则加上上述下限。')}</p>
+
+  <h2>${L(`3 · The ${c.proposed} proposals`, `3 · ${c.proposed} 项建议`)}</h2>
+  <div class="tablewrap"><table>
+    <tr>
+      <th>${L('Product', '产品')}</th><th>${L('Normal', '标准价')}</th><th>${L('Past (paid until now)', '过往价（至今支付）')}</th>
+      <th>${L('New sale', '新促销价')}</th><th>${L('Off', '折扣')}</th><th>${L('Margin @ new', '利润@新价')}</th>
+      <th>${L('Cover (on-hand → incl. inbound)', '覆盖（现有 → 含在途）')}</th><th>${L('Reasoning', '理由')}</th>
+    </tr>
+    ${propRows || `<tr><td colspan="8" style="color:var(--mut);">${L('No SKUs proposed for sale in this plan.', '本计划无待促销SKU。')}</td></tr>`}
+  </table></div>
+
+  <h2>${L(`4 · Held back: "wait for inbound" (${c.held} SKU(s))`, `4 · 暂缓："等待到货"（${c.held} 个SKU）`)}</h2>
+  <p>${L('These look overstocked once inbound shipments are counted, but on-hand stock is too thin to survive a sale — discounting now would risk a stockout before the shipment arrives, which costs search rank. They become sale candidates the moment stock lands.', '一旦计入在途货件，这些产品看似库存过剩，但现有可售库存太少不足以支撑促销 — 现在打折可能在货件到达前售罄，从而损失搜索排名。货件一到，它们即成为促销候选。')}</p>
+  <div class="tablewrap"><table>
+    <tr><th>${L('Product', '产品')}</th><th>${L('On-hand cover', '现有覆盖')}</th><th>${L('Incl. inbound', '含在途')}</th><th>${L('Why held', '暂缓原因')}</th></tr>
+    ${waitRows || `<tr><td colspan="4" style="color:var(--mut);">${L('Nothing is being held this round.', '本轮无暂缓项。')}</td></tr>`}
+  </table></div>
+
+  <h2>${L('5 · Flags for human judgment', '5 · 需人工判断的事项')}</h2>
+  ${flags}
+
+  <h2>${L('6 · How this plan was produced', '6 · 本计划如何生成')}</h2>
+  <ol>${prodBits.join('')}</ol>
+  <p style="font-size:.8rem;color:var(--mut);">${L(`The Sale Planner applied the rules in section 2, the proposals were reviewed row by row, and the tool exported ${escHtml(uploadFile)} in Amazon's exact PriceAndQuantity template format.`, `促销计划应用了第2节的规则，逐行审阅了各项建议，工具随后以亚马逊标准的PriceAndQuantity模板格式导出了 ${escHtml(uploadFile)}。`)}</p>
+
+  <h2>${L('7 · Monthly routine (how to run this next time)', '7 · 每月例程（下次如何运行）')}</h2>
+  <ol>
+    <li><strong>${L('Download the three reports', '下载三份报告')}</strong> — ${L('open the tool, Sale Planner → click the three report links → set each date range to the last 30 days → export CSV.', '打开工具，促销计划 → 点击三个报告链接 → 将每个日期范围设为最近30天 → 导出CSV。')}</li>
+    <li><strong>${L('Import', '导入')}</strong> — ${L('click Import Amazon Reports, select all three CSVs at once. When asked how many days the Business Report covers, enter its range (default 30).', '点击导入亚马逊报告，一次选择全部三个CSV。当询问业务报告涵盖多少天时，输入其范围（默认30）。')}</li>
+    <li><strong>${L('Optional but recommended', '可选但推荐')}</strong> — ${L('upload the latest shipment control sheet (Shipments xlsx); without it the tool still uses Amazon\'s own inbound numbers. If CIF costs changed, import the updated CIF CSV too.', '上传最新的货件控制表（货件xlsx）；没有它工具仍会使用亚马逊自身的在途数据。如果CIF成本有变，也请导入更新后的CIF CSV。')}</li>
+    <li><strong>${L('Open the Sale Planner', '打开促销计划')}</strong> — ${L('review the summary chips, then the flagged rows: at-cost floors, "wait for inbound", loss leaders. Adjust any price or untick any row; sale dates default to today → end of month.', '查看摘要标签，然后是被标记的行：成本下限、"等待到货"、亏本引流品。调整任何价格或取消勾选任何行；促销日期默认为今天 → 月末。')}</li>
+    <li><strong>${L('Export & upload', '导出并上传')}</strong> — ${L('Export Amazon Price File (which also saves this review report), then Seller Central → Catalog → Add Products via Upload. Check the processing report shows all rows accepted; badges appear within the hour.', '导出亚马逊价格文件（同时保存本审阅报告），然后卖家中心 → 商品目录 → 批量上传商品。检查处理报告显示所有行均被接受；徽章会在一小时内出现。')}</li>
+    <li><strong>${L('Held-back SKUs', '暂缓的SKU')}</strong> — ${L('when inbound shipments land mid-month, re-open the planner: "wait" rows flip to sale candidates and can be uploaded as a top-up file the same way.', '当在途货件在月中到达时，重新打开计划："等待"行会转为促销候选，可用同样方式作为补充文件上传。')}</li>
+  </ol>
+
+  <div class="foot">
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (501 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（501项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+  </div>`;
+
+  return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<title>${L('Month-End Sale Proposal', '月末促销方案')} · ${model.window.start} → ${model.window.end}</title>` +
+    `<style>${CSS}</style></head><body>${body}</body></html>`;
+}
+
 // ── XLSX writer (mirrored from app) ──
 function xmlEscapeXlsx(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function colIndexToRef(i) {
@@ -1703,6 +1920,88 @@ eq(sPipeInf.action, 'sale', 'pipelineCover Infinity → sale'); eq(sPipeInf.off,
 eq(S({ yourPrice: 10, available: 5, daysOfCover: 30, pipelineCover: 400, breakEvenPrice: 12 }).reason, 'loss_leader', 'Your Price < break-even wins over fat pipeline → skip/loss_leader');
 // boundary: decisionCover exactly at threshold → keep (not a sale)
 eq(S({ yourPrice: 20, available: 5, daysOfCover: 120, pipelineCover: 120, coverThreshold: 120 }).action, 'keep', 'decisionCover == threshold → keep (boundary)');
+
+describe('escHtml — HTML entity escaping');
+eq(escHtml('a&b'), 'a&amp;b', '& → &amp;');
+eq(escHtml('<x>'), '&lt;x&gt;', '< and > escaped');
+eq(escHtml('"q"'), '&quot;q&quot;', 'double quote → &quot;');
+eq(escHtml("it's"), 'it&#39;s', "single quote → &#39;");
+eq(escHtml('a & b < c > "d" \'e\''), 'a &amp; b &lt; c &gt; &quot;d&quot; &#39;e&#39;', 'all five characters together');
+eq(escHtml('&lt;'), '&amp;lt;', 'ampersand escaped first — no double-escaping of existing entities');
+eq(escHtml(42), '42', 'non-string input is coerced via String()');
+
+describe('buildProposalReportHtml — standalone proposal document');
+// Fixture: 2 included rows (one floored+atCost, one overridden+aboveActiveSale), 1 wait row, en.
+// sku1 carries & and < to prove escaping; name1 carries <..> & too.
+const PM = {
+  window: { start: '2026-08-03', end: '2026-08-31' },
+  generatedAt: '2026-08-03',
+  lang: 'en',
+  threshold: 120,
+  ladder: [ { cover: 365, off: 20 }, { cover: 240, off: 15 }, { cover: 180, off: 12 }, { cover: 120, off: 8 } ],
+  minRunwayDays: 45,
+  minOffPct: 5,
+  included: [
+    { sku: 'FLOOR&<1', name: 'Cast Net <Lead> & Weights',
+      yourPrice: 26.95, activeSale: null, realized30: null,
+      newPrice: 23.74, offPct: 12, marginAtNew: 0.2,
+      coverSellable: 102, coverPipeline: 462, inbound: 300,
+      floored: true, overridden: false, aboveActiveSale: false, atCost: true, reasonRung: 20 },
+    { sku: 'PLIER-030163', name: 'Fishing Pliers, Compact, Black',
+      yourPrice: 26.99, activeSale: 18.90, realized30: 18.90,
+      newPrice: 20.90, offPct: 23, marginAtNew: 34,
+      coverSellable: 373, coverPipeline: 373, inbound: 0,
+      floored: false, overridden: true, aboveActiveSale: true, atCost: false, reasonRung: 20 }
+  ],
+  waits: [ { sku: 'WAIT-1', name: 'Standard Cast Net', coverSellable: 24, coverPipeline: 181 } ],
+  excludedCounts: { lossLeader: 8, promoEroded: 4, blocked: 2, healthy: 62, noData: 1 },
+  excludedExamples: { lossLeader: ['LL-1'], promoEroded: [], blocked: [], healthy: [], noData: [] },
+  freshness: {
+    business: '2026-07-31', businessDays: 30, ads: '2026-07-30',
+    adsRange: '2026-07-01 → 2026-07-30', inventorySnapshot: '2026-07-31',
+    shipments: { file: 'control.xlsx', date: '2026-07-27' },
+    costData: { file: 'cif-seed.csv', date: '2026-07-18' }
+  },
+  counts: { proposed: 2, held: 1, excludedGuardrails: 14, healthy: 62, noData: 1 },
+  avgOffPct: 18
+};
+const H = buildProposalReportHtml(PM);
+is(H.indexOf('<!doctype html>') === 0, 'output starts with <!doctype html>');
+is(H.indexOf('<html lang="en">') !== -1, 'has <html> root with lang');
+is(H.indexOf('FLOOR&amp;&lt;1') !== -1, 'sku1 is present, HTML-escaped (& and <)');
+is(H.indexOf('FLOOR&<1') === -1, 'raw unescaped sku1 does NOT appear (escaping proven)');
+is(H.indexOf('Cast Net &lt;Lead&gt; &amp; Weights') !== -1, 'product name1 escaped (< > &)');
+is(H.indexOf('PLIER-030163') !== -1, 'sku2 present');
+is(H.indexOf('2026-08-03 → 2026-08-31') !== -1, 'window dates rendered in the sub line');
+is(H.indexOf('PriceUpdate-Sale-2026-08-31.xlsx') !== -1, 'upload filename derived from window.end');
+is(H.indexOf('Save as PDF') !== -1, 'toolbar has the Save-as-PDF button');
+is(H.indexOf('window.print()') !== -1, 'Save-as-PDF button calls window.print()');
+is(H.indexOf('@media print') !== -1 && H.indexOf('.toolbar { display: none; }') !== -1, 'toolbar hidden in print CSS');
+is(H.indexOf('sells at cost') !== -1, 'at-cost reasoning phrase present (floored row)');
+is(H.indexOf('manually adjusted') !== -1, 'manually-adjusted note present (overridden row)');
+is(H.indexOf('above the currently running sale price') !== -1, 'aboveActiveSale warning present');
+is(H.indexOf('at cost') !== -1, 'margin column renders "at cost" for the atCost row');
+is(H.indexOf('The 2 proposals') !== -1, 'section 3 heading reflects the proposed count');
+is(H.indexOf('−18%') !== -1, 'stat strip shows the average discount');
+is(H.indexOf('≤ 120 days') !== -1, 'ladder table first row parameterised from threshold');
+is(H.indexOf('&gt; 365 days, or stock with zero sales') !== -1, 'ladder top rung labelled with zero-sales case');
+is(H.indexOf('control.xlsx') !== -1 && H.indexOf('cif-seed.csv') !== -1, 'freshness section lists shipment + CIF files');
+is(H.indexOf('Standard Cast Net') !== -1, 'wait row product present in section 4');
+is(H.indexOf('No rows need human judgment') === -1, 'green "nothing to flag" fallback NOT shown when flags exist');
+
+// zh variant renders Chinese strings
+const Hzh = buildProposalReportHtml({ ...PM, lang: 'zh' });
+is(Hzh.indexOf('月末促销方案') !== -1, 'zh: title translated');
+is(Hzh.indexOf('保存为PDF') !== -1, 'zh: Save-as-PDF button translated');
+is(Hzh.indexOf('手动调整') !== -1, 'zh: manually-adjusted note translated');
+
+// empty plan → green "nothing to flag" fallback, empty-table placeholders
+const Hempty = buildProposalReportHtml({ ...PM,
+  included: [], waits: [],
+  counts: { proposed: 0, held: 0, excludedGuardrails: 14, healthy: 62, noData: 1 }, avgOffPct: 0 });
+is(Hempty.indexOf('No rows need human judgment') !== -1, 'empty plan shows green no-flags callout');
+is(Hempty.indexOf('No SKUs proposed for sale in this plan.') !== -1, 'empty proposals table shows placeholder row');
+is(Hempty.indexOf('Nothing is being held this round.') !== -1, 'empty wait table shows placeholder row');
 
 describe('ZIP structural sanity + CRC-32');
 eq(crc32(_strToBytesXlsx('hello')) >>> 0, 0x3610a686, 'CRC-32 of "hello" = 0x3610a686 (known value)');

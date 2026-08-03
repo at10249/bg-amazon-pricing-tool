@@ -82,7 +82,29 @@ no build step.
   "wait for inbound" summary chip, and wait rows sort just below sale candidates.
   Rows with no inbound pipeline are byte-identical to the previous model.
 
-Tests: 332 → **466** (`npm test`).
+### Added (2026-08-03) — Sale Proposal review report
+- **📄 Review Report** — every price plan now generates a polished, self-contained
+  HTML "Month-End Sale Proposal" document (light professional palette, stat strip,
+  striped tables, human-judgment callouts, print CSS). It explains the three prices
+  (normal / past / new), the discount ladder and four guardrails (all parameterised
+  from the code constants so the doc never drifts), the full proposals table with
+  per-row reasoning (at-cost floors, "manually adjusted" overrides, "⚠ above the
+  currently running sale price"), the "wait for inbound" hold list, freshness of every
+  data source, and the monthly routine. A print toolbar (hidden when printing) offers
+  🖨 Save as PDF. Bilingual (follows the app language).
+- **Auto-report on export** — `exportPriceFile()` also produces the review report:
+  it opens in a new tab next to the `.xlsx` download (a second programmatic download
+  in the same click is silently dropped by Chromium's multiple-download policy, so
+  the tab is the reliable channel; a download of
+  `PriceUpdate-Sale-<end>-report.html` is the fallback when popups are blocked).
+- **`collectPlanItems()`** — a single shared source of truth for which rows ship and at
+  what effective price, used by both the `.xlsx` export and the report model, so the two
+  can never describe a different set of SKUs. `exportPriceFile()` was refactored onto it
+  (behaviour identical).
+- New pure functions `escHtml()` and `buildProposalReportHtml()` are mirrored + tested;
+  `buildProposalModel()` assembles them from state.
+
+Tests: 466 → **501** (`npm test`).
 
 ## [Fable Edit 1.1] — 2026-07-07
 
