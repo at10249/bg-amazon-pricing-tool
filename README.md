@@ -251,6 +251,24 @@ kill criteria, either:
 The code uses `// RULE:` comments throughout so you can `Ctrl+F RULE:` to find every
 decision point.
 
+### Changing the rules (from inside the app)
+
+You don't need to open the code to change the rules. Click **📐 Pricing Rules** (in the
+Sale Planner controls card, or the Strategy Guide "2026 Rules" tab). The modal shows every
+live rule value — read straight from the app's own constants, so it can never be out of
+date — and then lets you **⬇ Download rules document**. The edit loop is:
+
+1. **Download** the rules document (`pricing-rules-LOGIC.md` — this is `LOGIC.md`, the
+   source of truth).
+2. **Edit** any threshold, discount-ladder step, guardrail, or fee assumption in plain
+   language, right in the document.
+3. **Hand it to a coding agent** — give the edited file to Claude (or any coding agent)
+   with: *"Update index.html to match this edited LOGIC.md — every rule has a CODE LOCATION
+   reference. Mirror changed constants in test.js and run npm test."*
+
+`LOGIC.md` is the canonical, human-editable description of the rules; `index.html` is made
+to match it, and its preamble explains the same workflow.
+
 ---
 
 ## Using with a Different Ad Platform

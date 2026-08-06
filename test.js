@@ -791,6 +791,7 @@ function buildProposalReportHtml(model) {
     <li><strong>${L('Stockout guard', '缺货防护')}</strong> — ${L(`anything with under ${model.minRunwayDays} days of on-hand stock is held as "wait for inbound" rather than discounted, so a sale can never sell a product out before its replenishment lands (${c.held} SKU(s), section 4).`, `现有库存不足 ${model.minRunwayDays} 天的产品会被暂缓为"等待到货"而非打折，这样促销绝不会在补货到达前把产品卖光（${c.held} 个SKU，见第4节）。`)}</li>
   </ol>
   <p>${L('The tool needs no target margins to run: with no cost data it anchors purely on the normal price ("easy mode"); with CIF costs — as here — it adds the floors above.', '工具无需目标利润率即可运行：无成本数据时纯粹以标准价为基准（"简易模式"）；有CIF成本时（如本例）则加上上述下限。')}</p>
+  <p style="font-size:.85rem;color:var(--mut);">${L('The complete rule set (editable) can be downloaded from the app via 📐 Pricing Rules.', '完整规则集（可编辑）可通过应用内的 📐 定价规则 下载。')}</p>
 
   <h2>${L(`3 · The ${c.proposed} proposals`, `3 · ${c.proposed} 项建议`)}</h2>
   <div class="tablewrap"><table>
@@ -827,12 +828,114 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (501 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（501项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (519 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（519项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
     `<title>${L('Month-End Sale Proposal', '月末促销方案')} · ${model.window.start} → ${model.window.end}</title>` +
     `<style>${CSS}</style></head><body>${body}</body></html>`;
+}
+
+// ── Pricing rules viewer (mirrored from app) ──
+// buildRulesHtml is PURE and mirrored here. Its data feeder rulesLiveData() and the
+// modal/download impure functions (openRulesModal, downloadRulesDoc, fetchRulesDoc) read
+// state/DOM/network → NOT mirrored (per the task).
+function buildRulesHtml(data) {
+  const L = (en, zh) => data.lang === 'zh' ? zh : en;
+  const dayW = L('days', '天');
+  const tr = data.tierRules;
+  const end = tr.endings;
+
+  const s1 = `
+    <div class="card">
+      <div class="card-title">${L('How a sale price is decided', '促销价如何确定')}</div>
+      <div style="font-size:0.8rem;color:var(--c-c5c8e0);line-height:1.55;">
+        ${L(
+          `Every suggested sale price is anchored on <strong style="color:var(--c-e8eaf0);">Your Price</strong> and sized by how urgently stock needs to move, measured in <strong style="color:var(--c-e8eaf0);">days of cover</strong> = (sellable + inbound + AWD) &divide; daily velocity. Velocity is taken in priority order: Inventory Health 30-day &rarr; Business report &rarr; latest check-in. The deeper the cover, the deeper the discount &mdash; then the guardrails below apply.`,
+          `每个建议促销价都以<strong style="color:var(--c-e8eaf0);">您的售价</strong>为基准，并按库存出清的紧迫程度确定幅度，以<strong style="color:var(--c-e8eaf0);">库存覆盖天数</strong>衡量 =（可售 + 在途 + AWD）&divide; 每日销速。销速按优先级取值：库存健康30天 &rarr; 业务报告 &rarr; 最新检查记录。覆盖越深，折扣越大 &mdash; 然后应用下方的防护规则。`
+        )}
+      </div>
+    </div>`;
+
+  const asc = [...data.ladder].sort((a, b) => a.cover - b.cover);
+  let ladderRows = `<tr><td>&le; ${data.thresholdDefault} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
+  asc.forEach((rg, i) => {
+    const isLast = i === asc.length - 1;
+    const label = isLast ? `&gt; ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `&gt; ${rg.cover} ${dayW}`;
+    ladderRows += `<tr><td>${label}</td><td>${Math.round(rg.off * 100)}% ${L('off Your Price', '低于您的售价')}</td></tr>`;
+  });
+  const s2 = `
+    <div class="card">
+      <div class="card-title">${L('Discount ladder', '折扣阶梯')}</div>
+      <table class="ptable">
+        <thead><tr><th>${L('Days of cover (incl. inbound)', '库存覆盖天数（含在途）')}</th><th>${L('Discount', '折扣')}</th></tr></thead>
+        <tbody>${ladderRows}</tbody>
+      </table>
+      <div style="font-size:0.72rem;color:var(--c-555870);margin-top:8px;line-height:1.5;">
+        ${L(
+          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round to a .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
+          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格四舍五入至 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
+        )}
+      </div>
+    </div>`;
+
+  const s3 = `
+    <div class="card">
+      <div class="card-title">${L('Guardrails', '防护规则')}</div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells exactly at cost.', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品恰好按成本价销售。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Loss leaders excluded', '排除亏本引流品')}</strong> &mdash; ${L('a Your Price already below break-even is a deliberate loss leader &mdash; never deepened.', '标准价已低于盈亏平衡的产品是有意为之的亏本引流 &mdash; 绝不加深。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> &mdash; ${L('products already selling below break-even via deals/coupons are not pushed further.', '已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Runway guard', '库存跑道防护')}</strong> &mdash; ${L(`under ${data.runwayDays} ${dayW} of on-hand sellable stock &rarr; "wait for inbound" instead of discounting now (a sale would risk a stockout before the shipment lands).`, `现有可售库存不足 ${data.runwayDays} ${dayW} &rarr; "等待到货"而非立即打折（促销可能在货件到达前售罄）。`)}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, '默认为当月最后一天；剩余不足 3 天时顺延至下月末。')}</li>
+      </ul>
+    </div>`;
+
+  const s4 = `
+    <div class="card">
+      <div class="card-title">${L('Inventory status thresholds', '库存状态阈值')}</div>
+      <table class="ptable">
+        <tbody>
+          <tr><td>${L('Stockout risk', '缺货风险')}</td><td>${L('cover', '覆盖')} &lt; ${data.stockoutDays} ${dayW}</td></tr>
+          <tr><td>${L('Reorder soon', '尽快补货')}</td><td>${L('cover', '覆盖')} &lt; ${data.reorderDays} ${dayW}</td></tr>
+          <tr><td>${L('Aged / overstock', '陈旧 / 库存过剩')}</td><td>${L('cover', '覆盖')} &gt; ${data.agedDays} ${dayW} ${L('(Amazon aged-inventory surcharge)', '（亚马逊陈旧库存附加费）')}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  const s5 = `
+    <div class="card">
+      <div class="card-title">${L('Price tiers', '价格层级')}</div>
+      <table class="ptable">
+        <thead><tr><th>${L('Tier', '层级')}</th><th>${L('Derivation', '推导')}</th><th style="text-align:right;">${L('Ends in', '结尾')}</th></tr></thead>
+        <tbody>
+          <tr><td>${L('Your Price', '您的售价')}</td><td>${L('viable price from the calculator', '来自计算器的可行价格')}</td><td style="text-align:right;">.${Math.round(end.your * 100)}</td></tr>
+          <tr><td>${L('List Price', '标价')}</td><td>${L(`Your Price + ${tr.listPremiumPct}% (MSRP premium)`, `您的售价 + ${tr.listPremiumPct}%（建议零售溢价）`)}</td><td style="text-align:right;">.${Math.round(end.list * 100)}</td></tr>
+          <tr><td>${L('Sale Price', '促销价')}</td><td>${L(`Your Price &minus; ${tr.saleDiscountPct}%`, `您的售价 &minus; ${tr.saleDiscountPct}%`)}</td><td style="text-align:right;">.${Math.round(end.sale * 100)}</td></tr>
+          <tr><td>${L('Clearance', '清仓价')}</td><td>${L(`Sale Price &minus; ${tr.clearanceDiscountPct}%`, `促销价 &minus; ${tr.clearanceDiscountPct}%`)}</td><td style="text-align:right;">.${Math.round(end.clearance * 100)}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  const s6 = `
+    <div class="card">
+      <div class="card-title">${L('Fee assumptions', '费用假设')}</div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Fuel &amp; logistics surcharge', '燃油与物流附加费')}</strong> &mdash; ${L(`${data.fuelSurchargePct}% on top of every FBA fee${data.fuelEffectiveFrom ? ` (from ${data.fuelEffectiveFrom})` : ''}.`, `每笔 FBA 费用之上加收 ${data.fuelSurchargePct}%${data.fuelEffectiveFrom ? `（自 ${data.fuelEffectiveFrom} 起）` : ''}。`)}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Referral fees', '推荐费')}</strong> &mdash; ${L('category-based, see full document.', '基于类目，详见完整文档。')}</li>
+      </ul>
+    </div>`;
+
+  const s7 = `
+    <div class="alert info" style="margin-top:4px;">
+      ${L(
+        `<strong>Want different rules?</strong> Download the rules document, edit any threshold, ladder step, or rule in plain language, and give the edited file to Claude (or any coding agent) with the instruction: <em>"Update index.html to match this edited LOGIC.md &mdash; every rule has a CODE LOCATION reference. Mirror changed constants in test.js and run npm test."</em> The document's own preamble explains the same workflow.`,
+        `<strong>想要不同的规则？</strong>下载规则文档，用通俗语言编辑任何阈值、阶梯档位或规则，然后把编辑后的文件交给 Claude（或任何编码代理），并附上指令：<em>"更新 index.html 以匹配这份编辑后的 LOGIC.md &mdash; 每条规则都有 CODE LOCATION 引用。在 test.js 中同步修改的常量并运行 npm test。"</em>该文档自身的前言也说明了同样的工作流程。`
+      )}
+    </div>`;
+
+  return s1 + s2 + s3 + s4 + s5 + s6 + s7;
 }
 
 // ── XLSX writer (mirrored from app) ──
@@ -1988,6 +2091,7 @@ is(H.indexOf('&gt; 365 days, or stock with zero sales') !== -1, 'ladder top rung
 is(H.indexOf('control.xlsx') !== -1 && H.indexOf('cif-seed.csv') !== -1, 'freshness section lists shipment + CIF files');
 is(H.indexOf('Standard Cast Net') !== -1, 'wait row product present in section 4');
 is(H.indexOf('No rows need human judgment') === -1, 'green "nothing to flag" fallback NOT shown when flags exist');
+is(H.indexOf('The complete rule set (editable) can be downloaded from the app via 📐 Pricing Rules.') !== -1, 'methodology points to the in-app Pricing Rules viewer');
 
 // zh variant renders Chinese strings
 const Hzh = buildProposalReportHtml({ ...PM, lang: 'zh' });
@@ -2002,6 +2106,55 @@ const Hempty = buildProposalReportHtml({ ...PM,
 is(Hempty.indexOf('No rows need human judgment') !== -1, 'empty plan shows green no-flags callout');
 is(Hempty.indexOf('No SKUs proposed for sale in this plan.') !== -1, 'empty proposals table shows placeholder row');
 is(Hempty.indexOf('Nothing is being held this round.') !== -1, 'empty wait table shows placeholder row');
+
+describe('buildRulesHtml — in-app pricing rules summary (PURE)');
+// NOTE: only buildRulesHtml is mirrored/tested. rulesLiveData() and the modal/download
+// helpers (openRulesModal, downloadRulesDoc, fetchRulesDoc) read state/DOM/network and are
+// NOT mirrored — like buildProposalModel vs buildProposalReportHtml.
+// Fixture uses distinct numbers so the assertions prove every value is read from `data`.
+const RD = {
+  ladder: [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ],
+  minOffPct: 5,
+  thresholdDefault: 120,
+  thresholdCurrent: 90,   // distinct from default → proves both are rendered
+  runwayDays: 45,
+  stockoutDays: 30,
+  reorderDays: 90,
+  agedDays: 181,
+  feeEffectiveFrom: '2026-01-15',
+  fuelEffectiveFrom: '2026-04-17',
+  fuelSurchargePct: 3.5,
+  tierRules: {
+    listPremiumPct: 10, saleDiscountPct: 6, clearanceDiscountPct: 9,
+    endings: { your: 0.95, list: 0.99, sale: 0.90, clearance: 0.97 }
+  },
+  saleEndRule: '<3 days left rolls to next month end',
+  lang: 'en'
+};
+const R = buildRulesHtml(RD);
+is(R.indexOf('<script') === -1, 'no <script in output (safe to innerHTML)');
+is(R.indexOf('var(--c-') !== -1, 'uses the app-UI palette (var(--c-*)), not hex');
+is(R.indexOf('20% off Your Price') !== -1, 'ladder rung rendered from fixture off:0.20 → 20%');
+is(R.indexOf('15% off Your Price') !== -1, 'ladder rung rendered from fixture off:0.15 → 15%');
+is(R.indexOf('&gt; 365 days (or stock with zero sales)') !== -1, 'top ladder rung labelled with the zero-sales case');
+is(R.indexOf('&le; 120 days') !== -1, 'threshold row parameterised from thresholdDefault');
+is(R.indexOf('90 days') !== -1, 'live/current threshold number (90) rendered');
+is(R.indexOf('45 days') !== -1, 'runway-guard days (45) rendered');
+is(R.indexOf('&lt; 30 days') !== -1 && R.indexOf('&gt; 181 days') !== -1, 'inventory status thresholds (30, 181) rendered');
+is(R.indexOf('.95') !== -1 && R.indexOf('.99') !== -1 && R.indexOf('.97') !== -1, 'price-tier endings (.95/.99/.97) rendered');
+is(R.indexOf('2026-01-15') !== -1, 'fee schedule effective date rendered');
+is(R.indexOf('3.5% on top of every FBA fee') !== -1, 'fuel surcharge % rendered');
+is(R.indexOf('Update index.html to match this edited LOGIC.md') !== -1, 'edit-loop instruction sentence present');
+
+// Changing a ladder rung changes the output → proves numbers come from `data`, not literals.
+const R2 = buildRulesHtml({ ...RD, ladder: [ { cover: 365, off: 0.30 }, { cover: 240, off: 0.15 }, { cover: 180, off: 0.12 }, { cover: 120, off: 0.08 } ] });
+is(R2.indexOf('30% off Your Price') !== -1, 'changed rung (off:0.30) renders 30% off');
+is(R2.indexOf('20% off Your Price') === -1, 'old rung value (20%) is gone after the change');
+
+// zh variant renders known Chinese strings.
+const Rzh = buildRulesHtml({ ...RD, lang: 'zh' });
+is(Rzh.indexOf('折扣阶梯') !== -1, 'zh: "Discount ladder" heading translated');
+is(Rzh.indexOf('想要不同的规则') !== -1, 'zh: edit-loop callout translated');
 
 describe('ZIP structural sanity + CRC-32');
 eq(crc32(_strToBytesXlsx('hello')) >>> 0, 0x3610a686, 'CRC-32 of "hello" = 0x3610a686 (known value)');

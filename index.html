@@ -882,6 +882,10 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
           <div class="rule"><div class="rdot p"></div><div class="rule-txt"><strong>Overhead:</strong> Seller Central $39.99/mo, photography $300–$800 one-time, Brand Registry $500+ legal, tools $50–$100/mo, Vine $200/ASIN. Amortise across annual units.</div></div>
         </div>
         <div id="sg-rules" class="sub-panel">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="topbar-btn" onclick="openRulesModal()" data-en="📐 Pricing Rules" data-zh="📐 定价规则">📐 Pricing Rules</button>
+            <div style="font-size:0.72rem;color:var(--c-555870);" data-en="Live pricing/sale rule values + the full editable document" data-zh="实时定价/促销规则数值 + 完整可编辑文档">Live pricing/sale rule values + the full editable document</div>
+          </div>
           <div class="warn-box">Two major rule changes hit April–May 2026. Inflated List Prices and persistent discounting to manufacture "Was/Now" badges no longer work reliably.</div>
           <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>List Price — April 23, 2026:</strong> Must be substantiated by real Amazon sales at that price, OR evidence another retailer sold at that price recently. Amazon removes the strike-through if unverified.</div></div>
           <div class="rule"><div class="rdot r"></div><div class="rule-txt"><strong>Typical Price — May 18, 2026:</strong> If below non-promo median >50% of 90-day window, Amazon includes promo prices in Typical Price. Permanently deflates "Was" until 90 days at higher price.</div></div>
@@ -1372,6 +1376,36 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
     <div id="ir-body"></div>
     <div class="modal-footer">
       <button class="btn primary" onclick="closeModalEl('import-report-modal')" data-en="Close" data-zh="关闭">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ PRICING RULES MODAL ════════════════════ -->
+<!-- Shows the LIVE business rules behind every price/sale calculation (built from the
+     actual constants by buildRulesHtml) + the full editable LOGIC.md for the edit loop. -->
+<div class="modal-overlay" id="rules-modal" onclick="if(event.target===this)closeModalEl('rules-modal')">
+  <div class="modal" style="width:760px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+      <div>
+        <h2 style="margin-bottom:2px;" data-en="Pricing Rules" data-zh="定价规则">Pricing Rules</h2>
+        <div style="font-size:0.74rem;color:var(--c-555870);" data-en="The exact rules behind every price &amp; sale suggestion — live from the app's constants." data-zh="每个价格与促销建议背后的确切规则 — 实时取自应用的常量。">The exact rules behind every price &amp; sale suggestion — live from the app's constants.</div>
+      </div>
+      <button class="topbar-btn" onclick="closeModalEl('rules-modal')">✕</button>
+    </div>
+    <div id="rules-body">
+      <div id="rules-live"></div>
+      <hr style="border:none;border-top:1px solid var(--c-252836);margin:18px 0;">
+      <div id="rules-doc">
+        <div class="card-title" data-en="Full rules document (LOGIC.md)" data-zh="完整规则文档（LOGIC.md）">Full rules document (LOGIC.md)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn primary" onclick="downloadRulesDoc()" data-en="⬇ Download rules document" data-zh="⬇ 下载规则文档">⬇ Download rules document</button>
+          <a class="topbar-btn" href="https://github.com/at10249/bg-amazon-pricing-tool/blob/main/LOGIC.md" target="_blank" rel="noopener" data-en="↗ View on GitHub" data-zh="↗ 在GitHub查看">↗ View on GitHub</a>
+        </div>
+        <div id="rules-doc-body" style="font-size:0.75rem;color:var(--c-8b8fa8);">…</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" onclick="closeModalEl('rules-modal')" data-en="Close" data-zh="关闭">Close</button>
     </div>
   </div>
 </div>
@@ -4982,6 +5016,7 @@ function renderSalePlanner() {
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button class="btn primary" onclick="exportPriceFile()">${t('⬇ Export Amazon Price File (.xlsx)', '⬇ 导出亚马逊价格文件（.xlsx）')}</button>
         <button class="topbar-btn" onclick="openProposalReport()">${t('📄 Review Report', '📄 审阅报告')}</button>
+        <button class="topbar-btn" onclick="openRulesModal()">${t('📐 Pricing Rules', '📐 定价规则')}</button>
         <div style="font-size:0.74rem;color:var(--c-555870);max-width:520px;">${t(`Uploads via Seller Central → Add Products via Upload. Sets Sale Price + start/end dates. Sale ends ${endDefault}. The Review Report opens a shareable summary; exporting also saves one automatically.`, `通过卖家中心 → 批量上传商品上传。设置促销价及起止日期。促销结束于 ${endDefault}。审阅报告会打开可分享的摘要；导出时也会自动保存一份。`)}</div>
       </div>
     </div>`;
@@ -5343,6 +5378,7 @@ function buildProposalReportHtml(model) {
     <li><strong>${L('Stockout guard', '缺货防护')}</strong> — ${L(`anything with under ${model.minRunwayDays} days of on-hand stock is held as "wait for inbound" rather than discounted, so a sale can never sell a product out before its replenishment lands (${c.held} SKU(s), section 4).`, `现有库存不足 ${model.minRunwayDays} 天的产品会被暂缓为"等待到货"而非打折，这样促销绝不会在补货到达前把产品卖光（${c.held} 个SKU，见第4节）。`)}</li>
   </ol>
   <p>${L('The tool needs no target margins to run: with no cost data it anchors purely on the normal price ("easy mode"); with CIF costs — as here — it adds the floors above.', '工具无需目标利润率即可运行：无成本数据时纯粹以标准价为基准（"简易模式"）；有CIF成本时（如本例）则加上上述下限。')}</p>
+  <p style="font-size:.85rem;color:var(--mut);">${L('The complete rule set (editable) can be downloaded from the app via 📐 Pricing Rules.', '完整规则集（可编辑）可通过应用内的 📐 定价规则 下载。')}</p>
 
   <h2>${L(`3 · The ${c.proposed} proposals`, `3 · ${c.proposed} 项建议`)}</h2>
   <div class="tablewrap"><table>
@@ -5379,7 +5415,7 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (501 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（501项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (519 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（519项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -5414,6 +5450,198 @@ function openProposalReport() {
   const model = buildProposalModel(start, end);
   const html = buildProposalReportHtml(model);
   deliverProposalReport(html, `PriceUpdate-Sale-${end}-report.html`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRICING RULES VIEWER + EDIT LOOP (LOGIC.md §21)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// RULE: rulesLiveData() reads the ACTUAL live constants + the live user threshold —
+// never a hardcoded copy. This is the truth-by-construction contract: because the pure
+// renderer buildRulesHtml() is fed these live values, the in-app summary can NEVER drift
+// from what the pricing engine actually does. Impure (reads state) → NOT mirrored in
+// test.js; buildRulesHtml() (pure) IS mirrored + tested.
+function rulesLiveData() {
+  const thresholdDefault = PLANNER_COVER_THRESHOLD_DEFAULT;
+  const thresholdCurrent = (state.planner && state.planner.coverThreshold > 0) ? state.planner.coverThreshold : thresholdDefault;
+  return {
+    ladder: SALE_LADDER,                                  // [{cover, off(fraction)}] — the live ladder
+    minOffPct: Math.round(SALE_MIN_OFF * 100),
+    thresholdDefault,
+    thresholdCurrent,
+    runwayDays: SALE_MIN_RUNWAY_DAYS,
+    stockoutDays: STOCKOUT_RISK_DAYS,
+    reorderDays: REORDER_SOON_DAYS,
+    agedDays: AGED_INVENTORY_DAYS,
+    feeEffectiveFrom: FEE_SCHEDULE.effectiveFrom,
+    fuelEffectiveFrom: FEE_SCHEDULE.fuelSurchargeEffectiveFrom,
+    fuelSurchargePct: Math.round((FEE_SCHEDULE.tables.FUEL_SURCHARGE - 1) * 1000) / 10, // 1.035 → 3.5
+    tierRules: {
+      listPremiumPct: Math.round((LIST_PREMIUM - 1) * 100),          // 1.10 → 10
+      saleDiscountPct: Math.round((1 - SALE_DISCOUNT) * 100),        // 0.94 → 6
+      clearanceDiscountPct: Math.round((1 - CLEARANCE_DISCOUNT) * 100), // 0.91 → 9
+      endings: { your: PRICE_YOUR_END, list: PRICE_LIST_END, sale: PRICE_SALE_END, clearance: PRICE_DISC_END }
+    },
+    saleEndRule: '<3 days left rolls to next month end',
+    lang: state.lang
+  };
+}
+
+// RULE: buildRulesHtml(data) is PURE (mirrored + tested in test.js). It renders the in-app
+// "Pricing Rules" summary from a plain data object (fed by rulesLiveData). Bilingual via a
+// local L(en,zh) — the app's t() is NOT called inside it (keeps it pure/testable). Every
+// number in the output comes from `data`, never a literal — that is what makes the summary
+// truth-by-construction. This is APP UI, so colours come only from var(--c-*) (no hex).
+function buildRulesHtml(data) {
+  const L = (en, zh) => data.lang === 'zh' ? zh : en;
+  const dayW = L('days', '天');
+  const tr = data.tierRules;
+  const end = tr.endings;
+
+  // 1 — How a sale price is decided
+  const s1 = `
+    <div class="card">
+      <div class="card-title">${L('How a sale price is decided', '促销价如何确定')}</div>
+      <div style="font-size:0.8rem;color:var(--c-c5c8e0);line-height:1.55;">
+        ${L(
+          `Every suggested sale price is anchored on <strong style="color:var(--c-e8eaf0);">Your Price</strong> and sized by how urgently stock needs to move, measured in <strong style="color:var(--c-e8eaf0);">days of cover</strong> = (sellable + inbound + AWD) &divide; daily velocity. Velocity is taken in priority order: Inventory Health 30-day &rarr; Business report &rarr; latest check-in. The deeper the cover, the deeper the discount &mdash; then the guardrails below apply.`,
+          `每个建议促销价都以<strong style="color:var(--c-e8eaf0);">您的售价</strong>为基准，并按库存出清的紧迫程度确定幅度，以<strong style="color:var(--c-e8eaf0);">库存覆盖天数</strong>衡量 =（可售 + 在途 + AWD）&divide; 每日销速。销速按优先级取值：库存健康30天 &rarr; 业务报告 &rarr; 最新检查记录。覆盖越深，折扣越大 &mdash; 然后应用下方的防护规则。`
+        )}
+      </div>
+    </div>`;
+
+  // 2 — Discount ladder (parameterised from data.ladder + threshold; ascending like the report)
+  const asc = [...data.ladder].sort((a, b) => a.cover - b.cover);
+  let ladderRows = `<tr><td>&le; ${data.thresholdDefault} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
+  asc.forEach((rg, i) => {
+    const isLast = i === asc.length - 1;
+    const label = isLast ? `&gt; ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `&gt; ${rg.cover} ${dayW}`;
+    ladderRows += `<tr><td>${label}</td><td>${Math.round(rg.off * 100)}% ${L('off Your Price', '低于您的售价')}</td></tr>`;
+  });
+  const s2 = `
+    <div class="card">
+      <div class="card-title">${L('Discount ladder', '折扣阶梯')}</div>
+      <table class="ptable">
+        <thead><tr><th>${L('Days of cover (incl. inbound)', '库存覆盖天数（含在途）')}</th><th>${L('Discount', '折扣')}</th></tr></thead>
+        <tbody>${ladderRows}</tbody>
+      </table>
+      <div style="font-size:0.72rem;color:var(--c-555870);margin-top:8px;line-height:1.5;">
+        ${L(
+          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round to a .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
+          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格四舍五入至 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
+        )}
+      </div>
+    </div>`;
+
+  // 3 — Guardrails
+  const s3 = `
+    <div class="card">
+      <div class="card-title">${L('Guardrails', '防护规则')}</div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells exactly at cost.', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品恰好按成本价销售。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Loss leaders excluded', '排除亏本引流品')}</strong> &mdash; ${L('a Your Price already below break-even is a deliberate loss leader &mdash; never deepened.', '标准价已低于盈亏平衡的产品是有意为之的亏本引流 &mdash; 绝不加深。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> &mdash; ${L('products already selling below break-even via deals/coupons are not pushed further.', '已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Runway guard', '库存跑道防护')}</strong> &mdash; ${L(`under ${data.runwayDays} ${dayW} of on-hand sellable stock &rarr; "wait for inbound" instead of discounting now (a sale would risk a stockout before the shipment lands).`, `现有可售库存不足 ${data.runwayDays} ${dayW} &rarr; "等待到货"而非立即打折（促销可能在货件到达前售罄）。`)}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, '默认为当月最后一天；剩余不足 3 天时顺延至下月末。')}</li>
+      </ul>
+    </div>`;
+
+  // 4 — Inventory status thresholds
+  const s4 = `
+    <div class="card">
+      <div class="card-title">${L('Inventory status thresholds', '库存状态阈值')}</div>
+      <table class="ptable">
+        <tbody>
+          <tr><td>${L('Stockout risk', '缺货风险')}</td><td>${L('cover', '覆盖')} &lt; ${data.stockoutDays} ${dayW}</td></tr>
+          <tr><td>${L('Reorder soon', '尽快补货')}</td><td>${L('cover', '覆盖')} &lt; ${data.reorderDays} ${dayW}</td></tr>
+          <tr><td>${L('Aged / overstock', '陈旧 / 库存过剩')}</td><td>${L('cover', '覆盖')} &gt; ${data.agedDays} ${dayW} ${L('(Amazon aged-inventory surcharge)', '（亚马逊陈旧库存附加费）')}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  // 5 — Price tiers
+  const s5 = `
+    <div class="card">
+      <div class="card-title">${L('Price tiers', '价格层级')}</div>
+      <table class="ptable">
+        <thead><tr><th>${L('Tier', '层级')}</th><th>${L('Derivation', '推导')}</th><th style="text-align:right;">${L('Ends in', '结尾')}</th></tr></thead>
+        <tbody>
+          <tr><td>${L('Your Price', '您的售价')}</td><td>${L('viable price from the calculator', '来自计算器的可行价格')}</td><td style="text-align:right;">.${Math.round(end.your * 100)}</td></tr>
+          <tr><td>${L('List Price', '标价')}</td><td>${L(`Your Price + ${tr.listPremiumPct}% (MSRP premium)`, `您的售价 + ${tr.listPremiumPct}%（建议零售溢价）`)}</td><td style="text-align:right;">.${Math.round(end.list * 100)}</td></tr>
+          <tr><td>${L('Sale Price', '促销价')}</td><td>${L(`Your Price &minus; ${tr.saleDiscountPct}%`, `您的售价 &minus; ${tr.saleDiscountPct}%`)}</td><td style="text-align:right;">.${Math.round(end.sale * 100)}</td></tr>
+          <tr><td>${L('Clearance', '清仓价')}</td><td>${L(`Sale Price &minus; ${tr.clearanceDiscountPct}%`, `促销价 &minus; ${tr.clearanceDiscountPct}%`)}</td><td style="text-align:right;">.${Math.round(end.clearance * 100)}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  // 6 — Fees
+  const s6 = `
+    <div class="card">
+      <div class="card-title">${L('Fee assumptions', '费用假设')}</div>
+      <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Fuel &amp; logistics surcharge', '燃油与物流附加费')}</strong> &mdash; ${L(`${data.fuelSurchargePct}% on top of every FBA fee${data.fuelEffectiveFrom ? ` (from ${data.fuelEffectiveFrom})` : ''}.`, `每笔 FBA 费用之上加收 ${data.fuelSurchargePct}%${data.fuelEffectiveFrom ? `（自 ${data.fuelEffectiveFrom} 起）` : ''}。`)}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Referral fees', '推荐费')}</strong> &mdash; ${L('category-based, see full document.', '基于类目，详见完整文档。')}</li>
+      </ul>
+    </div>`;
+
+  // 7 — The edit loop (F3 wording)
+  const s7 = `
+    <div class="alert info" style="margin-top:4px;">
+      ${L(
+        `<strong>Want different rules?</strong> Download the rules document, edit any threshold, ladder step, or rule in plain language, and give the edited file to Claude (or any coding agent) with the instruction: <em>"Update index.html to match this edited LOGIC.md &mdash; every rule has a CODE LOCATION reference. Mirror changed constants in test.js and run npm test."</em> The document's own preamble explains the same workflow.`,
+        `<strong>想要不同的规则？</strong>下载规则文档，用通俗语言编辑任何阈值、阶梯档位或规则，然后把编辑后的文件交给 Claude（或任何编码代理），并附上指令：<em>"更新 index.html 以匹配这份编辑后的 LOGIC.md &mdash; 每条规则都有 CODE LOCATION 引用。在 test.js 中同步修改的常量并运行 npm test。"</em>该文档自身的前言也说明了同样的工作流程。`
+      )}
+    </div>`;
+
+  return s1 + s2 + s3 + s4 + s5 + s6 + s7;
+}
+
+// RULE: LOGIC.md is fetched lazily once per session and cached in _rulesDocMd so the modal
+// opens instantly and the download reuses the same bytes. Fetch order mirrors loadRoadmap's
+// resilience: relative 'LOGIC.md' first (works on the deployed site + localhost), then the
+// raw.githubusercontent fallback (works from file:// with internet).
+let _rulesDocMd = null; // cached raw markdown once fetched (module-level, once per session)
+function fetchRulesDoc() {
+  if (_rulesDocMd !== null) return Promise.resolve(_rulesDocMd);
+  const fromGitHub = () => fetch('https://raw.githubusercontent.com/at10249/bg-amazon-pricing-tool/main/LOGIC.md?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); });
+  return fetch('LOGIC.md?t=' + Date.now())
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .catch(fromGitHub)
+    .then(md => { _rulesDocMd = md; return md; });
+}
+
+// Fill the live-rules summary, open the modal, then lazily fetch + render LOGIC.md.
+function openRulesModal() {
+  document.getElementById('rules-live').innerHTML = buildRulesHtml(rulesLiveData());
+  openModalEl('rules-modal');
+  const body = document.getElementById('rules-doc-body');
+  if (_rulesDocMd !== null) { body.innerHTML = mdToHtml(_rulesDocMd); return; }
+  body.innerHTML = '<div style="color:var(--c-555870);padding:8px 0;">' + t('Loading…', '加载中…') + '</div>';
+  fetchRulesDoc()
+    .then(md => { body.innerHTML = mdToHtml(md); })
+    .catch(() => {
+      body.innerHTML = '<div style="color:var(--c-f87171);">' + t('Could not load LOGIC.md — check your connection or ', '无法加载 LOGIC.md — 请检查网络连接或') +
+        '<a href="https://github.com/at10249/bg-amazon-pricing-tool/blob/main/LOGIC.md" target="_blank" style="color:var(--c-818cf8);">' + t('view on GitHub', '在GitHub查看') + '</a>.</div>';
+    });
+}
+
+// RULE: the download IS the edit-loop artifact — the user edits this file in plain language
+// and hands it to Claude/another coding agent, which uses its CODE LOCATION references to
+// update index.html to match. Named pricing-rules-LOGIC.md so it is obviously the rules doc.
+function downloadRulesDoc() {
+  const save = (md) => {
+    const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pricing-rules-LOGIC.md'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
+  if (_rulesDocMd !== null) { save(_rulesDocMd); return; }
+  fetchRulesDoc()
+    .then(save)
+    .catch(() => alert(t('Could not download the rules document. View it on GitHub: ', '无法下载规则文档。请在 GitHub 查看：') +
+      'https://github.com/at10249/bg-amazon-pricing-tool/blob/main/LOGIC.md'));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -5543,7 +5771,12 @@ function loadRoadmap(force) {
 
 function mdToHtml(md) {
   function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function inline(s) { return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--c-e8eaf0);">$1</strong>'); }
+  function inline(s) {
+    return esc(s)
+      .replace(/\*\*(.+?)\*\*/g,'<strong style="color:var(--c-e8eaf0);">$1</strong>')
+      .replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s).,;:]|$)/g,'$1<em>$2</em>')
+      .replace(/`([^`]+)`/g,'<code style="background:var(--c-13151f);padding:1px 5px;border-radius:4px;color:var(--c-a5b4fc);font-size:0.95em;">$1</code>');
+  }
 
   const lines = md.split('\n');
   let html = '', inList = false, listStyle = '';
@@ -5553,9 +5786,34 @@ function mdToHtml(md) {
     if (!inList || listStyle !== style) { closeList(); html += `<ul style="list-style:none;padding:0;margin:2px 0 6px;">`; inList = true; listStyle = style; }
   };
 
+  // Pipe tables (| a | b |): buffered until a non-table line, then rendered as a
+  // horizontally-scrollable table. The |---| separator row is consumed, not rendered.
+  let tableBuf = [];
+  const flushTable = () => {
+    if (!tableBuf.length) return;
+    const rows = tableBuf.map(l => l.replace(/^\|/,'').replace(/\|$/,'').split('|').map(c => c.trim()));
+    let out = '<div style="overflow-x:auto;margin:6px 0;"><table style="border-collapse:collapse;font-size:0.72rem;min-width:60%;">';
+    rows.forEach((cells, i) => {
+      if (i === 1 && cells.every(c => /^:?-{2,}:?$/.test(c))) return;
+      const th = i === 0;
+      const style = th
+        ? 'text-align:left;padding:4px 9px;background:var(--c-13151f);color:var(--c-818cf8);font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;'
+        : 'padding:4px 9px;border-top:1px solid var(--c-1e2130);color:var(--c-c5c8e0);vertical-align:top;';
+      out += '<tr>' + cells.map(c => `<${th?'th':'td'} style="${style}">${inline(c)}</${th?'th':'td'}>`).join('') + '</tr>';
+    });
+    out += '</table></div>';
+    html += out;
+    tableBuf = [];
+  };
+
   for (const line of lines) {
     const t = line.trim();
-    if (t.startsWith('# ')) {
+    if (t.startsWith('|') && t.endsWith('|') && t.length > 2) { closeList(); tableBuf.push(t); continue; }
+    flushTable();
+    if (t.startsWith('#### ')) {
+      closeList();
+      html += `<h5 style="font-size:0.72rem;font-weight:700;color:var(--c-8b8fa8);margin:8px 0 2px;">${inline(t.slice(5))}</h5>`;
+    } else if (t.startsWith('# ')) {
       closeList();
       html += `<h2 style="font-size:1rem;font-weight:700;color:var(--c-e8eaf0);margin:20px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--c-1e2130);">${inline(t.slice(2))}</h2>`;
     } else if (t.startsWith('## ')) {
@@ -5583,6 +5841,7 @@ function mdToHtml(md) {
       html += `<p style="font-size:0.74rem;color:var(--c-8b8fa8);margin:3px 0;">${inline(t)}</p>`;
     }
   }
+  flushTable();
   closeList();
   return html;
 }

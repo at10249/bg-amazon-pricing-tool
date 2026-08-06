@@ -7,6 +7,34 @@ Releases are named after the edit round rather than semantic versions. The app
 remains a single self-contained `index.html` — vanilla JS, no dependencies,
 no build step.
 
+## [Pricing Rules Round] — 2026-08-06
+
+### Added (2026-08-06) — Pricing Rules viewer & edit loop
+- **📐 Pricing Rules viewer** — a new modal (`rules-modal`) that shows, in plain
+  language, every rule behind the price/sale calculations: how a sale price is
+  decided, the discount ladder, the guardrails (break-even floor, loss-leader /
+  promo-eroded exclusions, runway guard, sale window), inventory status thresholds,
+  price-tier derivations, and fee assumptions. Opened from the Sale Planner controls
+  card (next to 📄 Review Report) and from the Strategy Guide "2026 Rules" sub-panel.
+  Bilingual (follows the app language).
+- **Truth-by-construction** — `rulesLiveData()` reads the *actual* live constants
+  (`SALE_LADDER`, `PLANNER_COVER_THRESHOLD_DEFAULT`, the live `state.planner.coverThreshold`,
+  `FEE_SCHEDULE`, the price-tier constants, …), never a hardcoded copy, and feeds them to
+  the pure renderer `buildRulesHtml()` — so the in-app summary can never drift from what
+  the engine actually does.
+- **Downloadable rules document (the edit loop)** — the modal fetches and renders
+  `LOGIC.md` (relative path first, `raw.githubusercontent` fallback — mirrors
+  `loadRoadmap()`), with **⬇ Download rules document** (saves `pricing-rules-LOGIC.md`)
+  and **↗ View on GitHub** buttons. The workflow: download → edit thresholds/rules in
+  plain language → hand the edited file to Claude (or any coding agent) with the
+  instruction to update `index.html` to match (every rule carries a CODE LOCATION
+  reference). The proposal report's methodology now points at the same viewer.
+- New pure function `buildRulesHtml()` is mirrored + tested; `rulesLiveData()`,
+  `openRulesModal()`, `downloadRulesDoc()`, and `fetchRulesDoc()` read state/DOM/network
+  and are (deliberately) not mirrored.
+
+Tests: 501 → **519** (`npm test`).
+
 ## [Weekly Ops Round] — 2026-07-31
 
 ### Added

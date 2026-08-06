@@ -822,61 +822,143 @@ FBA Fee Preview export.
 Portfolio-wide view (top bar) answering: *which ASINs need faster sales in the next
 month, and at what sale price?*
 
-### 19.1 Data sources per row (priority order)
-- **Your Price**: `reportData.yourPrice` → latest check-in `currentPrice` → none.
-- **Velocity**: Inventory Health `u30/30` → Business `bizUnits/bizDays` → latest
-  check-in `unitsSold30/periodDays`.
-- **Stock**: Inventory Health `available` → latest check-in `inventoryUnits`.
-- **Realized price** (actual average transaction price): `s30/u30` per the Inventory
-  Health 30-day trailing window; the 90/60/30/7d series is shown as a trend. RULE:
-  realized price captures sale prices and deals that `your-price` cannot (verified
-  against real exports where an active sale shows `avg30 ≈ sales-price`). It does NOT
-  capture coupon clip-discounts (promotion rebates) — deliberately out of scope.
-- **Inbound pipeline**: shipments xlsx (`inbound + awdInbound + awdAvailable`) →
-  Inventory Health `inbound-quantity`.
+### 19.1 HOW A SUGGESTED SALE PRICE IS DECIDED — complete specification
 
-**Two cover measures (`plannerRows`):**
-- **Sellable cover** (`daysOfCover`) = on-hand `available ÷ velocity`. What can stock
-  out *now*.
-- **Pipeline cover** (`pipelineCover`) = `(available + inbound) ÷ velocity` — how long
-  ALL known stock (on-hand + inbound + AWD) lasts. `velocity ≤ 0` with stock in the pipe
-  → `Infinity`; no stock → `null`. RULE: pipeline decides HOW MUCH must move; sellable
-  cover decides WHETHER a sale can start now without stocking out first.
+This is the definitive, reviewable spec for the number in the planner's "Sale Price"
+column. It lists every input variable (source column, fallback chain, decision
+boundaries), the gates in exact evaluation order, the price arithmetic, a worked
+example from real data, and what the model deliberately ignores. Edit any boundary
+here and hand this file to an LLM agent to change the app's behaviour.
 
-### 19.2 Suggestion taxonomy (`suggestSalePrice`)
-RULE: suggestions anchor on **Your Price**; margin data only adds guardrails
-("easy mode" = no COGS = ladder only, no floor). Products auto-created from
-Amazon reports (18.2 stubs, `cogs: 0`) therefore work in the planner immediately —
-they simply run in easy mode until CIF costs are imported.
+**RULE (the anchor):** every suggestion is a discount off **Your Price** — the standard
+listing price. Cost data only adds guardrails; nothing else ever moves the anchor.
 
-**`decisionCover`** = `pipelineCover` when supplied (else `daysOfCover`). Both the
-`> threshold` sale test AND the discount-ladder rung read `decisionCover`, so a row with
-a fat inbound pipeline is discounted on total pipeline depth, not just on-hand stock.
-When `pipelineCover` is absent behaviour is byte-identical to the pre-pipeline model.
+#### 19.1.1 Input variables
 
-1. No price → `no_data/no_price`; no sellable stock → `skip/no_stock`.
-2. Your Price < break-even (`solveMinPriceRaw` at margin 0) → `skip/loss_leader`
-   (RULE: a Your Price below break-even is a deliberate loss leader — never deepen it).
-3. Realized price < break-even while Your Price ≥ break-even →
-   `skip/below_breakeven_promo` (promos already erode margin past zero).
-4. No `decisionCover` → `no_data/no_velocity`; `decisionCover` ≤ threshold
-   (default 120, editable) → `keep/healthy`.
-   RULE: 120 because the aged-inventory surcharge starts at 181 days — act before it.
-5. Pipeline qualified the row but sellable `daysOfCover < SALE_MIN_RUNWAY_DAYS` (45) →
-   `wait/thin_stock_inbound`. RULE: a month-end sale window is ~31 days and discounting
-   accelerates velocity, so under 45 days of on-hand stock would likely stock out before
-   inbound lands — wait for the shipment, then discount. (Sellable cover < 45 can never
-   exceed a threshold ≥ 45, so this only ever fires when pipeline promoted the row.)
-6. Otherwise `sale`: discount ladder by `decisionCover` — ≥365d (or ∞ = stock with zero
-   sales) 20%, ≥240d 15%, ≥180d 12%, ≥120d 8%, else 5%. Price = `roundSaleEnding`
-   (ends in .90 — promo signal), capped at ≥5% off (`SALE_MIN_OFF`, Amazon badge
-   minimum), floored at break-even. Floor above the 5%-off cap → `blocked/floor_above_5pct`.
+**V1 · Your Price (the anchor)**
+- Source: Inventory Health `your-price` (first value > 0 per ASIN).
+- Fallback: most recent check-in *Current Price*. No value → no suggestion (Gate 1).
+- Used for: the base of every discount; the loss-leader test (V7).
 
-An amber row badge flags hidden discounting: realized30 < 97% of Your Price with no
-active sale price ("selling below Your Price — deal/coupon?").
+**V2 · Sellable stock (units on hand)**
+- Source: Inventory Health `available` (summed across rows per ASIN).
+- Fallback: latest check-in *Current Inventory*.
+- Boundaries: `≤ 0` → skip, nothing to sell (Gate 2). Numerator of sellable cover (V5).
 
-Per-row price and inclusion overrides persist in `state.planner.overrides[productId]`;
-default inclusion = `action === 'sale'`.
+**V3 · Sales velocity (units/day)**
+- Source priority: ① Inventory Health `units-shipped-t30 ÷ 30` (fixed trailing 30-day
+  window) → ② Business Report `Units Ordered ÷ periodDays` (window entered at import,
+  default 30) → ③ latest check-in `Units Sold ÷ periodDays`.
+- Boundary: velocity `≤ 0` while stock exists → cover is treated as **∞** (maximal
+  overstock → deepest ladder rung).
+
+**V4 · Inbound pipeline (units on the way)**
+- Source: team shipments xlsx `Inbound + AWD Inbound + AWD Available`, joined by
+  Merchant SKU (the ASIN↔SKU bridge comes from the Inventory Health import).
+- Fallback: Inventory Health `inbound-quantity`.
+- DELIBERATE BOUNDARY: quantities only — per-batch ETA date columns in the shipments
+  sheet are **not parsed**. Arrival timing is proxied by the 45-day runway guard (V5/G7)
+  instead of per-shipment dates. If you want date-aware logic, edit this rule.
+
+**V5 · Sellable cover (days)** = V2 ÷ V3 — how long on-hand stock lasts at current speed.
+- Boundary: `< 45` (`SALE_MIN_RUNWAY_DAYS`) → a sale cannot start now (Gate 7 → `wait`),
+  because a ~31-day sale window at accelerated velocity would stock out before inbound lands.
+
+**V6 · Pipeline cover (days)** = (V2 + V4) ÷ V3 — how long ALL known stock lasts. This is
+the **decision cover**: both the "needs faster sales?" test and the ladder rung read it
+(falls back to V5 when no pipeline data exists; behaviour is then identical to the
+pre-pipeline model).
+- Boundaries: `≤ 120` (threshold, editable per session in the planner; default
+  `PLANNER_COVER_THRESHOLD_DEFAULT`) → healthy, no sale. Ladder rungs at
+  `>120 / ≥180 / ≥240 / ≥365-or-∞`.
+- RULE: 120 because Amazon's aged-inventory surcharge starts at 181 days — act before it.
+
+**V7 · Break-even price (the floor)**
+- Source: `solveMinPriceRaw` at margin 0 — CIF landed COGS + inbound shipping + prep +
+  storage + PPC + returns + overhead + live FBA & referral fees + fuel surcharge, solved
+  iteratively because the fees depend on the price (Sections 1–2).
+- Absent (COGS blank/0, e.g. report-created stubs) → **easy mode**: no floor and Gates
+  3–4 are skipped; ladder only.
+- Boundaries: Your Price `<` break-even → loss leader, excluded (Gate 3). Candidate sale
+  price `<` break-even → raised to break-even (sells at cost). Raised floor `>` the 5%
+  cap → `blocked` (Gate 8/P4 — no profitable sale exists).
+
+**V8 · Realized price, trailing 30d** = `sales-shipped-last-30-days ÷ units-shipped-t30`
+— the average price buyers actually paid.
+- Boundary: realized `<` break-even while Your Price `≥` break-even → excluded
+  (Gate 4: promos are already selling below water; do not deepen).
+- Display boundary: realized `< 97% ×` Your Price with no active sale-price set → amber
+  "selling below Your Price — deal/coupon?" badge (informational only).
+- Captures price discounts and deals; does NOT capture coupon clip rebates — deliberately
+  out of scope (confirmed not SOP).
+
+**V9 · Sale window** — start = today; end = last day of the current month, rolling to
+next month-end when fewer than 3 days remain (`defaultSaleEndYmd`). Both editable.
+
+#### 19.1.2 Decision gates — exact evaluation order (`suggestSalePrice`)
+
+| # | Condition | Outcome |
+|---|-----------|---------|
+| G1 | V1 Your Price ≤ 0 / missing | `no_data / no_price` — cannot anchor |
+| G2 | V2 sellable stock ≤ 0 | `skip / no_stock` |
+| G3 | V7 exists AND Your Price < break-even | `skip / loss_leader` — deliberate, never deepen |
+| G4 | V7 exists AND V8 realized < break-even ≤ Your Price | `skip / below_breakeven_promo` |
+| G5 | V6 decision cover unknowable (no velocity/stock data) | `no_data / no_velocity` |
+| G6 | V6 decision cover ≤ threshold (120) | `keep / healthy` — no sale needed |
+| G7 | V5 sellable cover < 45 (pipeline promoted the row) | `wait / thin_stock_inbound` — discount after inbound lands |
+| G8 | otherwise | `sale` → price arithmetic below (or `blocked`, P4) |
+
+#### 19.1.3 Price arithmetic (only when G8 is reached)
+
+- **P1 — ladder rung** from V6 decision cover: ≥ 365d or ∞ → **20%** · ≥ 240d → **15%**
+  · ≥ 180d → **12%** · > 120d → **8%** · (> threshold when threshold set below 120 → 5%).
+- **P2 — promo rounding**: candidate = `roundSaleEnding(YourPrice × (1 − rung))` →
+  `floor(x) − 0.10` (a `.90` ending; never below $1).
+- **P3 — badge cap**: candidate may not exceed `YourPrice × 0.95` (`SALE_MIN_OFF` —
+  Amazon shows no sale badge under 5% off).
+- **P4 — cost floor**: if candidate < V7 break-even → raise to break-even (an "at cost"
+  sale: moves stock, loses nothing). If the raised price exceeds the P3 cap →
+  `blocked / floor_above_5pct` — no profitable badge-worthy sale exists; a human decides.
+
+#### 19.1.4 Worked example (real row, August 2026 plan)
+
+4ft Zinc cast net `LY-QQ62-JS2I`: Your Price **$24.95**, 804 sellable, 469 sold/30d
+→ velocity 15.6/day → sellable cover **52d**; +1,504 inbound → pipeline cover **~135d**.
+G1–G5 pass · G6: 135 > 120 → needs faster sales · G7: 52 ≥ 45 → no wait ·
+P1: 135 < 180 → 8% → candidate 24.95 × 0.92 = 22.95 → P2 → **$22.90** · P3 cap
+$23.70 ok · P4: break-even **$23.29** > 22.90 → raised to **$23.29 (at cost)**.
+Shipped exactly so in the 2026-08 upload.
+
+#### 19.1.5 What the model deliberately does NOT use
+
+- **Shipment ETA dates** — quantity only; timing proxied by the 45-day runway guard.
+- **Coupons / promotion rebates** — invisible in transaction data; confirmed not SOP.
+- **Competitor / featured-offer price** — `featuredoffer-price` exists in the Inventory
+  Health export but is unused; suggestions never chase the buy box.
+- **Ad spend / ACoS** — shown in check-ins and reports, not a pricing input.
+- **Seasonality** — no month-of-year adjustments; the Strategy Guide calendar is advice,
+  not automation.
+
+Any of these can be promoted to a rule: edit this section to say what should matter and
+with what boundaries, then hand the file to an agent.
+
+#### 19.1.6 Where each boundary lives (for edits)
+
+| Boundary | Constant / function | Current value |
+|----------|--------------------|---------------|
+| Needs-faster-sales threshold | `PLANNER_COVER_THRESHOLD_DEFAULT` (+ planner input) | 120 days |
+| Discount ladder | `SALE_LADDER` | 365/240/180/120 → 20/15/12/8% |
+| Minimum discount (badge) | `SALE_MIN_OFF` | 5% |
+| On-hand runway guard | `SALE_MIN_RUNWAY_DAYS` | 45 days |
+| Promo price ending | `roundSaleEnding()` | .90 |
+| Sale window default | `defaultSaleEndYmd()` | month-end, <3 days → next month |
+| Break-even floor | `solveMinPriceRaw(margin 0)` | from CIF + fee tables |
+
+### 19.2 Overrides
+
+Products auto-created from Amazon reports (18.2 stubs, `cogs: 0`) run in easy mode until
+CIF costs are imported. Per-row price and inclusion overrides persist in
+`state.planner.overrides[productId]`; default inclusion = `action === 'sale'`.
 
 ### 19.3 Price-feed export
 `exportPriceFile()` collects checked rows (requires a SKU — rows without one are
@@ -963,7 +1045,49 @@ ZIP entries are **STORED** (method 0) so no compression API is needed; inline st
 avoid sharedStrings. Round-tripped in `test.js` through the Section 20.1 reader and
 validated externally with openpyxl against the original template.
 
+## 21. RULES VIEWER & EDIT LOOP
+
+**CODE LOCATION:** `index.html` → `rulesLiveData()`, `buildRulesHtml(data)`,
+`openRulesModal()`, `downloadRulesDoc()`, `fetchRulesDoc()`, and the `rules-modal` markup.
+Entry points: the 📐 Pricing Rules button in the Sale Planner controls card (next to
+📄 Review Report) and in the Strategy Guide `sg-rules` ("2026 Rules") sub-panel.
+
+The in-app **📐 Pricing Rules** modal shows, in plain language, every rule behind the
+price/sale calculations (how a sale price is decided, the discount ladder, the guardrails,
+inventory status thresholds, price-tier derivations, fee assumptions) and lets the user
+download this file for editing.
+
+**Truth by construction.** `rulesLiveData()` reads the *actual* live constants
+(`SALE_LADDER`, `SALE_MIN_OFF`, `PLANNER_COVER_THRESHOLD_DEFAULT`, the live
+`state.planner.coverThreshold`, `SALE_MIN_RUNWAY_DAYS`, `STOCKOUT_RISK_DAYS`,
+`REORDER_SOON_DAYS`, `AGED_INVENTORY_DAYS`, `FEE_SCHEDULE` + `FUEL_SURCHARGE`, and the
+price-tier constants `LIST_PREMIUM`/`SALE_DISCOUNT`/`CLEARANCE_DISCOUNT` +
+`PRICE_*_END`) — never a hardcoded copy — and passes them to `buildRulesHtml(data)`.
+`buildRulesHtml` is **PURE** (mirrored + tested in `test.js`); it renders bilingually via a
+local `L(en, zh)` (not the app `t()`) and uses only `var(--c-*)` palette colours (it is app
+UI, so the colours-via-vars house rule applies — unlike the standalone proposal report).
+Because the summary is built from the same constants the engine uses, it can never drift.
+`rulesLiveData()`/`openRulesModal()`/`downloadRulesDoc()`/`fetchRulesDoc()` read
+state/DOM/network and are not mirrored.
+
+**Fetch fallback chain (`fetchRulesDoc`).** `LOGIC.md` is fetched lazily once per session
+and cached in the module-level `_rulesDocMd`: relative `LOGIC.md?t=<ts>` first (works on the
+deployed site and localhost), then `https://raw.githubusercontent.com/at10249/bg-amazon-pricing-tool/main/LOGIC.md?t=<ts>`
+(works from `file://` with internet) — the same resilience pattern as `loadRoadmap()`. It is
+rendered with `mdToHtml()`; total failure shows the GitHub link.
+
+**The edit loop.** `downloadRulesDoc()` saves this file as `pricing-rules-LOGIC.md`. **THIS
+FILE is the download artifact.** The intended workflow: user downloads it → edits any
+threshold, ladder step, guardrail, or fee assumption in plain language → hands the edited
+file to an LLM/coding agent with *"Update index.html to match this edited LOGIC.md — every
+rule has a CODE LOCATION reference. Mirror changed constants in test.js and run npm test."*
+The proposal report's methodology (Section 19.4) points at the same viewer.
+
+**TO UPDATE:** the viewer needs no maintenance when a constant changes — `rulesLiveData()`
+picks up the new value automatically. Only edit `buildRulesHtml()` (and its `test.js` mirror)
+when adding or removing a *rule*, not when re-tuning an existing number.
+
 ---
 
-*Last updated: July 2026*
+*Last updated: August 2026*
 *To update this document after modifying the code, ask an LLM: "Update LOGIC.md to reflect the change I made to [function/constant name]"*
