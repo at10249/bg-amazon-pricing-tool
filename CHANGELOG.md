@@ -9,6 +9,30 @@ no build step.
 
 ## [Import & Guardrails Round] — 2026-08-30
 
+### Changed (2026-08-30)
+- **Sale Planner guide modal is now actionable** — every step in `#planner-howto-modal`
+  that names a button carries a small `topbar-btn` that performs it: step 1 **Import
+  CSV/XLSX** (`#csv-file`) + **⚡ Load bundled catalog** (`loadBundledCatalog()`), step 2
+  **⬆ Import Amazon Reports** (`#amz-report-file`), step 3 **⬆ Import Inventory**
+  (`#fba-preview-file`), step 4 **Import shipments xlsx** (`#shipments-file`). Each picker
+  closes the modal before opening the OS file dialog so the dialog is never stacked under
+  the overlay.
+- **Direct Seller-Central report links in the guide** — steps that require a download link
+  straight to the report (step 2 → Business / Ads / Inventory Health, step 3 → Fee
+  Preview). The anchors are populated from the single `AMZ_REPORT_LINKS` constant in
+  `openModalEl()` (via a `data-amzlink` key), so URLs never drift from the app's other uses.
+- **Step-1 NOTE spells out the floorless lesson** — the bundled seed covers products up to
+  2026-07-18; a CIF workbook only covers products existing at its export date; import BOTH
+  (bundled seed first, newest workbook on top) and request a fresh CIF export whenever the
+  floorless warning names products.
+- **Warning banners now carry their remedy** — the floorless planner banner gained an inline
+  **⚡ Load bundled catalog** button plus "then re-import the team's newest CIF workbook —
+  see ❓ How to use"; the stale / missing Inventory-snapshot banners gained a direct
+  **↗ Open Inventory Health report** link; and the floorless export `confirm()` appends
+  "Fix: load the bundled catalog (⚡) and import the newest CIF workbook, then re-open the
+  planner." (all bilingual). After a real incident where an April-only CIF import left 29
+  sale rows floorless and the warning offered no way out.
+
 ### Added (2026-08-30)
 - **Sale Planner "❓ How to use" guide** — a button in the Sale Planner header opens an
   in-app modal with the step-by-step monthly SOP (costs → three reports → FBA Fee Preview

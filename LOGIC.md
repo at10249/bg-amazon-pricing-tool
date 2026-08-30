@@ -1077,6 +1077,18 @@ RULE: easy mode is a documented feature (Section 19.2) so neither guard is a har
 but it must be **impossible** to export floorless rows, or to export off stale inventory,
 without seeing exactly which rows and how old the data is.
 
+**Remedies live in the guards themselves (2026-08-30).** A warning that offers no way out
+is what let the original incident ship, so each guard now names its fix inline:
+- The stale / missing-snapshot banners carry a direct **↗ Open Inventory Health report**
+  link (`AMZ_REPORT_LINKS.inventory`, `target="_blank"`) so a fresh snapshot is one click
+  away. The `confirm()` gate stays text-only (a native dialog cannot hold a link).
+- The floorless banner is one coherent block that also carries a **⚡ Load bundled catalog**
+  button (`loadBundledCatalog()`) plus *"then re-import the team's newest CIF workbook — see
+  ❓ How to use."*
+- The floorless export `confirm()` appends the remedy sentence *"Fix: load the bundled
+  catalog (⚡) and import the newest CIF workbook, then re-open the planner."* before
+  "Export anyway?".
+
 ### 19.4 Proposal review report
 **CODE LOCATION:** `index.html` → `collectPlanItems()`, `buildProposalModel()`,
 `buildProposalReportHtml()`, `escHtml()`, `openProposalReport()`
@@ -1134,9 +1146,30 @@ bilingual, quoting the exact UI button names so users can match them. It reuses 
 `flow-modal` shell/styling of the top-bar "? Guide" for consistency, and its footer
 points to the 📐 Pricing Rules viewer (Section 21) for the full decision spec.
 
+**Actionable steps (2026-08-30).** Every step that names a button now carries a small
+`topbar-btn` that performs it directly, so the guide is a control panel rather than a
+description. Each picker button first `closeModalEl('planner-howto-modal')` and only then
+`.click()`s the hidden file input, so the OS file dialog is never stacked under the modal
+overlay: step 1 → **Import CSV/XLSX** (`#csv-file`) + **⚡ Load bundled catalog**
+(`loadBundledCatalog()`); step 2 → **⬆ Import Amazon Reports** (`#amz-report-file`); step 3
+→ **⬆ Import Inventory** (`#fba-preview-file`); step 4 → **Import shipments xlsx**
+(`#shipments-file`). Step 6 keeps text only — the export button lives in the planner itself.
+
+Wherever a report must be downloaded the step also shows a direct Seller-Central link
+(`<a target="_blank" rel="noopener">`): step 2 → Business / Ads / Inventory Health, step 3
+→ Fee Preview. Those anchors carry a `data-amzlink` key (`business` / `ads` / `inventory` /
+`feePreview`) and their `href` is populated from the single `AMZ_REPORT_LINKS` constant in
+`openModalEl()` when the modal opens, so a URL edit never has to be duplicated in the static
+markup. Step 1's NOTE spells out the real lesson: the bundled seed covers products up to
+**2026-07-18**, any CIF workbook only covers products existing at its export date, so import
+BOTH (bundled seed first, newest workbook on top) and ask the team for an updated CIF export
+whenever the floorless warning names products.
+
 **CODE LOCATION:** `index.html` → the `❓ How to use` button rendered in the header block
-of `renderSalePlanner()` (calls `openModalEl('planner-howto-modal')`), and the static
-modal `#planner-howto-modal` (a `.flow-modal-overlay`).
+of `renderSalePlanner()` (calls `openModalEl('planner-howto-modal')`), the static modal
+`#planner-howto-modal` (a `.flow-modal-overlay`) with its inline step buttons and
+`a[data-amzlink]` links, and the `id === 'planner-howto-modal'` link-population branch in
+`openModalEl()`.
 
 ## 20. ZERO-DEPENDENCY XLSX READ / WRITE
 

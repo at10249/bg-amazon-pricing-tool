@@ -253,7 +253,9 @@ price?" from the imported reports:
   Products with no COGS work in **easy mode** — ladder only, no margin data needed.
 - Every row's price and inclusion is editable before export.
 - New to the monthly routine? The **❓ How to use** button in the Sale Planner header
-  opens an in-app step-by-step guide (bilingual) covering the exact import order.
+  opens an in-app step-by-step guide (bilingual) covering the exact import order. Each
+  step is actionable — its buttons run the import directly and link straight to the
+  matching Seller-Central report to download.
 
 **Export Amazon Price File** generates a real `.xlsx` in the exact PriceAndQuantity
 template format (Sale Price + Sale Start/End dates per SKU). Upload it via Seller
