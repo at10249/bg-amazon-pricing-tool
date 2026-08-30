@@ -10,6 +10,11 @@ no build step.
 ## [Import & Guardrails Round] — 2026-08-30
 
 ### Added (2026-08-30)
+- **Sale Planner "❓ How to use" guide** — a button in the Sale Planner header opens an
+  in-app modal with the step-by-step monthly SOP (costs → three reports → FBA Fee Preview
+  → optional shipments → review → export), bilingual and quoting the exact UI button
+  names, reusing the existing "? Guide" flow-modal styling; footer links to 📐 Pricing
+  Rules for the full spec.
 - **Fee Preview import updates existing products** — size tier and weight are now
   backfilled onto catalog products (including report-created stubs that carried the
   default ss/8oz), fixing understated break-even floors; the import summary reports

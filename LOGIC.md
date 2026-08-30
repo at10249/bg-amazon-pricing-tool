@@ -1126,6 +1126,18 @@ delivery accordingly ('opened in a new tab' vs 'also saved'). Callers:
 `openProposalReport()` (📄 Review Report button) and `exportPriceFile()`. The planner
 **empty state** shows no report button (nothing to report).
 
+### 19.6 Sale Planner how-to modal
+The Sale Planner is an order-dependent monthly workflow (costs → three reports → FBA Fee
+Preview → optional shipments → review → export) and users get the sequence wrong. A
+**"❓ How to use"** button in the planner header opens a modal with the six-step SOP,
+bilingual, quoting the exact UI button names so users can match them. It reuses the
+`flow-modal` shell/styling of the top-bar "? Guide" for consistency, and its footer
+points to the 📐 Pricing Rules viewer (Section 21) for the full decision spec.
+
+**CODE LOCATION:** `index.html` → the `❓ How to use` button rendered in the header block
+of `renderSalePlanner()` (calls `openModalEl('planner-howto-modal')`), and the static
+modal `#planner-howto-modal` (a `.flow-modal-overlay`).
+
 ## 20. ZERO-DEPENDENCY XLSX READ / WRITE
 
 ### 20.1 Reader (incoming shipments, F4)
