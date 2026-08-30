@@ -579,7 +579,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
   <button class="topbar-btn" onclick="exportCSV()" data-en="Export CSV" data-zh="导出CSV">Export CSV</button>
   <button class="topbar-btn" onclick="document.getElementById('import-file').click()" data-en="Import JSON" data-zh="导入JSON">Import JSON</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
-  <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
+  <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV/XLSX" data-zh="导入CSV/XLSX">Import CSV/XLSX</button>
   <input type="file" id="csv-file" accept=".csv,.xlsx,.xlsm" style="display:none" onchange="importCSV(event)">
   <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
   <button class="topbar-btn" id="btn-planner" onclick="toggleSalePlanner()" data-en="Sale Planner" data-zh="促销计划">Sale Planner</button>
@@ -1036,7 +1036,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
               <div class="wf-step-path"><strong>Columns needed:</strong> name, asin, cogs, target_margin<br><strong>Optional:</strong> length_in, width_in, height_in, weight_lb, category</div>
               <div class="wf-actions">
                 <a href="products-template.csv" download class="topbar-btn">⬇ CSV Template</a>
-                <button class="topbar-btn" onclick="document.getElementById('wf-cogs-file').click()">⬆ Import CSV</button>
+                <button class="topbar-btn" onclick="document.getElementById('wf-cogs-file').click()">⬆ Import CSV/XLSX</button>
                 <input type="file" id="wf-cogs-file" accept=".csv,.xlsx,.xlsm" style="display:none" onchange="importCSV(event)">
               </div>
             </div>
