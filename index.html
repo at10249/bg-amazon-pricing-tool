@@ -580,7 +580,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
   <button class="topbar-btn" onclick="document.getElementById('import-file').click()" data-en="Import JSON" data-zh="导入JSON">Import JSON</button>
   <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
   <button class="topbar-btn" onclick="document.getElementById('csv-file').click()" data-en="Import CSV" data-zh="导入CSV">Import CSV</button>
-  <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(event)">
+  <input type="file" id="csv-file" accept=".csv,.xlsx,.xlsm" style="display:none" onchange="importCSV(event)">
   <a href="products-template.csv" download class="topbar-btn" data-en="CSV Template" data-zh="CSV模板">CSV Template</a>
   <button class="topbar-btn" id="btn-planner" onclick="toggleSalePlanner()" data-en="Sale Planner" data-zh="促销计划">Sale Planner</button>
   <button class="topbar-btn" id="btn-portfolio" onclick="togglePortfolio()">Portfolio</button>
@@ -1037,7 +1037,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
               <div class="wf-actions">
                 <a href="products-template.csv" download class="topbar-btn">⬇ CSV Template</a>
                 <button class="topbar-btn" onclick="document.getElementById('wf-cogs-file').click()">⬆ Import CSV</button>
-                <input type="file" id="wf-cogs-file" accept=".csv" style="display:none" onchange="importCSV(event)">
+                <input type="file" id="wf-cogs-file" accept=".csv,.xlsx,.xlsm" style="display:none" onchange="importCSV(event)">
               </div>
             </div>
           </div>
@@ -1675,6 +1675,37 @@ const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
 //   bad_size_tier     — size_tier not one of ss / ls / lb / xl
 // Update rows (matched to an existing product) skip the missing-field checks —
 // they may legitimately carry only the columns being updated.
+// RULE: header aliases for the product / CIF import (case-insensitive, trimmed).
+// The partner's real CIF workbook (xlsx) has exactly these sheet-1 headers:
+//   `Merchant SKU, ASIN, FNSKU, model_name, CIF`
+// so it can be imported with no manual re-typing: CIF is the landed cost (→ cogs),
+// model_name is the listing name (→ name), Merchant SKU is the Amazon seller SKU
+// (→ sku), ASIN already matches once lowercased, and FNSKU has no field here so it
+// falls through as an unknown column and is ignored.
+// PURE — mirrored in test.js.
+const PRODUCT_HEADER_ALIASES = {
+  'cif': 'cogs',
+  'model_name': 'name',
+  'model name': 'name',
+  'merchant sku': 'sku',
+  'merchant_sku': 'sku',
+  'seller sku': 'sku'
+};
+function aliasProductHeaders(headers) {
+  return (headers || []).map(h => {
+    const k = String(h === undefined || h === null ? '' : h).trim().toLowerCase();
+    return PRODUCT_HEADER_ALIASES[k] || k;
+  });
+}
+
+// RULE: true when the file supplied cogs through the `CIF` alias. CIF is Cost-Insurance-
+// Freight — a LANDED cost that already contains inbound freight — so those imports must
+// also zero `inbound_shipping` (see importProductRows) or freight is counted twice.
+// Same convention as the bundled CIF seed CSV. PURE — mirrored in test.js.
+function headersCarryCIF(rawHeaders) {
+  return (rawHeaders || []).some(h => String(h === undefined || h === null ? '' : h).trim().toLowerCase() === 'cif');
+}
+
 const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
 function validateCSVRow(row, isUpdate) {
   const errors = [];
@@ -1759,13 +1790,53 @@ function amazonSizeTierToAppTier(raw) {
   return null; // unknown → caller uses default
 }
 
+// RULE: the product / CIF import accepts BOTH .csv and .xlsx/.xlsm. The partner ships
+// its CIF costs as a workbook, and re-saving it as CSV by hand was the step that got
+// skipped (products then imported with cogs = 0 and no break-even floor). Only the
+// FIRST SHEET is read — the partner file carries unrelated reference data on sheets 2-3.
 function importCSV(event) {
   const file = event.target.files[0];
   if (!file) return;
+  const name = file.name || '';
   const reader = new FileReader();
-  reader.onload = (e) => { importProductsCSVText(e.target.result, file.name); };
-  reader.readAsText(file);
+  if (/\.xls[xm]$/i.test(name)) {
+    reader.onload = async (e) => {
+      let rows;
+      try { rows = await readXlsxFirstSheet(e.target.result); }
+      catch (err) { alert(t('Could not read the xlsx: ', '无法读取xlsx：') + err.message); return; }
+      importProductsXlsxRows(rows, name);
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = (e) => { importProductsCSVText(e.target.result, name); };
+    reader.readAsText(file);
+  }
   event.target.value = '';
+}
+
+// RULE: xlsx rows (arrays of strings, first sheet only) are converted into the SAME
+// row-object shape the CSV path produces and then run through the identical
+// validation/import pipeline (importProductRows → validateCSVRow → showImportReport),
+// so the two file formats can never diverge. The first row containing any non-empty
+// cell is the header row — partner exports sometimes carry a blank leading row.
+function importProductsXlsxRows(rows, filename) {
+  const all = rows || [];
+  const hdrIdx = all.findIndex(r => r && r.some(c => (c === undefined || c === null ? '' : String(c)).trim() !== ''));
+  if (hdrIdx === -1 || hdrIdx >= all.length - 1) {
+    alert(t('The spreadsheet needs a header row and at least one data row.', '该表格需要一个标题行和至少一行数据。'));
+    return;
+  }
+  const rawHeaders = all[hdrIdx].map(c => (c === undefined || c === null ? '' : String(c)).trim());
+  const headers = aliasProductHeaders(rawHeaders);
+  const rowObjs = [];
+  for (let i = hdrIdx + 1; i < all.length; i++) {
+    const cols = (all[i] || []).map(c => (c === undefined || c === null ? '' : String(c)).trim());
+    if (!cols.some(c => c !== '')) continue; // blank spacer row
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+    rowObjs.push({ row, line: i + 1 });
+  }
+  importProductRows(headers, rowObjs, filename, headersCarryCIF(rawHeaders));
 }
 
 // RULE: pure text→state import extracted from importCSV so the bundled-catalog fetch()
@@ -1773,18 +1844,32 @@ function importCSV(event) {
 function importProductsCSVText(text, filename) {
     const lines = text.split('\n').filter(l => l.trim());
     if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
-    const has = col => headers.includes(col);
-    let created = 0, updated = 0;
-    const skippedRows = []; // { line, errors: [{field, code, value?}] } — see validateCSVRow
-
+    // Quote-aware header parse + alias mapping, so a CSV export of the partner's CIF
+    // workbook imports exactly like the workbook itself.
+    const rawHeaders = parseCSVRow(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
+    const headers = aliasProductHeaders(rawHeaders);
+    const rowObjs = [];
     for (let i = 1; i < lines.length; i++) {
       // Use the quote-aware row parser — a naive split(',') corrupts columns whenever a
       // field (e.g. a real Amazon product title) contains a comma inside quotes.
       const cols = parseCSVRow(lines[i]).map(c => c.trim().replace(/^"|"$/g,''));
       const row = {};
       headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+      rowObjs.push({ row, line: i + 1 });
+    }
+    importProductRows(headers, rowObjs, filename, headersCarryCIF(rawHeaders));
+}
 
+// RULE: the ONE "rows → state" importer. Both file formats (.csv text and .xlsx rows)
+// funnel through here, so validation, defaults, the CIF landed-cost convention and the
+// post-import report behave identically whichever file the user picked. `cifCogs` is
+// true when cogs arrived via the `CIF` header alias (see headersCarryCIF).
+function importProductRows(headers, rowObjs, filename, cifCogs) {
+    const has = col => headers.includes(col);
+    let created = 0, updated = 0;
+    const skippedRows = []; // { line, errors: [{field, code, value?}] } — see validateCSVRow
+
+    for (const { row, line } of rowObjs) {
       const asin = row.asin?.trim().toUpperCase() || '';
       // Match existing product by ASIN when the row provides one. Only fall back to matching
       // by name when the row has NO asin at all — otherwise two different real ASINs that
@@ -1795,12 +1880,15 @@ function importProductsCSVText(text, filename) {
 
       // RULE: Validate before importing — rows with errors are skipped and reported
       const rowErrors = validateCSVRow(row, !!existing);
-      if (rowErrors.length) { skippedRows.push({ line: i + 1, errors: rowErrors }); continue; }
+      if (rowErrors.length) { skippedRows.push({ line, errors: rowErrors }); continue; }
 
       if (existing) {
         // UPDATE — only overwrite fields that are present as columns in this CSV
         if (row.name) existing.name = row.name;
         if (asin) existing.asin = asin;
+        // RULE: `Merchant SKU` (aliased to `sku`) is the Amazon seller SKU — the join key
+        // for the shipments import and the price-feed export. Never blank an existing one.
+        if (has('sku') && row.sku) existing.sku = row.sku;
         if (has('category') && row.category) existing.inputs.category = CAT_MAP[row.category.toLowerCase()] || existing.inputs.category;
 
         const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16
@@ -1817,6 +1905,11 @@ function importProductsCSVText(text, filename) {
         if (has('cogs') && row.cogs)                         existing.inputs.cogs      = parseFloat(row.cogs);
         if (has('target_margin') && row.target_margin)        existing.inputs.margin    = parseFloat(row.target_margin);
         if (has('inbound_shipping') && row.inbound_shipping)  existing.inputs.inbound   = parseFloat(row.inbound_shipping);
+        // RULE: a CIF figure is a LANDED cost that already includes inbound freight, so
+        // when cogs arrived via the `CIF` alias and the row supplies no inbound_shipping
+        // of its own, zero the separate inbound field — otherwise freight is counted
+        // twice and margin is understated (same convention as the bundled CIF seed).
+        else if (cifCogs && has('cogs') && row.cogs)          existing.inputs.inbound   = 0;
         if (has('inbound_placement') && row.inbound_placement)existing.inputs.placement = parseFloat(row.inbound_placement);
         if (has('prep_labelling') && row.prep_labelling)      existing.inputs.prep      = parseFloat(row.prep_labelling);
         if (has('storage') && row.storage)                    existing.inputs.storage   = parseFloat(row.storage);
@@ -1842,6 +1935,7 @@ function importProductsCSVText(text, filename) {
         const p = createDefaultProduct();
         p.name = row.name || `Product ${asin}`;
         p.asin = asin;
+        p.sku = row.sku || '';
         p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
         const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16 : numOr(row.weight_oz, 8);
         p.inputs.weight = weightOz;
@@ -1854,7 +1948,9 @@ function importProductsCSVText(text, filename) {
         }
         p.inputs.cogs        = numOr(row.cogs, 6);
         p.inputs.margin      = numOr(row.target_margin, 30);
-        p.inputs.inbound     = numOr(row.inbound_shipping, 0.50);
+        // RULE: CIF is landed cost incl. freight → default inbound_shipping to 0 for
+        // CIF-sourced rows (see the update branch above); other files keep the $0.50 default.
+        p.inputs.inbound     = numOr(row.inbound_shipping, cifCogs ? 0 : 0.50);
         p.inputs.placement   = numOr(row.inbound_placement, 0);
         p.inputs.prep        = numOr(row.prep_labelling, 0.25);
         p.inputs.storage     = numOr(row.storage, 0.10);
@@ -3628,18 +3724,33 @@ function importFBAFeePreview(event) {
       return +(num * 16).toFixed(1); // assume lbs
     };
 
-    let created = 0, skipped = 0;
+    let created = 0, updated = 0, skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
       const cols = splitRow(lines[i]);
       if (!cols.length) continue;
       const asin = (cols[asinCol] || '').trim().toUpperCase();
       if (!asin || asin.length < 5) { skipped++; continue; }
-      if (state.products.some(p => p.asin === asin)) { skipped++; continue; }
 
       const name     = nameCol   !== -1 ? (cols[nameCol]   || '').trim() : '';
       const tierRaw  = tierCol   !== -1 ? (cols[tierCol]   || '').trim() : '';
       const weightRaw= weightCol !== -1 ? (cols[weightCol] || '').trim() : '';
+
+      // RULE: an existing product (e.g. a stub auto-created from the weekly reports with
+      // the default ss/8oz) gets its size tier and weight UPDATED from the Fee Preview —
+      // Amazon is the source of truth for physical attributes, and a wrong tier silently
+      // understates FBA fees and therefore the break-even floor in the Sale Planner.
+      // Everything else (COGS, margins, notes) is left untouched.
+      const existing = state.products.find(p => p.asin === asin);
+      if (existing) {
+        let touched = false;
+        const exTier = amazonSizeTierToAppTier(tierRaw);
+        if (exTier && existing.inputs.sizetier !== exTier) { existing.inputs.sizetier = exTier; touched = true; }
+        const exOz = parseWeightToOz(weightRaw);
+        if (exOz && Math.abs((existing.inputs.weight || 0) - exOz) > 0.05) { existing.inputs.weight = exOz; touched = true; }
+        if (touched) updated++; else skipped++;
+        continue;
+      }
 
       const p = createDefaultProduct();
       p.name   = name || `Product ${asin}`;
@@ -3657,11 +3768,18 @@ function importFBAFeePreview(event) {
       created++;
     }
 
-    if (created === 0) {
+    if (created === 0 && updated === 0) {
       alert(t(
         `No new products found. ${skipped > 0 ? skipped + ' rows skipped (already exist or invalid ASIN).' : 'Check the file is the correct Amazon report.'}`,
         `未找到新产品。${skipped > 0 ? skipped + ' 行已跳过（已存在或ASIN无效）。' : '请检查文件是否为正确的亚马逊报告。'}`
       ));
+    } else if (created === 0) {
+      alert(t(
+        `Updated size tier / weight on ${updated} existing product(s) from the report. ${skipped} unchanged.`,
+        `已根据报告更新 ${updated} 个现有产品的尺寸分级/重量。${skipped} 个未变化。`
+      ));
+      saveToStorage();
+      renderAll();
     } else {
       if (!state.activeProductId && state.products.length > 0) state.activeProductId = state.products[state.products.length - created].id;
       saveToStorage();
@@ -3724,6 +3842,22 @@ function detectAmazonReport(hdrs) {
   return null;
 }
 
+// RULE: an FBA Fee Preview export is the file most often dropped into the weekly report
+// import by mistake — it looks like an inventory file but carries NO stock or velocity
+// columns, so detectAmazonReport() rejects it and (before this) it vanished into a
+// generic "unrecognized" line. Recognise it explicitly so the summary can say what the
+// file actually is and where it should go instead. Headers are compared in the app's
+// NORMALIZED form (normalizeHeaders lowercases and turns - _ ( ) into single spaces),
+// so 'estimated-fee-total' is matched as 'estimated fee total'.
+function looksLikeFeePreview(hdrs) {
+  const h = hdrs || [];
+  const has = s => h.indexOf(s) !== -1;
+  if (has('estimated fee total')) return true;
+  if (has('expected fulfillment fee per unit')) return true;
+  // The catalog-shaped variant: size tier + price but no stock column at all.
+  return has('product size tier') && has('your price') && !has('available');
+}
+
 // RULE: local YYYY-MM-DD — NEVER toISOString (that shifts the date in non-UTC timezones).
 function ymd(d) {
   const y = d.getFullYear();
@@ -3737,14 +3871,16 @@ function endOfMonthYmd(d) {
   return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 }
 
-// RULE: default sale end = end of the current month — unless fewer than 3 days
+// RULE: default sale end = end of the current month — unless fewer than 7 days
 // (including today) remain, in which case a "sale until month end" would be uselessly
 // short and the user is really planning NEXT month's sale → roll to end of next month.
-// The date field stays editable either way.
+// A sale window shorter than a week is never the intent of a month-end sale plan (the
+// price feed takes a day to process and shoppers need time to see the badge), so with
+// fewer than 7 days left the user is planning NEXT month. The field stays editable.
 function defaultSaleEndYmd(d) {
   const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const remainingDays = eom.getDate() - d.getDate() + 1;
-  if (remainingDays < 3) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  if (remainingDays < 7) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
   return ymd(eom);
 }
 
@@ -3918,8 +4054,14 @@ function importAmazonReport(event) {
         parsed.push(parseAdsReport(lines, name));
       } else if (kind === 'inventory') {
         parsed.push(parseInventoryReport(lines, name));
+      } else if (looksLikeFeePreview(hdrs)) {
+        // RULE: never let a Fee Preview file fail silently as "unrecognized" — name it and
+        // point at the two flows that actually consume it.
+        failures.push({ fileName: name, feePreview: true, reason: t(
+          "is an FBA Fee Preview export — it contains no stock or velocity data, so the Sale Planner ignores it. Import it via '⬆ Import Inventory' to update sizes/weights, and download the Inventory Health report for the planner.",
+          "是FBA费用预览导出文件 — 其中没有库存或销售速度数据，因此促销计划器会忽略它。请通过“⬆ 导入库存”导入以更新尺寸/重量，并下载库存健康报告供计划器使用。") });
       } else {
-        failures.push({ fileName: name, reason: t('unrecognized — expected a Business, Advertising (Advertised product), or Inventory Health CSV', '无法识别 — 应为业务、广告（推广商品）或库存健康CSV') });
+        failures.push({ fileName: name, reason: t('unrecognized report — expected a Business, Advertising (Advertised product), or Inventory Health CSV', '无法识别的报告 — 应为业务、广告（推广商品）或库存健康CSV') });
       }
     }
     applyAmazonReports(parsed, failures);
@@ -4061,7 +4203,10 @@ function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched, 
   const kindName = k => k === 'business' ? t('Business Report', '业务报告') : k === 'ads' ? t('Advertising Report', '广告报告') : t('Inventory Health', '库存健康');
   const period = f => f.kind === 'business' ? t(`${f.periodDays}-day window`, `${f.periodDays}天窗口`)
     : f.kind === 'ads' ? `${f.start || '?'} → ${f.end || '?'}`
-    : t('snapshot', '快照');
+    : (f.kind === 'inventory'
+        ? (() => { const d = Object.values(f.byAsin).map(r => r.snapshotDate).find(Boolean);
+                   return d ? t(`snapshot ${d}`, `快照 ${d}`) : t('snapshot', '快照'); })()
+        : t('snapshot', '快照'));
   let body = `<div style="font-size:0.95rem;font-weight:700;color:var(--c-e8eaf0);margin-bottom:10px;">${t('Amazon report import', '亚马逊报告导入')}</div>`;
 
   if (parsedFiles.length) {
@@ -4104,7 +4249,7 @@ function showAmzImportReport(parsedFiles, failures, matchedProducts, unmatched, 
 
   if (failures.length) {
     body += `<div style="margin-top:10px;">` + failures.map(f =>
-      `<div class="alert bad" style="margin:4px 0;font-size:0.74rem;"><strong>${f.fileName}</strong> — ${f.reason}</div>`).join('') + `</div>`;
+      `<div class="alert ${f.feePreview ? 'warn' : 'bad'}" style="margin:4px 0;font-size:0.74rem;"><strong>${f.fileName}</strong>${f.feePreview ? ' ' : ' — '}${f.reason}</div>`).join('') + `</div>`;
   }
 
   document.getElementById('ir-body').innerHTML = body;
@@ -4818,6 +4963,40 @@ function plannerSetThreshold(v) { const pl = _plannerEnsure(); const n = parseIn
 function plannerSetInclude(pid, checked) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; pl.overrides[pid].include = !!checked; saveToStorage(); renderSalePlanner(); }
 function plannerSetPrice(pid, val) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; const n = parseFloat(val); pl.overrides[pid].price = (n > 0 ? +n.toFixed(2) : undefined); saveToStorage(); renderSalePlanner(); }
 
+// RULE (F2 staleness guard): the planner is only as good as its newest Inventory Health
+// snapshot. A price plan was once built on a 29-day-old snapshot — stock levels, prices
+// and velocity were all wrong and nothing said so. Returns the NEWEST snapshotDate found
+// in state.reportData.byAsin and its age in whole days, or null when no snapshot exists
+// at all. Dates are plain local YYYY-MM-DD strings (never toISOString). PURE — mirrored.
+const INVENTORY_STALE_DAYS = 7;
+function inventorySnapshotAge(byAsin, todayYmd) {
+  const all = byAsin || {};
+  let newest = null;
+  for (const a in all) {
+    const raw = (all[a] && all[a].snapshotDate) || '';
+    const m = String(raw).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if (!m) continue;
+    if (!newest || m[1] > newest) newest = m[1];
+  }
+  if (!newest) return null;
+  const utc = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  return { snapshotYmd: newest, ageDays: Math.round((utc(todayYmd) - utc(newest)) / 86400000) };
+}
+
+// RULE (F3 no-cost-floor guard): a product with cogs <= 0 runs in easy mode — the
+// suggestion ladder still works but NOTHING stops the price going below landed cost,
+// because there is no break-even floor to clamp it. Counts how many of the given rows
+// (the ones selected for export) are in that state. Missing/NaN cogs counts as
+// floorless — an unparseable cost is not protection. PURE — mirrored in test.js.
+function floorlessCount(rows) {
+  let n = 0;
+  for (const r of (rows || [])) {
+    const cogs = (r && r.p && r.p.inputs) ? Number(r.p.inputs.cogs) : 0;
+    if (!(cogs > 0)) n++;
+  }
+  return n;
+}
+
 function plannerFreshness() {
   const rdAll = (state.reportData && state.reportData.byAsin) ? state.reportData.byAsin : {};
   let bizAt = null, bizDays = null, adStart = null, adEnd = null, adAt = null, snap = null, invAt = null;
@@ -4888,6 +5067,29 @@ function renderSalePlanner() {
       <button class="topbar-btn" onclick="document.getElementById('shipments-file').click()">${t('⬆ Shipments xlsx (optional)', '⬆ 货件xlsx（可选）')}</button>
       ${linkBtns}
     </div>`;
+
+  // ── RULE: export guards are shown ABOVE the table, not buried in the freshness pills —
+  // stale inventory and missing cost floors are the two failure modes that silently
+  // produce a wrong price plan (LOGIC.md 19.5).
+  const snapAge = inventorySnapshotAge(state.reportData && state.reportData.byAsin, ymd(today));
+  const banner = txt => `<div class="alert warn" style="margin-bottom:12px;font-size:0.78rem;">⚠️ ${txt}</div>`;
+  let guards = '';
+  if (!snapAge) {
+    guards += banner(t('No Inventory Health snapshot imported — the planner is using old or fallback data.',
+                       '未导入库存健康快照 — 计划器正在使用旧数据或回退数据。'));
+  } else if (snapAge.ageDays > INVENTORY_STALE_DAYS) {
+    guards += banner(t(`Inventory data is ${snapAge.ageDays} days old (snapshot ${snapAge.snapshotYmd}). Download a fresh Inventory Health report before uploading prices.`,
+                       `库存数据已有 ${snapAge.ageDays} 天（快照 ${snapAge.snapshotYmd}）。上传价格前请下载最新的库存健康报告。`));
+  }
+  const selectedRows = rows.filter(r => {
+    const ov = pl.overrides[r.p.id] || {};
+    return (ov.include !== undefined) ? ov.include : (r.sug.action === 'sale');
+  });
+  const nFloorless = floorlessCount(selectedRows);
+  if (nFloorless > 0) {
+    guards += banner(t(`${nFloorless} of ${selectedRows.length} sale rows have no cost data (COGS) — no break-even floor protects them. Import CIF costs first.`,
+                       `${selectedRows.length} 个促销行中有 ${nFloorless} 个没有成本数据（COGS）— 没有盈亏平衡下限保护。请先导入CIF成本。`));
+  }
 
   const startDefault = ymd(today);
   const endDefault = defaultSaleEndYmd(today);
@@ -5021,7 +5223,7 @@ function renderSalePlanner() {
       </div>
     </div>`;
 
-  el.innerHTML = header + freshnessRow + controls + chips + table + exportCard;
+  el.innerHTML = header + freshnessRow + guards + controls + chips + table + exportCard;
 }
 
 // RULE: single source of truth for "which planner rows ship, and at what price".
@@ -5069,6 +5271,33 @@ function exportPriceFile() {
     return;
   }
 
+  // RULE (F2): never build a price file off a stale or missing Inventory Health snapshot
+  // without the user seeing it and saying yes. The warning is ALSO prepended to the
+  // export summary so it survives past the confirm dialog.
+  const snapAge = inventorySnapshotAge(state.reportData && state.reportData.byAsin, ymd(new Date()));
+  let staleWarning = '';
+  if (!snapAge) {
+    staleWarning = t('⚠️ No Inventory Health snapshot imported — the planner is using old or fallback data.',
+                     '⚠️ 未导入库存健康快照 — 计划器正在使用旧数据或回退数据。');
+    if (!confirm(t('No Inventory Health snapshot imported — the planner is using old or fallback data. Export anyway?',
+                   '未导入库存健康快照 — 计划器正在使用旧数据或回退数据。仍要导出吗？'))) return;
+  } else if (snapAge.ageDays > INVENTORY_STALE_DAYS) {
+    staleWarning = t(`⚠️ Inventory data is ${snapAge.ageDays} days old (snapshot ${snapAge.snapshotYmd}). Download a fresh Inventory Health report before uploading prices.`,
+                     `⚠️ 库存数据已有 ${snapAge.ageDays} 天（快照 ${snapAge.snapshotYmd}）。上传价格前请下载最新的库存健康报告。`);
+    if (!confirm(t(`Inventory data is ${snapAge.ageDays} days old — export anyway?`,
+                   `库存数据已有 ${snapAge.ageDays} 天 — 仍要导出吗？`))) return;
+  }
+
+  // RULE (F3): floorless rows (cogs <= 0) are allowed to ship — easy mode is a documented
+  // feature — but it must be IMPOSSIBLE to export them without seeing exactly which SKUs
+  // have no break-even floor. Not a hard block; a named confirm plus a summary list.
+  const floorlessSkus = items.filter(it => floorlessCount([it.r]) === 1).map(it => it.sku);
+  const nFloorless = floorlessSkus.length;
+  if (nFloorless > 0) {
+    if (!confirm(t(`${nFloorless} of ${items.length} SKU(s) being exported have no cost data (COGS), so no break-even floor protects them:\n\n${floorlessSkus.join(', ')}\n\nExport anyway?`,
+                   `将导出的 ${items.length} 个SKU中有 ${nFloorless} 个没有成本数据（COGS），因此没有盈亏平衡下限保护：\n\n${floorlessSkus.join(', ')}\n\n仍要导出吗？`))) return;
+  }
+
   const feedItems = items.map(it => ({ sku: it.sku, price: it.price }));
   const bytes = buildPriceFeedXlsx(feedItems, start, end);
   const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -5089,11 +5318,13 @@ function exportPriceFile() {
     reportDelivery = deliverProposalReport(html, reportName);
   } catch (e) { console.warn('Review report generation failed:', e); reportName = ''; }
 
-  let summary = t(`✓ Exported ${items.length} SKU${items.length !== 1 ? 's' : ''} to PriceUpdate-Sale-${end}.xlsx\nSale window: ${start} → ${end}\n\nUpload via Seller Central → Catalog → Add Products via Upload.`,
+  let summary = staleWarning ? staleWarning + '\n\n' : '';
+  summary += t(`✓ Exported ${items.length} SKU${items.length !== 1 ? 's' : ''} to PriceUpdate-Sale-${end}.xlsx\nSale window: ${start} → ${end}\n\nUpload via Seller Central → Catalog → Add Products via Upload.`,
                   `✓ 已导出 ${items.length} 个SKU至 PriceUpdate-Sale-${end}.xlsx\n促销周期：${start} → ${end}\n\n通过卖家中心 → 商品目录 → 批量上传商品上传。`);
   if (reportName) summary += '\n\n' + (reportDelivery === 'tab'
     ? t(`The review report opened in a new tab — save it or use 🖨 Save as PDF there to share it.`, `审阅报告已在新标签页中打开 — 可在该页保存或用"🖨 另存为PDF"分享。`)
     : t(`Also saved: ${reportName} — a shareable review report (open it and use Save-as-PDF to send it on).`, `另存：${reportName} — 可分享的审阅报告（打开后用"另存为PDF"发送）。`));
+  if (nFloorless) summary += '\n\n' + t(`No break-even floor (no COGS) for ${nFloorless} exported SKU(s): ${floorlessSkus.join(', ')}`, `${nFloorless} 个已导出SKU没有盈亏平衡下限（无COGS）：${floorlessSkus.join(', ')}`);
   if (noSku.length) summary += '\n\n' + t(`Skipped (no SKU): ${noSku.join(', ')}`, `已跳过（无SKU）：${noSku.join(', ')}`);
   if (noPrice.length) summary += '\n\n' + t(`Skipped (checked but no sale price typed): ${noPrice.join(', ')}`, `已跳过（已勾选但未输入促销价）：${noPrice.join(', ')}`);
   if (subFivePct.length) summary += '\n\n' + t(`Note: ${subFivePct.length} SKU(s) are <5% off Your Price — Amazon may not show a sale badge for these.`, `注意：${subFivePct.length} 个SKU折扣低于5% — 亚马逊可能不显示促销徽章。`);
@@ -5415,7 +5646,7 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (519 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（519项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (573 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（573项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +

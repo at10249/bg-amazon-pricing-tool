@@ -247,6 +247,28 @@ const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
   jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
 const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
 
+// RULE: product/CIF import header aliases (case-insensitive, trimmed). Lets the partner's
+// real CIF workbook (`Merchant SKU, ASIN, FNSKU, model_name, CIF`) import as-is.
+const PRODUCT_HEADER_ALIASES = {
+  'cif': 'cogs',
+  'model_name': 'name',
+  'model name': 'name',
+  'merchant sku': 'sku',
+  'merchant_sku': 'sku',
+  'seller sku': 'sku'
+};
+function aliasProductHeaders(headers) {
+  return (headers || []).map(h => {
+    const k = String(h === undefined || h === null ? '' : h).trim().toLowerCase();
+    return PRODUCT_HEADER_ALIASES[k] || k;
+  });
+}
+// RULE: cogs supplied via the `CIF` alias is a LANDED cost incl. freight → inbound_shipping
+// defaults to 0 for those rows so freight is never counted twice.
+function headersCarryCIF(rawHeaders) {
+  return (rawHeaders || []).some(h => String(h === undefined || h === null ? '' : h).trim().toLowerCase() === 'cif');
+}
+
 function validateCSVRow(row, isUpdate) {
   const errors = [];
   const v = f => (row[f] ?? '').toString().trim();
@@ -395,6 +417,17 @@ function detectAmazonReport(hdrs) {
   if ((has('asin') || has('sku')) && invQty) return 'inventory';
   return null;
 }
+// RULE: an FBA Fee Preview export carries no stock/velocity data — recognise it so the
+// weekly-import summary can say so instead of a generic "unrecognized" line. Headers are
+// compared in normalizeHeaders() form (hyphens/underscores → spaces).
+function looksLikeFeePreview(hdrs) {
+  const h = hdrs || [];
+  const has = s => h.indexOf(s) !== -1;
+  if (has('estimated fee total')) return true;
+  if (has('expected fulfillment fee per unit')) return true;
+  return has('product size tier') && has('your price') && !has('available');
+}
+
 function ymd(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -402,11 +435,12 @@ function ymd(d) {
   return `${y}-${m}-${day}`;
 }
 function endOfMonthYmd(d) { return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
-// RULE: default sale end rolls to NEXT month's end when fewer than 3 days (incl. today) remain.
+// RULE: default sale end rolls to NEXT month's end when fewer than 7 days (incl. today) remain
+// — a sale window shorter than a week is never the intent of a month-end sale plan.
 function defaultSaleEndYmd(d) {
   const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const remainingDays = eom.getDate() - d.getDate() + 1;
-  if (remainingDays < 3) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  if (remainingDays < 7) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
   return ymd(eom);
 }
 const _AMZ_MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
@@ -580,6 +614,30 @@ const SALE_LADDER = [ { cover: 365, off: 0.20 }, { cover: 240, off: 0.15 }, { co
 const SALE_MIN_RUNWAY_DAYS = 45;
 const SALE_MIN_OFF = 0.05;
 const PLANNER_COVER_THRESHOLD_DEFAULT = 120;
+// RULE: newest Inventory Health snapshot + its age in days, or null when none exists.
+const INVENTORY_STALE_DAYS = 7;
+function inventorySnapshotAge(byAsin, todayYmd) {
+  const all = byAsin || {};
+  let newest = null;
+  for (const a in all) {
+    const raw = (all[a] && all[a].snapshotDate) || '';
+    const m = String(raw).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+    if (!m) continue;
+    if (!newest || m[1] > newest) newest = m[1];
+  }
+  if (!newest) return null;
+  const utc = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  return { snapshotYmd: newest, ageDays: Math.round((utc(todayYmd) - utc(newest)) / 86400000) };
+}
+// RULE: rows with cogs <= 0 have NO break-even floor. Missing/NaN counts as floorless.
+function floorlessCount(rows) {
+  let n = 0;
+  for (const r of (rows || [])) {
+    const cogs = (r && r.p && r.p.inputs) ? Number(r.p.inputs.cogs) : 0;
+    if (!(cogs > 0)) n++;
+  }
+  return n;
+}
 function roundSaleEnding(x) {
   if (!(x > 0)) return +(x).toFixed(2);
   const candidate = Math.floor(x) - 0.10;
@@ -828,7 +886,7 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (519 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（519项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (573 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（573项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -1962,14 +2020,87 @@ eq(endOfMonthYmd(new Date(2026, 0, 15)), '2026-01-31', 'January → 2026-01-31')
 eq(endOfMonthYmd(new Date(2028, 1, 10)), '2028-02-29', 'Feb 2028 (leap) → 2028-02-29');
 eq(endOfMonthYmd(new Date(2027, 1, 10)), '2027-02-28', 'Feb 2027 (non-leap) → 2027-02-28');
 
-describe('defaultSaleEndYmd — rolls to next month when <3 days remain');
+describe('defaultSaleEndYmd — rolls to next month when <7 days remain');
 eq(defaultSaleEndYmd(new Date(2026, 6, 20)), '2026-07-31', 'mid-July → end of July');
-eq(defaultSaleEndYmd(new Date(2026, 6, 29)), '2026-07-31', 'Jul 29 (3 days left) → still end of July');
+eq(defaultSaleEndYmd(new Date(2026, 6, 25)), '2026-07-31', 'Jul 25 (7 days left) → still end of July');
+eq(defaultSaleEndYmd(new Date(2026, 6, 26)), '2026-08-31', 'Jul 26 (6 days left) → end of August');
+eq(defaultSaleEndYmd(new Date(2026, 6, 29)), '2026-08-31', 'Jul 29 (3 days left) → end of August');
 eq(defaultSaleEndYmd(new Date(2026, 6, 30)), '2026-08-31', 'Jul 30 (2 days left) → end of August');
 eq(defaultSaleEndYmd(new Date(2026, 6, 31)), '2026-08-31', 'Jul 31 (last day) → end of August');
+eq(defaultSaleEndYmd(new Date(2026, 7, 24)), '2026-08-31', 'Aug 24 2026 (8 days left) → end of August');
+eq(defaultSaleEndYmd(new Date(2026, 7, 25)), '2026-08-31', 'Aug 25 2026 (exactly 7 days left) → still end of August');
+eq(defaultSaleEndYmd(new Date(2026, 7, 26)), '2026-09-30', 'Aug 26 2026 (6 days left) → end of September');
+eq(defaultSaleEndYmd(new Date(2026, 7, 29)), '2026-09-30', 'Aug 29 2026 (3 days left) → end of September');
 eq(defaultSaleEndYmd(new Date(2026, 11, 31)), '2027-01-31', 'Dec 31 → end of January (year boundary)');
 eq(defaultSaleEndYmd(new Date(2027, 1, 27)), '2027-03-31', 'Feb 27 non-leap (2 days left) → end of March');
+eq(defaultSaleEndYmd(new Date(2027, 1, 22)), '2027-02-28', 'Feb 22 non-leap (7 days left) → still end of February');
 eq(ymd(new Date(2026, 6, 3)), '2026-07-03', 'ymd pads month/day and never shifts by timezone');
+
+describe('aliasProductHeaders — partner CIF workbook headers map onto app columns');
+eq(aliasProductHeaders(['Merchant SKU', 'ASIN', 'FNSKU', 'model_name', 'CIF']).join(','),
+   'sku,asin,fnsku,name,cogs', 'real partner sheet-1 headers map to sku/asin/fnsku/name/cogs');
+eq(aliasProductHeaders(['  cIf  ', 'Model_Name']).join(','), 'cogs,name', 'mixed case + surrounding whitespace still alias');
+eq(aliasProductHeaders(['name', 'asin', 'cogs', 'target_margin']).join(','), 'name,asin,cogs,target_margin',
+   'no-alias passthrough: existing CSV headers are unchanged (lowercased)');
+eq(aliasProductHeaders(['Notes', 'WEIGHT_OZ']).join(','), 'notes,weight_oz', 'unknown headers are simply lowercased');
+eq(aliasProductHeaders(['Merchant_SKU', 'Seller SKU']).join(','), 'sku,sku', 'both SKU spellings alias to sku');
+eq(aliasProductHeaders([]).length, 0, 'empty header list → empty result');
+eq(aliasProductHeaders(null).length, 0, 'null header list → empty result (no throw)');
+eq(aliasProductHeaders([null, undefined]).join(','), ',', 'null/undefined cells become empty strings');
+// FNSKU has no app field — it must survive aliasing as an unknown column and be ignored downstream.
+is(aliasProductHeaders(['FNSKU']).indexOf('cogs') === -1, 'FNSKU never aliases onto a real column');
+
+describe('headersCarryCIF — landed-cost provenance flag');
+is(headersCarryCIF(['Merchant SKU', 'ASIN', 'CIF']), 'partner workbook headers carry CIF');
+is(headersCarryCIF([' cif ']), 'CIF match is trimmed + case-insensitive');
+is(!headersCarryCIF(['name', 'cogs', 'inbound_shipping']), 'a plain cogs CSV does not carry CIF');
+is(!headersCarryCIF([]), 'empty headers → false');
+is(!headersCarryCIF(null), 'null headers → false (no throw)');
+
+describe('inventorySnapshotAge — staleness of the newest Inventory Health snapshot');
+const _snapNewest = { A1: { snapshotDate: '2026-07-31' }, A2: { snapshotDate: '2026-08-02' }, A3: { snapshotDate: '2026-06-01' } };
+eq(inventorySnapshotAge(_snapNewest, '2026-08-30').snapshotYmd, '2026-08-02', 'picks the NEWEST snapshot date, not the first');
+eq(inventorySnapshotAge(_snapNewest, '2026-08-30').ageDays, 28, 'age in whole days from the newest snapshot');
+eq(inventorySnapshotAge({ A1: { snapshotDate: '2026-08-30' } }, '2026-08-30').ageDays, 0, 'same-day snapshot is 0 days old');
+eq(inventorySnapshotAge({ A1: { snapshotDate: '2026-08-23' } }, '2026-08-30').ageDays, 7, 'exactly 7 days old (the staleness boundary)');
+is(inventorySnapshotAge({ A1: { snapshotDate: '2026-08-23' } }, '2026-08-30').ageDays <= INVENTORY_STALE_DAYS, '7 days old is NOT stale (> boundary only)');
+is(inventorySnapshotAge({ A1: { snapshotDate: '2026-08-22' } }, '2026-08-30').ageDays > INVENTORY_STALE_DAYS, '8 days old IS stale');
+eq(inventorySnapshotAge({ A1: { snapshotDate: '2026-07-01' } }, '2026-08-30').ageDays, 60, 'crosses a month boundary correctly');
+eq(inventorySnapshotAge({ A1: { snapshotDate: '2026-08-02T00:00:00Z' } }, '2026-08-30').snapshotYmd, '2026-08-02', 'tolerates a datetime suffix on the snapshot cell');
+is(inventorySnapshotAge({}, '2026-08-30') === null, 'no ASINs → null');
+is(inventorySnapshotAge(null, '2026-08-30') === null, 'null byAsin → null (no throw)');
+is(inventorySnapshotAge({ A1: { snapshotDate: '' }, A2: {} }, '2026-08-30') === null, 'ASINs present but no snapshot date → null');
+is(inventorySnapshotAge({ A1: { snapshotDate: 'n/a' } }, '2026-08-30') === null, 'unparseable snapshot cell → null');
+// DST-safe: a UTC-based day diff never returns 27 or 29 across a European clock change.
+eq(inventorySnapshotAge({ A1: { snapshotDate: '2026-10-20' } }, '2026-11-03').ageDays, 14, 'day count is DST-proof across a clock change');
+
+describe('floorlessCount — rows with no break-even floor (cogs <= 0)');
+const _row = c => ({ p: { inputs: { cogs: c } } });
+eq(floorlessCount([_row(6), _row(0), _row(3)]), 1, 'one zero-COGS row among three');
+eq(floorlessCount([_row(0), _row(0)]), 2, 'all floorless');
+eq(floorlessCount([_row(6), _row(3)]), 0, 'all costed → none floorless');
+eq(floorlessCount([_row(-1)]), 1, 'negative COGS counts as floorless');
+eq(floorlessCount([_row(undefined)]), 1, 'missing COGS counts as floorless');
+eq(floorlessCount([_row('abc')]), 1, 'unparseable COGS counts as floorless (not protection)');
+eq(floorlessCount([_row('6.50')]), 0, 'numeric string COGS is a real floor');
+eq(floorlessCount([{}]), 1, 'row with no product object counts as floorless');
+eq(floorlessCount([]), 0, 'empty selection → 0');
+eq(floorlessCount(null), 0, 'null rows → 0 (no throw)');
+
+describe('looksLikeFeePreview — FBA Fee Preview dropped into the weekly report import');
+// Real Fee Preview headers, normalized (hyphens → spaces) exactly as the app compares them.
+const _feeHdrs = normalizeHeaders(['sku', 'asin', 'product-name', 'product-size-tier', 'your-price',
+  'estimated-fee-total', 'expected-fulfillment-fee-per-unit', 'currency']);
+is(looksLikeFeePreview(_feeHdrs), 'real Fee Preview header row is recognised');
+is(detectAmazonReport(_feeHdrs) === null, 'and detectAmazonReport still rejects it (no stock column)');
+is(looksLikeFeePreview(['estimated fee total']), 'estimated-fee-total alone is enough');
+is(looksLikeFeePreview(['expected fulfillment fee per unit']), 'expected-fulfillment-fee-per-unit alone is enough');
+is(looksLikeFeePreview(['asin', 'product size tier', 'your price']), 'size tier + your price + no stock column');
+is(!looksLikeFeePreview(['asin', 'product size tier', 'your price', 'available']), 'with an "available" column it is an inventory report, not a fee preview');
+is(!looksLikeFeePreview(normalizeHeaders(['asin', 'sku', 'available', 'inbound-quantity', 'snapshot-date'])), 'Inventory Health headers are NOT a fee preview');
+is(!looksLikeFeePreview(normalizeHeaders(['(Child) ASIN', 'Ordered Product Sales', 'Units Ordered'])), 'Business Report headers are NOT a fee preview');
+is(!looksLikeFeePreview([]), 'empty headers → false');
+is(!looksLikeFeePreview(null), 'null headers → false (no throw)');
 
 describe('roundSaleEnding — promo prices end in .90 with $1 floor');
 eq(roundSaleEnding(21.21), 20.90, '21.21 → 20.90');

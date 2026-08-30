@@ -7,6 +7,53 @@ Releases are named after the edit round rather than semantic versions. The app
 remains a single self-contained `index.html` — vanilla JS, no dependencies,
 no build step.
 
+## [Import & Guardrails Round] — 2026-08-30
+
+### Added (2026-08-30)
+- **Fee Preview import updates existing products** — size tier and weight are now
+  backfilled onto catalog products (including report-created stubs that carried the
+  default ss/8oz), fixing understated break-even floors; the import summary reports
+  created / updated / skipped.
+- **Product / CIF import accepts `.xlsx` and `.xlsm`** — the `#csv-file` input now takes
+  workbooks as well as CSVs, read with the existing zero-dependency `readXlsxFirstSheet()`
+  (**first sheet only**; the partner file's sheets 2-3 are unrelated reference data).
+  Both formats funnel through one shared importer, `importProductRows()`, so validation,
+  defaults and the post-import report are identical either way.
+- **Header aliases for the partner CIF workbook** — new pure `aliasProductHeaders()` +
+  `PRODUCT_HEADER_ALIASES` map its real sheet-1 headers
+  (`Merchant SKU, ASIN, FNSKU, model_name, CIF`) onto app columns: `CIF` → `cogs`,
+  `model_name` → `name`, `Merchant SKU` → a new optional `sku` column, `ASIN` → `asin`;
+  `FNSKU` is ignored. RULE: cogs arriving via the `CIF` alias also forces
+  `inbound_shipping = 0` (`headersCarryCIF()`) — CIF is a landed cost that already
+  includes freight, so the $0.50 default would count it twice.
+- **Stale-inventory guard (Sale Planner + export)** — new pure `inventorySnapshotAge()`
+  reports the newest Inventory Health `snapshotDate` and its age in days. The planner
+  shows a warning banner when the snapshot is missing or more than `INVENTORY_STALE_DAYS`
+  (7) old, and `exportPriceFile()` prepends the warning to the export summary **and**
+  requires a `confirm()` before building the file. Fixes the silent path that produced a
+  price plan off a 29-day-old snapshot.
+- **No-cost-floor guard** — new pure `floorlessCount()` counts rows selected for export
+  whose product has `cogs <= 0` (no break-even floor). The planner banners them, and the
+  export lists the affected SKUs in the summary behind a `confirm()` naming the count.
+  Deliberately not a hard block — easy mode stays supported — but floorless rows can no
+  longer ship unseen.
+- **Fee Preview misfile is named explicitly** — new pure `looksLikeFeePreview()` detects an
+  FBA Fee Preview export dropped into the weekly report import (headers compared in
+  `normalizeHeaders()` form) and the summary now says the file contains no stock or
+  velocity data and points at **⬆ Import Inventory** plus the Inventory Health report.
+  Previously it vanished into a generic "unrecognized" line.
+
+### Changed (2026-08-30)
+- **Month-end roll threshold 3 → 7 days** (`defaultSaleEndYmd`) — a sale window shorter
+  than a week is never the intent of a month-end sale plan; with fewer than 7 days left
+  the user is planning NEXT month. An Aug 29 export previously produced a 3-day
+  Aug 29 → Aug 31 sale.
+- README documents Inventory Health as **required** for the planner, the direct CIF-xlsx
+  import, and the two export confirms. LOGIC.md gains §11.0 (file formats + aliases), the
+  Fee Preview note in §18.2, and §19.5 (export guards); §11.2, §19.1.6 and §19.3 updated.
+
+Tests: 519 → **573** (`npm test`).
+
 ## [Pricing Rules Round] — 2026-08-06
 
 ### Added (2026-08-06) — Pricing Rules viewer & edit loop

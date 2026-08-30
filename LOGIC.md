@@ -516,17 +516,49 @@ expression of that CPC across expected impression volume.
 
 ---
 
-## 11. CSV IMPORT FORMAT
+## 11. PRODUCT / CIF IMPORT FORMAT (.csv and .xlsx)
 
-**CODE LOCATION:** `index.html` → function `importCSV(event)`
+**CODE LOCATION:** `index.html` → `importCSV(event)`, `importProductsCSVText(text, filename)`,
+`importProductsXlsxRows(rows, filename)`, `importProductRows(headers, rowObjs, filename, cifCogs)`,
+`aliasProductHeaders(headers)`, `headersCarryCIF(rawHeaders)`, `PRODUCT_HEADER_ALIASES`
 
-Required columns (header row must match exactly, case-insensitive):
+Required columns (header row must match, case-insensitive, whitespace-trimmed):
 `name, asin, category, size_tier, weight_oz, cogs, target_margin`
 
 Optional columns (omit = use default values from section 3):
-`inbound_shipping, inbound_placement, prep_labelling, storage, q4_storage,
+`sku, inbound_shipping, inbound_placement, prep_labelling, storage, q4_storage,
 ppc_per_unit, returns_allowance, vine_enrolled, vine_units, annual_units, other_overhead,
 target_acos, launch_acos, cvr, notes`
+
+`sku` is the Amazon **Merchant SKU** — the join key used by the shipments import and the
+price-feed export. It is set on create and on update; a blank cell never clears an
+existing SKU (Amazon's Inventory Health import remains the other source of truth for it).
+
+### 11.0 File formats and header aliases
+**CODE LOCATION:** `index.html` → `importCSV(event)`, `aliasProductHeaders(headers)`
+
+The `#csv-file` input accepts **`.csv`, `.xlsx` and `.xlsm`**. RULE: only the **FIRST
+SHEET** of a workbook is read (via the zero-dependency `readXlsxFirstSheet()`, Section
+20.1) — the partner's real CIF workbook carries unrelated reference data on sheets 2-3.
+The first row containing any non-empty cell is the header row; fully blank rows are
+skipped. Both formats are converted to the same row-object shape and then run through
+**one** shared importer (`importProductRows`) → `validateCSVRow` → `showImportReport`, so
+the two paths can never diverge in validation, defaults or reporting.
+
+RULE: headers are alias-mapped (case-insensitive, trimmed) so the partner's CIF workbook
+imports with no manual re-typing. Its sheet-1 headers are exactly
+`Merchant SKU, ASIN, FNSKU, model_name, CIF`:
+
+| File header | App column | Note |
+|---|---|---|
+| `CIF` | `cogs` | landed cost — also forces `inbound_shipping = 0`, see 11.2 |
+| `model_name` (or `model name`) | `name` | listing name |
+| `Merchant SKU` (or `merchant_sku`, `seller sku`) | `sku` | Amazon seller SKU |
+| `ASIN` | `asin` | already matches once lowercased |
+| `FNSKU` | *(none)* | no app field — falls through as an unknown column and is ignored |
+
+**TO ADD an alias:** add one lowercase key to `PRODUCT_HEADER_ALIASES` (mirrored in
+`test.js`) — nothing else changes.
 
 Category values: `home`, `beauty`, `grocery`, `apparel`, `shoes`, `electronics`,
   `computers`, `camera`, `pc`, `appliances`, `jewelry`, `watches`, `giftcards`,
@@ -559,9 +591,19 @@ Empty optional fields are NOT errors — defaults from Section 3 apply.
 entry to `csvErrorText()` for any new error code.
 
 ### 11.2 Importing a landed-cost/CIF figure as `cogs`
+**CODE LOCATION:** `index.html` → `headersCarryCIF(rawHeaders)` + the `cifCogs` branches in
+`importProductRows()`
+
+RULE: when `cogs` arrives through the **`CIF` header alias** and the row supplies no
+`inbound_shipping` of its own, `inbound_shipping` is set to **0** automatically (on create
+*and* on update) — CIF is a landed cost that already includes freight, so leaving the
+$0.50 default in place would count freight twice, inflating total cost and understating
+margin. This is the same convention as the bundled CIF seed CSV. A row that *does* carry
+an `inbound_shipping` value always wins.
+
 If your cost data is a CIF (Cost, Insurance, Freight) or other all-in landed-cost figure
-that already includes inbound freight, set `cogs` = that figure AND `inbound_shipping = 0`
-in the CSV. Otherwise inbound freight gets counted twice (once inside the landed cost,
+that already includes inbound freight but the column is *not* named `CIF`, set `cogs` =
+that figure AND `inbound_shipping = 0` yourself in the file. Otherwise inbound freight gets counted twice (once inside the landed cost,
 once in the tool's separate inbound_shipping field), silently inflating total cost and
 understating margin. CIF terms typically stop at the destination port — verify separately
 whether US customs duty and last-mile drayage to the FBA warehouse still need to be added
@@ -747,6 +789,13 @@ comma-delimited) and creates NEW product stubs — one per unmatched ASIN. `cogs
 deliberately set to `0` to trigger the app's incomplete-setup banner; the user must open
 Edit and fill in COGS, margin and other costs before the pricing is trustworthy.
 
+RULE (added 2026-08-30): rows whose ASIN already exists in the catalog are no longer
+skipped — their **size tier and weight are updated** from the report (nothing else is
+touched). Amazon is the source of truth for physical attributes; a stub auto-created by
+the weekly import carries the default `ss`/8oz, which silently understates FBA fees and
+therefore the Sale Planner's break-even floor. Re-importing the Fee Preview after a
+weekly import corrects every floor. The summary reports created / updated / skipped.
+
 Column matching is fuzzy (substring match on lower-cased, `-`/`_`-stripped headers):
 ASIN, product name, product size tier, unit weight. Weight units are auto-detected from
 the column header (grams / oz / assumes lbs otherwise).
@@ -794,6 +843,22 @@ unmatched ASINs alongside three recovery actions: the Fee Preview catalog-export
 (`AMZ_REPORT_LINKS.feePreview`), the "⬆ Import Inventory" flow (18.1), and the
 bundled-catalog loader (`loadBundledCatalog()` — fetches the CIF seed CSV shipped
 next to index.html; works over http(s), not file://).
+
+**Fee Preview dropped into the weekly import (the misfile warning).**
+**CODE LOCATION:** `index.html` → `looksLikeFeePreview(hdrs)`, the `else if` branch in
+`importAmazonReport()`, rendering in `showAmzImportReport()`
+
+RULE: a file that `detectAmazonReport()` cannot identify must never disappear into a
+generic line. The FBA Fee Preview export is the file most often dropped into this import
+by mistake — it looks inventory-shaped but has **no stock or velocity columns**, so the
+Sale Planner ignores it entirely. `looksLikeFeePreview(hdrs)` recognises it (headers
+compared in `normalizeHeaders()` form, i.e. hyphens/underscores already collapsed to
+spaces) when they contain `estimated fee total`, OR `expected fulfillment fee per unit`,
+OR (`product size tier` AND `your price` AND NOT `available`). The import summary then
+names the file explicitly and points at the two flows that *do* consume it: **⬆ Import
+Inventory** (sizes/weights, Section 18.1) and the Inventory Health report (the planner).
+Any other unrecognised file still gets the generic "unrecognized report" line with its
+filename.
 
 ### 18.3 Size tier string mapping
 **CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
@@ -951,7 +1016,8 @@ with what boundaries, then hand the file to an agent.
 | Minimum discount (badge) | `SALE_MIN_OFF` | 5% |
 | On-hand runway guard | `SALE_MIN_RUNWAY_DAYS` | 45 days |
 | Promo price ending | `roundSaleEnding()` | .90 |
-| Sale window default | `defaultSaleEndYmd()` | month-end, <3 days → next month |
+| Sale window default | `defaultSaleEndYmd()` | month-end, <7 days → next month |
+| Inventory staleness | `INVENTORY_STALE_DAYS` | 7 days (see 19.5) |
 | Break-even floor | `solveMinPriceRaw(margin 0)` | from CIF + fee tables |
 
 ### 19.2 Overrides
@@ -965,9 +1031,51 @@ CIF costs are imported. Per-row price and inclusion overrides persist in
 listed as skipped), validates start ≤ end, and downloads
 `PriceUpdate-Sale-<end>.xlsx` built by `buildPriceFeedXlsx()` (Section 20.2).
 RULE: sale end defaults to the **last day of the current month** regardless of upload
-date (`defaultSaleEndYmd`) — but rolls to the end of NEXT month when fewer than 3 days
-(including today) remain, because a 1–2 day "month-end sale" is never the intent.
+date (`defaultSaleEndYmd`) — but rolls to the end of NEXT month when fewer than **7 days**
+(including today) remain. A sale window shorter than a week is never the intent of a
+month-end sale plan: the price feed takes a day to process and shoppers need time to see
+the badge, so with fewer than 7 days left the user is planning NEXT month. (Threshold
+raised from 3 to 7 on 2026-08-30 after an Aug-29 export produced a 3-day Aug 29 → Aug 31
+sale.) The date field stays editable either way.
 Rows discounted <5% are exported but the summary warns Amazon may not show a badge.
+
+### 19.5 Export guards — stale inventory & missing cost floors
+**CODE LOCATION:** `index.html` → `inventorySnapshotAge(byAsin, todayYmd)`,
+`INVENTORY_STALE_DAYS`, `floorlessCount(rows)`, banners in `renderSalePlanner()`,
+`confirm()` gates + summary lines in `exportPriceFile()`
+
+Two silent failure modes once produced a bad price plan on the same day: the planner ran
+on a **29-day-old** Inventory Health snapshot, and **every** product had `cogs = 0` so no
+break-even floor applied anywhere. Both are now visible in the planner and both gate the
+export.
+
+**Staleness (F2).** `inventorySnapshotAge()` returns the **newest** `snapshotDate` found in
+`state.reportData.byAsin` plus its age in whole days, or `null` when no snapshot exists at
+all. Day counts go through `Date.UTC()` on the plain `YYYY-MM-DD` strings, so a European
+clock change can never shift the answer by a day. Boundary: an age **strictly greater
+than** `INVENTORY_STALE_DAYS` (7) is stale — exactly 7 days old is still fine.
+
+- Planner (`renderSalePlanner`) shows a warning banner above the table:
+  *"No Inventory Health snapshot imported — the planner is using old or fallback data."*
+  when null, or *"Inventory data is N days old (snapshot YYYY-MM-DD). Download a fresh
+  Inventory Health report before uploading prices."* when stale.
+- `exportPriceFile()` prepends the same warning to the export summary **and** requires a
+  `confirm()` ("Inventory data is N days old — export anyway?") before the file is built.
+  Cancel = no file, no report.
+
+**No cost floor (F3).** `floorlessCount(rows)` counts rows whose product has `cogs <= 0`
+(missing or unparseable COGS counts as floorless — an unreadable cost is not protection).
+Those rows run in easy mode: the ladder still suggests a price but nothing stops it going
+below landed cost.
+
+- Planner shows: *"N of M sale rows have no cost data (COGS) — no break-even floor
+  protects them. Import CIF costs first."* over the rows currently ticked for export.
+- `exportPriceFile()` lists the affected **SKUs** in the summary and requires a `confirm()`
+  naming the count before proceeding.
+
+RULE: easy mode is a documented feature (Section 19.2) so neither guard is a hard block —
+but it must be **impossible** to export floorless rows, or to export off stale inventory,
+without seeing exactly which rows and how old the data is.
 
 ### 19.4 Proposal review report
 **CODE LOCATION:** `index.html` → `collectPlanItems()`, `buildProposalModel()`,

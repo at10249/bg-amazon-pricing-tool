@@ -149,10 +149,17 @@ target_acos, launch_acos, cvr, notes
 
 A template file `products-template.csv` is included in this repo.
 
-**Seeding from a CIF / landed-cost file:** if your cost data is a CIF (Cost, Insurance,
-Freight) figure that already includes inbound freight, set `cogs` to that figure and
-`inbound_shipping` to `0` — otherwise freight gets counted twice. See LOGIC.md Section 11
-for the full note on what CIF terms typically do and don't cover.
+**Excel files work too.** The import accepts `.csv`, `.xlsx` and `.xlsm` — only the
+**first sheet** of a workbook is read. The partner's CIF workbook
+(`Merchant SKU, ASIN, FNSKU, model_name, CIF`) imports **directly, with no re-typing and
+no Save-as-CSV step**: `CIF` → `cogs`, `model_name` → `name`, `Merchant SKU` → `sku`,
+`ASIN` → `asin`, and `FNSKU` is ignored.
+
+**Seeding from a CIF / landed-cost file:** a CIF (Cost, Insurance, Freight) figure already
+includes inbound freight. When the cost column is literally named `CIF`, the tool sets
+`inbound_shipping` to `0` for you; with any other column name set `cogs` to the landed cost
+and `inbound_shipping` to `0` yourself — otherwise freight gets counted twice. See LOGIC.md
+Section 11 for the full note on what CIF terms typically do and don't cover.
 
 ---
 
@@ -168,7 +175,14 @@ Sale Planner); the step-by-step paths below are the backup if Amazon changes the
 |---|---|---|
 | Business Report | Seller Central → Reports → Business Reports → Detail Page Sales and Traffic by Child Item | Total Revenue, Units Sold (velocity), CVR |
 | Advertising Report | Advertising Console → Sponsored ads reports → Create report → Advertised product | ACoS (computed as spend ÷ sales), Ad Spend, Ad Sales |
-| Inventory Health | Seller Central → Reports (hamburger menu) → Fulfillment → Inventory Health | Current Inventory, **Current Price** (your-price / active sale-price), realized price at 7/30/60/90d, SKU |
+| Inventory Health **(REQUIRED for the Sale Planner)** | Seller Central → Reports (hamburger menu) → Fulfillment → Inventory Health | Current Inventory, **Current Price** (your-price / active sale-price), realized price at 7/30/60/90d, SKU, snapshot date |
+
+**Download a fresh Inventory Health report every time you plan a sale.** It is the only
+source of stock levels, prices and velocity for the planner, and it is a dated snapshot:
+if the newest snapshot is more than 7 days old (or missing entirely) the Sale Planner
+shows a warning banner and the price-file export asks you to confirm before it builds
+anything. A **Fee Preview** file dropped into this import is now called out by name — it
+carries no stock or velocity data, so it belongs in **⬆ Import Inventory**, not here.
 
 Report dates are flexible: the Advertising report's own `Date range` column is parsed,
 the Inventory Health report is a dated snapshot with fixed 30-day trailing windows, and
@@ -182,6 +196,22 @@ or overstock in the check-in history.
 Optionally, upload the team's incoming-shipments spreadsheet (总体控制表 `.xlsx`) to see
 the inbound pipeline per product — matched by Merchant SKU, which the Inventory Health
 import captures automatically.
+
+### Monthly sale routine — the two export confirms
+
+Before **⬇ Export Amazon Price File**, the tool stops you twice if either guard trips:
+
+1. **Stale inventory** — "Inventory data is N days old — export anyway?" when the newest
+   Inventory Health snapshot is more than 7 days old (or none has been imported). The same
+   warning is repeated at the top of the export summary.
+2. **No break-even floor** — a confirm naming how many of the exported SKUs have no COGS,
+   and listing them. Those rows have nothing stopping a price going below landed cost.
+   Neither guard is a hard block (easy mode is a supported way to work) — but you cannot
+   export past them without seeing exactly which rows are affected.
+
+The sale window defaults to the end of the current month, and rolls to the end of **next**
+month when fewer than 7 days remain — a shorter-than-a-week "month-end sale" is never what
+you meant. Import your CIF costs first and the floors take care of themselves.
 
 ### Zero-setup start (empty catalog)
 
