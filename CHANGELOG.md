@@ -7,6 +7,46 @@ Releases are named after the edit round rather than semantic versions. The app
 remains a single self-contained `index.html` — vanilla JS, no dependencies,
 no build step.
 
+## [Copy Accuracy Round] — 2026-10-01
+
+### Fixed (2026-10-01)
+- **Sale prices were up to $1 too deep** — `roundSaleEnding` used `floor(x) − 0.10`, which
+  drops a whole extra dollar when x's cents are ≥ .90 ($39.90 at 20% → $30.90 instead of
+  $31.90). Now returns the highest `.90` ending at or below x. 21 of 60 September 2026
+  sale prices were affected (already live on Amazon until 2026-09-30).
+- **"At cost" could sit just below cost** — the break-even floor rounded to the nearest
+  cent, leaving 6 September rows $0.0002–$0.0035 under true break-even. It now rounds up
+  to the cent, so an at-cost sale never loses money.
+- **Copy now matches the engine** — an audit compared every human-facing description of
+  the pricing rules against the code; no pricing/calculation behaviour changed.
+  - **7-day roll everywhere** — the 📐 Pricing Rules viewer (EN + ZH), README and LOGIC.md
+    still said the sale end rolls to next month with fewer than *3* days left; the engine
+    has used 7 (incl. today) since 2026-08-30. New `SALE_END_ROLL_DAYS = 7` drives
+    `defaultSaleEndYmd()` (identical behaviour) and both viewer strings, so they can no
+    longer drift; the report's monthly routine now mentions the roll too.
+  - **≥ ladder labels** — the report and viewer ladder tables showed `> 180 / > 240 / > 365`
+    while the engine matches rungs with `>=`; they now read `≥` (the first rung keeps
+    `> threshold`). The viewer's "healthy" row now shows the current session threshold,
+    like the report, instead of the default.
+  - **Five guardrails** — report §2 listed four; it now also names the blocked outcome
+    (break-even above 95% of the normal price → no profitable badge-worthy sale; a human
+    decides).
+  - **Report delivery** — README, the export card and report §7 claimed exporting
+    "automatically saves" the report; it opens in a new tab and is downloaded only if
+    pop-ups are blocked.
+  - **Button names** — "Import CSV" → **Import CSV/XLSX** (bundled-catalog alert, README);
+    how-to step ④ quotes the real planner button **⬆ Shipments xlsx (optional)**; report
+    §7 says to import the CIF *workbook* (.xlsx/.xlsm or .csv) and that only Business and
+    Ads reports take a date range (Inventory Health is a snapshot). The planner subtitle
+    no longer lists Ads as a suggestion input (Ads data feeds check-ins only).
+  - **Worked example** (LOGIC.md §19.1.4) — recomputed: 51.4d sellable / 147.6d pipeline
+    cover, `roundSaleEnding(22.954)` = $21.90, floored to the $23.29 break-even.
+  - LOGIC.md V7 lists every break-even cost (placement, Q4 storage, Vine per-unit added);
+    P1 states the 8% rung as `≥ 120`; §21 qualifies "can never drift"; §19.1.6 gains the
+    `SALE_END_ROLL_DAYS` row.
+
+Tests: 573 → **594** (`npm test`).
+
 ## [Import & Guardrails Round] — 2026-08-30
 
 ### Changed (2026-08-30)

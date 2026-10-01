@@ -226,7 +226,7 @@ blocked:
 - **Load my catalog (CIF seed)** — a one-click button (app empty state, Check-ins import
   card, Sale Planner empty state, and the import summary) loads the bundled
   `cif-seed-2026-07-18.csv` (173 products with real landed costs). Works on the deployed
-  site; when opening `index.html` directly from disk, use **Import CSV** in the top bar
+  site; when opening `index.html` directly from disk, use **Import CSV/XLSX** in the top bar
   instead.
 - **Fee Preview (catalog export)** — a direct link to Seller Central's Fee Preview report,
   which exports your **full** catalog (ASIN, name, size tier, weight) even for ASINs with
@@ -243,8 +243,9 @@ price?" from the imported reports:
   transaction prices — catches deals and price discounts that Your Price can't),
   velocity, stock, days of cover, inbound pipeline, and margin.
 - Suggestions anchor on **Your Price** with a days-of-cover discount ladder
-  (5% beyond the threshold — default 120 days — up to 20% at 365+ days or zero sales),
-  rounded to a `.90` ending and always ≥5% off so Amazon shows the sale badge.
+  (8% just past the 120-day threshold, 12% at ≥180 days, 15% at ≥240, 20% at ≥365 or zero
+  sales; 5% applies only if the threshold is set below 120),
+  rounded down to the nearest `.90` ending and always ≥5% off so Amazon shows the sale badge.
 - Cover is **pipeline-aware**: the sale decision counts sellable + inbound stock, but a
   row with under 45 days of on-hand stock gets a **wait for inbound** status instead of
   a discount, so it isn't pushed into a stockout before the shipment lands.
@@ -260,13 +261,13 @@ price?" from the imported reports:
 **Export Amazon Price File** generates a real `.xlsx` in the exact PriceAndQuantity
 template format (Sale Price + Sale Start/End dates per SKU). Upload it via Seller
 Central → Catalog → **Add Products via Upload**. The sale end date defaults to the last
-day of the current month (rolling to next month's end when fewer than 3 days remain).
+day of the current month (rolling to next month's end when fewer than 7 days remain).
 
 **📄 Review Report** opens a polished, self-contained HTML "Month-End Sale Proposal"
 that explains every proposed price — the three prices, the discount ladder and guardrails,
 per-row reasoning, the "wait for inbound" holds, and the data sources — and exporting the
-price file automatically saves the matching report next to the `.xlsx`. Open the report and
-use your browser's **Save as PDF** (a print toolbar in the report offers it) to share it as
+price file also opens the matching report in a new tab (downloaded only if pop-ups are
+blocked). Open the report and use your browser's **Save as PDF** (a print toolbar in the report offers it) to share it as
 a document.
 
 ---

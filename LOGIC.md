@@ -939,13 +939,14 @@ pre-pipeline model).
 - RULE: 120 because Amazon's aged-inventory surcharge starts at 181 days — act before it.
 
 **V7 · Break-even price (the floor)**
-- Source: `solveMinPriceRaw` at margin 0 — CIF landed COGS + inbound shipping + prep +
-  storage + PPC + returns + overhead + live FBA & referral fees + fuel surcharge, solved
+- Source: `solveMinPriceRaw` at margin 0 — CIF landed COGS + inbound shipping + placement +
+  prep + storage + Q4 storage + PPC + returns + overhead + Vine per-unit cost (200 ÷ annual
+  units when Vine is on) + live FBA & referral fees + fuel surcharge, solved
   iteratively because the fees depend on the price (Sections 1–2).
 - Absent (COGS blank/0, e.g. report-created stubs) → **easy mode**: no floor and Gates
   3–4 are skipped; ladder only.
 - Boundaries: Your Price `<` break-even → loss leader, excluded (Gate 3). Candidate sale
-  price `<` break-even → raised to break-even (sells at cost). Raised floor `>` the 5%
+  price `<` break-even → raised to break-even, rounded UP to the cent (sells at cost, never below). Raised floor `>` the 5%
   cap → `blocked` (Gate 8/P4 — no profitable sale exists).
 
 **V8 · Realized price, trailing 30d** = `sales-shipped-last-30-days ÷ units-shipped-t30`
@@ -958,7 +959,8 @@ pre-pipeline model).
   out of scope (confirmed not SOP).
 
 **V9 · Sale window** — start = today; end = last day of the current month, rolling to
-next month-end when fewer than 3 days remain (`defaultSaleEndYmd`). Both editable.
+next month-end when fewer than 7 days (including today) remain (`SALE_END_ROLL_DAYS`,
+`defaultSaleEndYmd`). Both editable.
 
 #### 19.1.2 Decision gates — exact evaluation order (`suggestSalePrice`)
 
@@ -976,22 +978,27 @@ next month-end when fewer than 3 days remain (`defaultSaleEndYmd`). Both editabl
 #### 19.1.3 Price arithmetic (only when G8 is reached)
 
 - **P1 — ladder rung** from V6 decision cover: ≥ 365d or ∞ → **20%** · ≥ 240d → **15%**
-  · ≥ 180d → **12%** · > 120d → **8%** · (> threshold when threshold set below 120 → 5%).
+  · ≥ 180d → **12%** · ≥ 120d → **8%** · (> threshold when threshold set below 120 → 5%).
 - **P2 — promo rounding**: candidate = `roundSaleEnding(YourPrice × (1 − rung))` →
-  `floor(x) − 0.10` (a `.90` ending; never below $1).
+  the highest `.90` ending at or below x: `floor(x) + 0.90`, minus $1 if that exceeds x
+  (22.954 → 22.90, 31.92 → 31.90, 26.31 → 25.90; never below $1). Fixed 2026-10-01 — the
+  previous `floor(x) − 0.10` dropped a whole extra dollar whenever x's cents were ≥ .90.
 - **P3 — badge cap**: candidate may not exceed `YourPrice × 0.95` (`SALE_MIN_OFF` —
   Amazon shows no sale badge under 5% off).
-- **P4 — cost floor**: if candidate < V7 break-even → raise to break-even (an "at cost"
-  sale: moves stock, loses nothing). If the raised price exceeds the P3 cap →
+- **P4 — cost floor**: if candidate < V7 break-even → raise to break-even rounded UP to
+  the next cent (an "at cost" sale: moves stock, never sells below break-even; e.g. 12.1626
+  → 12.17). If the raised price exceeds the P3 cap →
   `blocked / floor_above_5pct` — no profitable badge-worthy sale exists; a human decides.
 
 #### 19.1.4 Worked example (real row, August 2026 plan)
 
 4ft Zinc cast net `LY-QQ62-JS2I`: Your Price **$24.95**, 804 sellable, 469 sold/30d
-→ velocity 15.6/day → sellable cover **52d**; +1,504 inbound → pipeline cover **~135d**.
-G1–G5 pass · G6: 135 > 120 → needs faster sales · G7: 52 ≥ 45 → no wait ·
-P1: 135 < 180 → 8% → candidate 24.95 × 0.92 = 22.95 → P2 → **$22.90** · P3 cap
-$23.70 ok · P4: break-even **$23.29** > 22.90 → raised to **$23.29 (at cost)**.
+→ velocity 15.63/day → sellable cover 804 ÷ 15.63 = **51.4d**; +1,504 inbound → pipeline
+cover (804 + 1,504) ÷ 15.63 = **147.6d**.
+G1–G5 pass · G6: 147.6 > 120 → needs faster sales · G7: 51.4 ≥ 45 → no wait ·
+P1: 120 ≤ 147.6 < 180 → 8% rung → candidate 24.95 × 0.92 = 22.954 → P2
+`roundSaleEnding(22.954)` = **$22.90** (highest .90 at or below) · P3 cap $23.70 ok ·
+P4: break-even **$23.2884** > 22.90 → raised and rounded up to **$23.29 (at cost)**.
 Shipped exactly so in the 2026-08 upload.
 
 #### 19.1.5 What the model deliberately does NOT use
@@ -1015,10 +1022,11 @@ with what boundaries, then hand the file to an agent.
 | Discount ladder | `SALE_LADDER` | 365/240/180/120 → 20/15/12/8% |
 | Minimum discount (badge) | `SALE_MIN_OFF` | 5% |
 | On-hand runway guard | `SALE_MIN_RUNWAY_DAYS` | 45 days |
-| Promo price ending | `roundSaleEnding()` | .90 |
+| Promo price ending | `roundSaleEnding()` | highest .90 at or below the discounted price |
 | Sale window default | `defaultSaleEndYmd()` | month-end, <7 days → next month |
+| Sale-window roll threshold | `SALE_END_ROLL_DAYS` (used by `defaultSaleEndYmd()` + 📐 viewer) | 7 days (incl. today) |
 | Inventory staleness | `INVENTORY_STALE_DAYS` | 7 days (see 19.5) |
-| Break-even floor | `solveMinPriceRaw(margin 0)` | from CIF + fee tables |
+| Break-even floor | `solveMinPriceRaw(margin 0)`, rounded up to the cent in `suggestSalePrice` | from CIF + fee tables |
 
 ### 19.2 Overrides
 
@@ -1213,13 +1221,16 @@ download this file for editing.
 **Truth by construction.** `rulesLiveData()` reads the *actual* live constants
 (`SALE_LADDER`, `SALE_MIN_OFF`, `PLANNER_COVER_THRESHOLD_DEFAULT`, the live
 `state.planner.coverThreshold`, `SALE_MIN_RUNWAY_DAYS`, `STOCKOUT_RISK_DAYS`,
-`REORDER_SOON_DAYS`, `AGED_INVENTORY_DAYS`, `FEE_SCHEDULE` + `FUEL_SURCHARGE`, and the
-price-tier constants `LIST_PREMIUM`/`SALE_DISCOUNT`/`CLEARANCE_DISCOUNT` +
+`REORDER_SOON_DAYS`, `AGED_INVENTORY_DAYS`, `SALE_END_ROLL_DAYS`, `FEE_SCHEDULE` +
+`FUEL_SURCHARGE`, and the price-tier constants `LIST_PREMIUM`/`SALE_DISCOUNT`/`CLEARANCE_DISCOUNT` +
 `PRICE_*_END`) — never a hardcoded copy — and passes them to `buildRulesHtml(data)`.
 `buildRulesHtml` is **PURE** (mirrored + tested in `test.js`); it renders bilingually via a
 local `L(en, zh)` (not the app `t()`) and uses only `var(--c-*)` palette colours (it is app
 UI, so the colours-via-vars house rule applies — unlike the standalone proposal report).
-Because the summary is built from the same constants the engine uses, it can never drift.
+Because every *number* in the summary comes from the same live constants the engine uses
+(since 2026-10-01 the sale-window line too, via `SALE_END_ROLL_DAYS`), re-tuning a value
+cannot make the summary drift. The prose around those numbers is still hand-written, so
+changing *how* a rule works — not just its value — still means editing `buildRulesHtml()`.
 `rulesLiveData()`/`openRulesModal()`/`downloadRulesDoc()`/`fetchRulesDoc()` read
 state/DOM/network and are not mirrored.
 

@@ -437,10 +437,11 @@ function ymd(d) {
 function endOfMonthYmd(d) { return ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
 // RULE: default sale end rolls to NEXT month's end when fewer than 7 days (incl. today) remain
 // — a sale window shorter than a week is never the intent of a month-end sale plan.
+const SALE_END_ROLL_DAYS = 7; // RULE: fewer than this many days left (incl. today) → default sale end rolls to next month end
 function defaultSaleEndYmd(d) {
   const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const remainingDays = eom.getDate() - d.getDate() + 1;
-  if (remainingDays < 7) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  if (remainingDays < SALE_END_ROLL_DAYS) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
   return ymd(eom);
 }
 const _AMZ_MONTHS = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
@@ -640,9 +641,10 @@ function floorlessCount(rows) {
 }
 function roundSaleEnding(x) {
   if (!(x > 0)) return +(x).toFixed(2);
-  const candidate = Math.floor(x) - 0.10;
-  if (candidate < 1) return +(x).toFixed(2);
-  return +candidate.toFixed(2);
+  let c = Math.floor(x) + 0.90;
+  if (c > x + 1e-9) c -= 1;           // tolerance: an x that is already .90 (float noise) stays put
+  if (c < 1) return +(x).toFixed(2);
+  return +c.toFixed(2);
 }
 function suggestSalePrice(o) {
   const yourPrice = o.yourPrice, available = o.available, daysOfCover = o.daysOfCover;
@@ -667,7 +669,9 @@ function suggestSalePrice(o) {
   const reason = decisionCover === Infinity ? 'no_sales' : 'overstock';
   if (be !== null) {
     if (price < be) {
-      const floored = +Math.max(be, 0).toFixed(2);
+      // RULE: an at-cost sale never sells below break-even — round the floor UP to the cent
+      // (the -1e-6 tolerance keeps a float like 12.1599999 at 12.16 instead of 12.17).
+      const floored = +(Math.ceil(Math.max(be, 0) * 100 - 1e-6) / 100).toFixed(2);
       if (floored > cap) return { action: 'blocked', reason: 'floor_above_5pct', off, floor: floored };
       return { action: 'sale', reason, off, price: floored, floor: be };
     }
@@ -739,7 +743,8 @@ function buildProposalReportHtml(model) {
   let ladderRows = `<tr><td>≤ ${model.threshold} ${dayW}</td><td>${L('none — healthy, no sale', '无 — 健康，不促销')}</td></tr>`;
   asc.forEach((rg, i) => {
     const isLast = i === asc.length - 1;
-    const label = isLast ? `&gt; ${rg.cover} ${dayW}, ${L('or stock with zero sales', '或零销量库存')}` : `&gt; ${rg.cover} ${dayW}`;
+    const cmp = i === 0 ? '&gt;' : '≥';   // rungs match with >= (first rung sits just past the threshold)
+    const label = isLast ? `${cmp} ${rg.cover} ${dayW}, ${L('or stock with zero sales', '或零销量库存')}` : `${cmp} ${rg.cover} ${dayW}`;
     ladderRows += `<tr><td>${label}</td><td>${rg.off}%</td></tr>`;
   });
 
@@ -841,9 +846,10 @@ function buildProposalReportHtml(model) {
     <tr><th>${L('Days of cover (incl. inbound)', '库存覆盖天数（含在途）')}</th><th>${L('Discount off normal price', '相对标准价的折扣')}</th></tr>
     ${ladderRows}
   </table></div>
-  <p>${L(`Prices are rounded to a .90 ending (promotional signal) and kept at least ${model.minOffPct}% below normal so Amazon shows the sale badge. Then four guardrails apply, using real CIF landed costs and Amazon's fee tables:`, `价格四舍五入至 .90 结尾（促销信号），并保持至少低于标准价 ${model.minOffPct}%，以便亚马逊显示促销徽章。随后应用四条防护规则，使用真实的CIF到岸成本和亚马逊费用表：`)}</p>
+  <p>${L(`Prices are rounded down to the nearest .90 ending (promotional signal) and kept at least ${model.minOffPct}% below normal so Amazon shows the sale badge. Then five guardrails apply, using real CIF landed costs and Amazon's fee tables:`, `价格向下取至最接近的 .90 结尾（促销信号），并保持至少低于标准价 ${model.minOffPct}%，以便亚马逊显示促销徽章。随后应用五条防护规则，使用真实的CIF到岸成本和亚马逊费用表：`)}</p>
   <ol>
-    <li><strong>${L('Break-even floor', '盈亏平衡下限')}</strong> — ${L('no sale price below landed cost + Amazon fees. Where the floor bites, the product sells exactly at cost (marked "at cost").', '促销价不低于到岸成本 + 亚马逊费用。当下限生效时，产品恰好按成本价销售（标记为"按成本"）。')}</li>
+    <li><strong>${L('Break-even floor', '盈亏平衡下限')}</strong> — ${L('no sale price below landed cost + Amazon fees. Where the floor bites, the product sells at cost — break-even rounded up to the cent, never below it (marked "at cost").', '促销价不低于到岸成本 + 亚马逊费用。当下限生效时，产品按成本价销售 — 盈亏平衡价向上取整到分，绝不低于它（标记为"按成本"）。')}</li>
+    <li><strong>${L('Blocked when no badge-worthy profit exists', '无可获利的徽章价时受阻')}</strong> — ${L(`if break-even sits above ${100 - model.minOffPct}% of the normal price, no sale price can be both profitable and badge-worthy, so the row is marked "blocked" and left for a human to decide (${model.excludedCounts.blocked} SKU(s)).`, `若盈亏平衡价高于标准价的 ${100 - model.minOffPct}%，则不存在既能盈利又能显示徽章的促销价，该行被标记为"受阻"，交由人工决定（${model.excludedCounts.blocked} 个SKU）。`)}</li>
     <li><strong>${L('Loss leaders excluded', '排除亏本引流品')}</strong> — ${L(`products whose normal price is already below break-even are priced that way deliberately; the tool never deepens the loss (${model.excludedCounts.lossLeader} SKU(s)).`, `标准价已低于盈亏平衡的产品是有意为之的定价；工具绝不加深亏损（${model.excludedCounts.lossLeader} 个SKU）。`)}</li>
     <li><strong>${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> — ${L(`products already selling below break-even through deals/coupons are not pushed further (${model.excludedCounts.promoEroded} SKU(s)).`, `已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压（${model.excludedCounts.promoEroded} 个SKU）。`)}</li>
     <li><strong>${L('Stockout guard', '缺货防护')}</strong> — ${L(`anything with under ${model.minRunwayDays} days of on-hand stock is held as "wait for inbound" rather than discounted, so a sale can never sell a product out before its replenishment lands (${c.held} SKU(s), section 4).`, `现有库存不足 ${model.minRunwayDays} 天的产品会被暂缓为"等待到货"而非打折，这样促销绝不会在补货到达前把产品卖光（${c.held} 个SKU，见第4节）。`)}</li>
@@ -877,16 +883,16 @@ function buildProposalReportHtml(model) {
 
   <h2>${L('7 · Monthly routine (how to run this next time)', '7 · 每月例程（下次如何运行）')}</h2>
   <ol>
-    <li><strong>${L('Download the three reports', '下载三份报告')}</strong> — ${L('open the tool, Sale Planner → click the three report links → set each date range to the last 30 days → export CSV.', '打开工具，促销计划 → 点击三个报告链接 → 将每个日期范围设为最近30天 → 导出CSV。')}</li>
+    <li><strong>${L('Download the three reports', '下载三份报告')}</strong> — ${L('open the tool, Sale Planner → click the three report links → set the Business and Ads reports to the last 30 days (Inventory Health is a current snapshot with no date range) → export CSV.', '打开工具，促销计划 → 点击三个报告链接 → 将业务报告和广告报告的日期范围设为最近30天（库存健康是当前快照，无日期范围）→ 导出CSV。')}</li>
     <li><strong>${L('Import', '导入')}</strong> — ${L('click Import Amazon Reports, select all three CSVs at once. When asked how many days the Business Report covers, enter its range (default 30).', '点击导入亚马逊报告，一次选择全部三个CSV。当询问业务报告涵盖多少天时，输入其范围（默认30）。')}</li>
-    <li><strong>${L('Optional but recommended', '可选但推荐')}</strong> — ${L('upload the latest shipment control sheet (Shipments xlsx); without it the tool still uses Amazon\'s own inbound numbers. If CIF costs changed, import the updated CIF CSV too.', '上传最新的货件控制表（货件xlsx）；没有它工具仍会使用亚马逊自身的在途数据。如果CIF成本有变，也请导入更新后的CIF CSV。')}</li>
-    <li><strong>${L('Open the Sale Planner', '打开促销计划')}</strong> — ${L('review the summary chips, then the flagged rows: at-cost floors, "wait for inbound", loss leaders. Adjust any price or untick any row; sale dates default to today → end of month.', '查看摘要标签，然后是被标记的行：成本下限、"等待到货"、亏本引流品。调整任何价格或取消勾选任何行；促销日期默认为今天 → 月末。')}</li>
-    <li><strong>${L('Export & upload', '导出并上传')}</strong> — ${L('Export Amazon Price File (which also saves this review report), then Seller Central → Catalog → Add Products via Upload. Check the processing report shows all rows accepted; badges appear within the hour.', '导出亚马逊价格文件（同时保存本审阅报告），然后卖家中心 → 商品目录 → 批量上传商品。检查处理报告显示所有行均被接受；徽章会在一小时内出现。')}</li>
+    <li><strong>${L('Optional but recommended', '可选但推荐')}</strong> — ${L('upload the latest shipment control sheet (Shipments xlsx); without it the tool still uses Amazon\'s own inbound numbers. If CIF costs changed, also import the updated CIF workbook (.xlsx/.xlsm or .csv) via Import CSV/XLSX.', '上传最新的货件控制表（货件xlsx）；没有它工具仍会使用亚马逊自身的在途数据。如果CIF成本有变，也请通过"导入CSV/XLSX"导入更新后的CIF工作簿（.xlsx/.xlsm 或 .csv）。')}</li>
+    <li><strong>${L('Open the Sale Planner', '打开促销计划')}</strong> — ${L(`review the summary chips, then the flagged rows: at-cost floors, "wait for inbound", loss leaders. Adjust any price or untick any row; sale dates default to today → end of month (end of next month if fewer than ${SALE_END_ROLL_DAYS} days remain).`, `查看摘要标签，然后是被标记的行：成本下限、"等待到货"、亏本引流品。调整任何价格或取消勾选任何行；促销日期默认为今天 → 月末（剩余不足 ${SALE_END_ROLL_DAYS} 天时为下月末）。`)}</li>
+    <li><strong>${L('Export & upload', '导出并上传')}</strong> — ${L('Export Amazon Price File (which also opens this review report in a new tab — downloaded only if pop-ups are blocked), then Seller Central → Catalog → Add Products via Upload. Check the processing report shows all rows accepted; badges appear within the hour.', '导出亚马逊价格文件（同时在新标签页中打开本审阅报告 — 仅在弹出窗口被拦截时才下载），然后卖家中心 → 商品目录 → 批量上传商品。检查处理报告显示所有行均被接受；徽章会在一小时内出现。')}</li>
     <li><strong>${L('Held-back SKUs', '暂缓的SKU')}</strong> — ${L('when inbound shipments land mid-month, re-open the planner: "wait" rows flip to sale candidates and can be uploaded as a top-up file the same way.', '当在途货件在月中到达时，重新打开计划："等待"行会转为促销候选，可用同样方式作为补充文件上传。')}</li>
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (573 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（573项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (594 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（594项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -916,10 +922,11 @@ function buildRulesHtml(data) {
     </div>`;
 
   const asc = [...data.ladder].sort((a, b) => a.cover - b.cover);
-  let ladderRows = `<tr><td>&le; ${data.thresholdDefault} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
+  let ladderRows = `<tr><td>&le; ${data.thresholdCurrent} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
   asc.forEach((rg, i) => {
     const isLast = i === asc.length - 1;
-    const label = isLast ? `&gt; ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `&gt; ${rg.cover} ${dayW}`;
+    const cmp = i === 0 ? '&gt;' : '&ge;';   // rungs match with >= (first rung sits just past the threshold)
+    const label = isLast ? `${cmp} ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `${cmp} ${rg.cover} ${dayW}`;
     ladderRows += `<tr><td>${label}</td><td>${Math.round(rg.off * 100)}% ${L('off Your Price', '低于您的售价')}</td></tr>`;
   });
   const s2 = `
@@ -931,8 +938,8 @@ function buildRulesHtml(data) {
       </table>
       <div style="font-size:0.72rem;color:var(--c-555870);margin-top:8px;line-height:1.5;">
         ${L(
-          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round to a .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
-          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格四舍五入至 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
+          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round down to the nearest .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
+          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格向下取至最接近的 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
         )}
       </div>
     </div>`;
@@ -941,11 +948,11 @@ function buildRulesHtml(data) {
     <div class="card">
       <div class="card-title">${L('Guardrails', '防护规则')}</div>
       <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
-        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells exactly at cost.', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品恰好按成本价销售。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells at cost (break-even rounded up to the cent, never below it).', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品按成本价销售（盈亏平衡价向上取整到分，绝不低于它）。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Loss leaders excluded', '排除亏本引流品')}</strong> &mdash; ${L('a Your Price already below break-even is a deliberate loss leader &mdash; never deepened.', '标准价已低于盈亏平衡的产品是有意为之的亏本引流 &mdash; 绝不加深。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> &mdash; ${L('products already selling below break-even via deals/coupons are not pushed further.', '已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Runway guard', '库存跑道防护')}</strong> &mdash; ${L(`under ${data.runwayDays} ${dayW} of on-hand sellable stock &rarr; "wait for inbound" instead of discounting now (a sale would risk a stockout before the shipment lands).`, `现有可售库存不足 ${data.runwayDays} ${dayW} &rarr; "等待到货"而非立即打折（促销可能在货件到达前售罄）。`)}</li>
-        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, '默认为当月最后一天；剩余不足 3 天时顺延至下月末。')}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, `默认为当月最后一天；剩余不足 ${data.saleEndRollDays} 天（含今天）时顺延至下月末。`)}</li>
       </ul>
     </div>`;
 
@@ -2106,8 +2113,19 @@ describe('roundSaleEnding — promo prices end in .90 with $1 floor');
 eq(roundSaleEnding(21.21), 20.90, '21.21 → 20.90');
 eq(roundSaleEnding(19.00), 18.90, '19.00 → 18.90');
 eq(roundSaleEnding(2.30), 1.90, '2.30 → 1.90');
-eq(roundSaleEnding(1.05), 1.05, '1.05 → 1.05 (floor-0.10 would be 0.90 < $1, so fall back)');
+eq(roundSaleEnding(1.05), 1.05, '1.05 → 1.05 (highest .90 at or below is 0.90 < $1, so fall back)');
 eq(roundSaleEnding(0.50), 0.50, '0.50 → 0.50 (fallback for sub-$1 values)');
+// highest .90 ending AT OR BELOW x — cents ≥ .90 keep their own dollar (old floor−0.10 cut a full $1 too deep)
+eq(roundSaleEnding(22.954), 22.90, '22.954 → 22.90 (worked example; old rule gave 21.90)');
+eq(roundSaleEnding(31.92), 31.90, '31.92 → 31.90 (cents ≥ .90)');
+eq(roundSaleEnding(7.92), 7.90, '7.92 → 7.90 (cents ≥ .90)');
+eq(roundSaleEnding(10.95), 10.90, '10.95 → 10.90 (cents ≥ .90)');
+eq(roundSaleEnding(22.90), 22.90, '22.90 → 22.90 (exact .90 stays)');
+eq(roundSaleEnding(26.312), 25.90, '26.312 → 25.90 (cents < .90 → previous dollar)');
+eq(roundSaleEnding(12.72), 11.90, '12.72 → 11.90');
+eq(roundSaleEnding(1.95), 1.90, '1.95 → 1.90');
+eq(roundSaleEnding(1.50), 1.50, '1.50 → 1.50 (0.90 < $1 → fall back)');
+eq(roundSaleEnding(24.95 * 0.92 - 0.054), 22.90, 'float-noise .90 (24.95×0.92−0.054) stays 22.90');
 
 describe('suggestSalePrice — every action branch');
 const S = suggestSalePrice;
@@ -2133,6 +2151,15 @@ eq(sFloor.action, 'sale', 'floor case still a sale'); eq(sFloor.price, 17, 'ladd
 // blocked when the break-even floor exceeds the 5%-off cap
 const sBlocked = S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 19.5 });
 eq(sBlocked.action, 'blocked', 'break-even 19.5 > 5%-cap 19.0 → blocked'); eq(sBlocked.reason, 'floor_above_5pct', 'reason floor_above_5pct'); eq(sBlocked.floor, 19.5, 'returns the floor');
+// at-cost floor rounds UP to the cent — an at-cost sale never sells below break-even
+eq(S({ yourPrice: 13, available: 5, daysOfCover: 400, breakEvenPrice: 12.1626 }).price, 12.17, 'break-even 12.1626 → at-cost 12.17 (ceil, not 12.16)');
+eq(S({ yourPrice: 24.95, available: 5, daysOfCover: 147.6, breakEvenPrice: 23.2884 }).price, 23.29, 'worked example: ladder 22.90 < break-even 23.2884 → at-cost 23.29');
+eq(S({ yourPrice: 13, available: 5, daysOfCover: 400, breakEvenPrice: 12.1599999 }).price, 12.16, 'float edge 12.1599999 → 12.16 (tolerance, not 12.17)');
+eq(S({ yourPrice: 13, available: 5, daysOfCover: 400, breakEvenPrice: 11.6730 }).price, 11.68, 'break-even 11.6730 → at-cost 11.68');
+// the ceil floor feeds the blocked test: 18.9951 rounds UP to 19.00 = cap → sale; 19.0001 → 19.01 > cap → blocked
+eq(S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 18.9951 }).price, 19.00, 'break-even 18.9951 → 19.00 = cap 19.00 → still a sale');
+const sCeilBlk = S({ yourPrice: 20, available: 5, daysOfCover: 400, breakEvenPrice: 19.0001 });
+eq(sCeilBlk.action, 'blocked', 'break-even 19.0001 → ceil 19.01 > cap 19.00 → blocked'); eq(sCeilBlk.floor, 19.01, 'blocked floor is the rounded-up value');
 
 describe('suggestSalePrice — pipeline-aware cover + runway guard');
 // backward compat: pipelineCover absent → decisionCover falls back to daysOfCover, identical results
@@ -2218,7 +2245,9 @@ is(H.indexOf('at cost') !== -1, 'margin column renders "at cost" for the atCost 
 is(H.indexOf('The 2 proposals') !== -1, 'section 3 heading reflects the proposed count');
 is(H.indexOf('−18%') !== -1, 'stat strip shows the average discount');
 is(H.indexOf('≤ 120 days') !== -1, 'ladder table first row parameterised from threshold');
-is(H.indexOf('&gt; 365 days, or stock with zero sales') !== -1, 'ladder top rung labelled with zero-sales case');
+is(H.indexOf('≥ 365 days, or stock with zero sales') !== -1, 'ladder top rung labelled with zero-sales case (≥, matches the engine)');
+is(H.indexOf('&gt; 120 days') !== -1 && H.indexOf('≥ 180 days') !== -1, 'report ladder: first rung "> 120", later rungs "≥"');
+is(H.indexOf('five guardrails apply') !== -1 && H.indexOf('above 95% of the normal price') !== -1, 'report lists five guardrails incl. the blocked (95% badge cap) outcome');
 is(H.indexOf('control.xlsx') !== -1 && H.indexOf('cif-seed.csv') !== -1, 'freshness section lists shipment + CIF files');
 is(H.indexOf('Standard Cast Net') !== -1, 'wait row product present in section 4');
 is(H.indexOf('No rows need human judgment') === -1, 'green "nothing to flag" fallback NOT shown when flags exist');
@@ -2259,7 +2288,8 @@ const RD = {
     listPremiumPct: 10, saleDiscountPct: 6, clearanceDiscountPct: 9,
     endings: { your: 0.95, list: 0.99, sale: 0.90, clearance: 0.97 }
   },
-  saleEndRule: '<3 days left rolls to next month end',
+  saleEndRule: `fewer than ${SALE_END_ROLL_DAYS} days left (incl. today) rolls to next month end`,
+  saleEndRollDays: SALE_END_ROLL_DAYS,
   lang: 'en'
 };
 const R = buildRulesHtml(RD);
@@ -2267,8 +2297,9 @@ is(R.indexOf('<script') === -1, 'no <script in output (safe to innerHTML)');
 is(R.indexOf('var(--c-') !== -1, 'uses the app-UI palette (var(--c-*)), not hex');
 is(R.indexOf('20% off Your Price') !== -1, 'ladder rung rendered from fixture off:0.20 → 20%');
 is(R.indexOf('15% off Your Price') !== -1, 'ladder rung rendered from fixture off:0.15 → 15%');
-is(R.indexOf('&gt; 365 days (or stock with zero sales)') !== -1, 'top ladder rung labelled with the zero-sales case');
-is(R.indexOf('&le; 120 days') !== -1, 'threshold row parameterised from thresholdDefault');
+is(R.indexOf('&ge; 365 days (or stock with zero sales)') !== -1, 'top ladder rung labelled with the zero-sales case (≥, matches the engine)');
+is(R.indexOf('&le; 90 days') !== -1, 'healthy row uses the current session threshold (thresholdCurrent)');
+is(R.indexOf('fewer than 7 days left (incl. today)') !== -1, 'sale-window roll rule rendered from SALE_END_ROLL_DAYS');
 is(R.indexOf('90 days') !== -1, 'live/current threshold number (90) rendered');
 is(R.indexOf('45 days') !== -1, 'runway-guard days (45) rendered');
 is(R.indexOf('&lt; 30 days') !== -1 && R.indexOf('&gt; 181 days') !== -1, 'inventory status thresholds (30, 181) rendered');
@@ -2286,6 +2317,7 @@ is(R2.indexOf('20% off Your Price') === -1, 'old rung value (20%) is gone after 
 const Rzh = buildRulesHtml({ ...RD, lang: 'zh' });
 is(Rzh.indexOf('折扣阶梯') !== -1, 'zh: "Discount ladder" heading translated');
 is(Rzh.indexOf('想要不同的规则') !== -1, 'zh: edit-loop callout translated');
+is(Rzh.indexOf('剩余不足 7 天（含今天）') !== -1, 'zh: sale-window roll days read from data (7), not a literal');
 
 describe('ZIP structural sanity + CRC-32');
 eq(crc32(_strToBytesXlsx('hello')) >>> 0, 0x3610a686, 'CRC-32 of "hello" = 0x3610a686 (known value)');

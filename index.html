@@ -1258,7 +1258,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="① Costs first — every product needs COGS" data-zh="① 先导入成本 — 每个产品都需要COGS">① Costs first — every product needs COGS</strong><br><span data-en="Import the latest partner CIF workbook via the &quot;Import CSV/XLSX&quot; button in the top bar. It accepts .xlsx / .xlsm / .csv and understands the Merchant SKU / ASIN / model_name / CIF headers. Also load &quot;⚡ Load my catalog (CIF seed, 173 products)&quot; if the catalog is fresh. Without COGS a row has no break-even floor and can be discounted below cost." data-zh="通过顶栏的&quot;Import CSV/XLSX&quot;按钮导入最新的合作方CIF工作簿。支持 .xlsx / .xlsm / .csv 格式，可识别 Merchant SKU / ASIN / model_name / CIF 表头。如果目录是新的，也请加载&quot;⚡ Load my catalog (CIF seed, 173 products)&quot;。没有COGS，某行就没有盈亏平衡下限，可能被折扣到成本价以下。">Import the latest partner CIF workbook via the &quot;Import CSV/XLSX&quot; button in the top bar. It accepts .xlsx / .xlsm / .csv and understands the Merchant SKU / ASIN / model_name / CIF headers. Also load &quot;⚡ Load my catalog (CIF seed, 173 products)&quot; if the catalog is fresh. Without COGS a row has no break-even floor and can be discounted below cost.</span><div style="margin-top:8px;background:var(--c-1a1d27);border-radius:6px;padding:8px 10px;font-size:0.72rem;color:var(--c-6b6f8a);line-height:1.6;"><strong style="color:var(--c-f59e0b);" data-en="NOTE" data-zh="注意">NOTE</strong> <span data-en="The bundled seed covers products up to 2026-07-18; any CIF workbook only covers products that existed at its export date — products launched later stay floorless. Import BOTH: the bundled catalog first, then the team's newest CIF workbook on top. Whenever the floorless warning names products, ask the team for an updated CIF export. Full floor/ladder spec: the 📐 Pricing Rules viewer below the planner table." data-zh="捆绑种子涵盖截至 2026-07-18 的产品；任何CIF工作簿仅涵盖其导出日期时已存在的产品 — 之后上架的产品仍无下限。请同时导入两者：先加载捆绑目录，再在其上导入团队最新的CIF工作簿。当无下限警告列出产品时，向团队索取更新的CIF导出。完整下限/阶梯规范见计划表下方的 📐 Pricing Rules 查看器。">The bundled seed covers products up to 2026-07-18; any CIF workbook only covers products that existed at its export date — products launched later stay floorless. Import BOTH: the bundled catalog first, then the team's newest CIF workbook on top. Whenever the floorless warning names products, ask the team for an updated CIF export. Full floor/ladder spec: the 📐 Pricing Rules viewer below the planner table.</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('csv-file').click()" data-en="Import CSV/XLSX" data-zh="导入CSV/XLSX">Import CSV/XLSX</button><button class="topbar-btn" style="font-size:0.72rem;background:var(--c-1a2a1a);border-color:var(--c-166534);color:var(--c-4ade80);" onclick="closeModalEl('planner-howto-modal');loadBundledCatalog()" data-en="⚡ Load bundled catalog" data-zh="⚡ 加载捆绑目录">⚡ Load bundled catalog</button></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="② Import the three Seller-Central reports" data-zh="② 导入三份卖家中心报告">② Import the three Seller-Central reports</strong><br><span data-en="Click &quot;⬆ Import Amazon Reports&quot; and multi-select all three at once: Business Report + Advertised product + Inventory Health. Enter the Business Report's day window when prompted (usually 30). It is OK to auto-create missing products. The Inventory Health report is required — without a fresh snapshot the planner warns and works off stale data. The FBA Fee Preview is not one of the three (the importer will say so if you select it here)." data-zh="点击&quot;⬆ Import Amazon Reports&quot;，一次多选全部三份：业务报告 + 推广商品 + 库存健康。出现提示时输入业务报告的天数窗口（通常为30）。可以自动创建缺失的产品。库存健康报告是必需的 — 没有最新快照，计划器会警告并使用过时数据。FBA费用预览不属于这三份（如果在此选择，导入器会提示）。">Click &quot;⬆ Import Amazon Reports&quot; and multi-select all three at once: Business Report + Advertised product + Inventory Health. Enter the Business Report's day window when prompted (usually 30). It is OK to auto-create missing products. The Inventory Health report is required — without a fresh snapshot the planner warns and works off stale data. The FBA Fee Preview is not one of the three (the importer will say so if you select it here).</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('amz-report-file').click()" data-en="⬆ Import Amazon Reports" data-zh="⬆ 导入亚马逊报告">⬆ Import Amazon Reports</button><a data-amzlink="business" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Open Business Report" data-zh="↗ 打开业务报告">↗ Open Business Report</a><a data-amzlink="ads" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-5b63f7);color:var(--c-818cf8);" data-en="↗ Open Ads Report" data-zh="↗ 打开广告报告">↗ Open Ads Report</a><a data-amzlink="inventory" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-7a5c00);color:var(--c-fcd34d);" data-en="↗ Open Inventory Health" data-zh="↗ 打开库存健康">↗ Open Inventory Health</a></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="③ Import the FBA Fee Preview" data-zh="③ 导入FBA费用预览">③ Import the FBA Fee Preview</strong><br><span data-en="Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier and weight onto auto-created products so their FBA fees and break-even floors are right. Do this every month, after step 2." data-zh="点击顶栏的&quot;⬆ Import Inventory&quot;导入FBA费用预览。它会将尺寸等级和重量回填到自动创建的产品上，使其FBA费用和盈亏平衡下限正确。每月在第2步之后执行此操作。">Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier and weight onto auto-created products so their FBA fees and break-even floors are right. Do this every month, after step 2.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('fba-preview-file').click()" data-en="⬆ Import Inventory" data-zh="⬆ 导入库存">⬆ Import Inventory</button><a data-amzlink="feePreview" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Open Fee Preview" data-zh="↗ 打开费用预览">↗ Open Fee Preview</a></div></div>
-      <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="④ Optional: incoming shipments" data-zh="④ 可选：在途货件">④ Optional: incoming shipments</strong><br><span data-en="Click &quot;Import Incoming Shipments (xlsx)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;." data-zh="点击&quot;Import Incoming Shipments (xlsx)&quot;导入团队的总体控制表。在途单位会提高管道覆盖，并可将库存紧张的行切换为&quot;等待&quot;。">Click &quot;Import Incoming Shipments (xlsx)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('shipments-file').click()" data-en="Import shipments xlsx" data-zh="导入货件xlsx">Import shipments xlsx</button></div></div>
+      <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="④ Optional: incoming shipments" data-zh="④ 可选：在途货件">④ Optional: incoming shipments</strong><br><span data-en="Click &quot;⬆ Shipments xlsx (optional)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;." data-zh="点击&quot;⬆ 货件xlsx（可选）&quot;导入团队的总体控制表。在途单位会提高管道覆盖，并可将库存紧张的行切换为&quot;等待&quot;。">Click &quot;⬆ Shipments xlsx (optional)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('shipments-file').click()" data-en="Import shipments xlsx" data-zh="导入货件xlsx">Import shipments xlsx</button></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="⑤ Review the planner table" data-zh="⑤ 审阅计划表">⑤ Review the planner table</strong><br><span data-en="The anchor is Your Price, discounted along the days-of-cover ladder and floored at break-even. Amber banners flag stale snapshots and floorless rows. Adjust any price or toggle inclusion per row before exporting." data-zh="锚点是您的售价，沿库存天数阶梯打折并以盈亏平衡价为下限。琥珀色横幅标记过时快照和无下限行。导出前可逐行调整价格或切换是否包含。">The anchor is Your Price, discounted along the days-of-cover ladder and floored at break-even. Amber banners flag stale snapshots and floorless rows. Adjust any price or toggle inclusion per row before exporting.</span></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="⑥ Export the Amazon price file" data-zh="⑥ 导出亚马逊价格文件">⑥ Export the Amazon price file</strong><br><span data-en="Click &quot;⬇ Export Amazon Price File (.xlsx)&quot;. The confirm step lists stale data and any floorless SKUs before the file is built. Upload the file in Seller Central and check the processing report. The sale window defaults to month-end, and rolls to next month when fewer than 7 days remain." data-zh="点击&quot;⬇ Export Amazon Price File (.xlsx)&quot;。生成文件前，确认步骤会列出过时数据和任何无下限SKU。在卖家中心上传该文件并检查处理报告。促销窗口默认为月末，当剩余不足7天时顺延至下月。">Click &quot;⬇ Export Amazon Price File (.xlsx)&quot;. The confirm step lists stale data and any floorless SKUs before the file is built. Upload the file in Seller Central and check the processing report. The sale window defaults to month-end, and rolls to next month when fewer than 7 days remain.</span></div>
     </div>
@@ -2009,12 +2009,12 @@ function importProductRows(headers, rowObjs, filename, cifCogs) {
 
 // RULE: the repo ships the user's CIF seed next to index.html; fetch() works when the
 // app is served over http(s) (Vercel/localhost) but NOT from file:// — fail with a
-// helpful fallback pointing at the Import CSV button.
+// helpful fallback pointing at the Import CSV/XLSX button.
 function loadBundledCatalog() {
   fetch('cif-seed-2026-07-18.csv')
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
     .then(text => importProductsCSVText(text, 'cif-seed-2026-07-18.csv'))
-    .catch(() => alert(t('Could not load the bundled catalog file (this works on the deployed site, not when opening index.html directly from disk). Use Import CSV in the top bar and select your CIF file instead.','无法加载内置目录文件（部署站点上可用，直接从磁盘打开 index.html 时不可用）。请使用顶栏的"导入CSV"并选择您的CIF文件。')));
+    .catch(() => alert(t('Could not load the bundled catalog file (this works on the deployed site, not when opening index.html directly from disk). Use Import CSV/XLSX in the top bar and select your CIF file instead.','无法加载内置目录文件（部署站点上可用，直接从磁盘打开 index.html 时不可用）。请使用顶栏的"导入CSV/XLSX"并选择您的CIF文件。')));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3903,10 +3903,11 @@ function endOfMonthYmd(d) {
 // A sale window shorter than a week is never the intent of a month-end sale plan (the
 // price feed takes a day to process and shoppers need time to see the badge), so with
 // fewer than 7 days left the user is planning NEXT month. The field stays editable.
+const SALE_END_ROLL_DAYS = 7; // RULE: fewer than this many days left (incl. today) → default sale end rolls to next month end
 function defaultSaleEndYmd(d) {
   const eom = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   const remainingDays = eom.getDate() - d.getDate() + 1;
-  if (remainingDays < 7) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
+  if (remainingDays < SALE_END_ROLL_DAYS) return ymd(new Date(d.getFullYear(), d.getMonth() + 2, 0));
   return ymd(eom);
 }
 
@@ -4873,12 +4874,14 @@ const SALE_MIN_RUNWAY_DAYS = 45;
 const SALE_MIN_OFF = 0.05;   // RULE: Amazon needs ≥5% off Your Price to show the sale badge
 const PLANNER_COVER_THRESHOLD_DEFAULT = 120; // RULE: >120d cover = "needs faster sales" (aged surcharge starts at 181d — act before it)
 
-// RULE: promo prices end in .90 → Math.floor(x)-0.10, but never below $1; else fall back to x.toFixed(2)
+// RULE: promo prices end in .90 → the HIGHEST .90 ending at or below x (22.954 → 22.90, 31.92 → 31.90,
+// 26.31 → 25.90), never below $1; else fall back to x.toFixed(2)
 function roundSaleEnding(x) {
   if (!(x > 0)) return +(x).toFixed(2);
-  const candidate = Math.floor(x) - 0.10;
-  if (candidate < 1) return +(x).toFixed(2);
-  return +candidate.toFixed(2);
+  let c = Math.floor(x) + 0.90;
+  if (c > x + 1e-9) c -= 1;           // tolerance: an x that is already .90 (float noise) stays put
+  if (c < 1) return +(x).toFixed(2);
+  return +c.toFixed(2);
 }
 
 // RULE: given price/stock/cover, suggest a month-end sale price anchored on Your Price,
@@ -4913,7 +4916,9 @@ function suggestSalePrice(o) {
   const reason = decisionCover === Infinity ? 'no_sales' : 'overstock';
   if (be !== null) {
     if (price < be) {
-      const floored = +Math.max(be, 0).toFixed(2);
+      // RULE: an at-cost sale never sells below break-even — round the floor UP to the cent
+      // (the -1e-6 tolerance keeps a float like 12.1599999 at 12.16 instead of 12.17).
+      const floored = +(Math.ceil(Math.max(be, 0) * 100 - 1e-6) / 100).toFixed(2);
       if (floored > cap) return { action: 'blocked', reason: 'floor_above_5pct', off, floor: floored };
       return { action: 'sale', reason, off, price: floored, floor: be };
     }
@@ -5057,7 +5062,7 @@ function renderSalePlanner() {
       <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div style="flex:1;min-width:0;">
       <div style="font-size:1.1rem;font-weight:800;color:var(--c-fff);">${t('Sale Planner — month-end sale on slow movers', '促销计划 — 月末清理滞销库存')}</div>
-      <div style="font-size:0.75rem;color:var(--c-555870);margin-top:2px;">${t('Combines Inventory Health (stock + price), Business (revenue/velocity), Ads (spend), and the optional shipments xlsx. Suggestions anchor on Your Price and are floored at break-even.', '综合库存健康（库存+价格）、业务（收入/销售速度）、广告（花费）和可选的货件xlsx。建议以您的售价为基准，并以盈亏平衡价为下限。')}</div>
+      <div style="font-size:0.75rem;color:var(--c-555870);margin-top:2px;">${t('Combines Inventory Health (stock + price), Business (revenue/velocity) and the optional shipments xlsx. Suggestions anchor on Your Price and are floored at break-even. Ads data feeds check-ins only, not suggestions.', '综合库存健康（库存+价格）、业务（收入/销售速度）和可选的货件xlsx。建议以您的售价为基准，并以盈亏平衡价为下限。广告数据仅用于检查记录，不影响建议。')}</div>
         </div>
         <button class="topbar-btn" onclick="openModalEl('planner-howto-modal')" title="${t('Step-by-step monthly workflow', '分步月度工作流程')}" style="white-space:nowrap;">${t('❓ How to use', '❓ 使用方法')}</button>
       </div>
@@ -5259,7 +5264,7 @@ function renderSalePlanner() {
         <button class="btn primary" onclick="exportPriceFile()">${t('⬇ Export Amazon Price File (.xlsx)', '⬇ 导出亚马逊价格文件（.xlsx）')}</button>
         <button class="topbar-btn" onclick="openProposalReport()">${t('📄 Review Report', '📄 审阅报告')}</button>
         <button class="topbar-btn" onclick="openRulesModal()">${t('📐 Pricing Rules', '📐 定价规则')}</button>
-        <div style="font-size:0.74rem;color:var(--c-555870);max-width:520px;">${t(`Uploads via Seller Central → Add Products via Upload. Sets Sale Price + start/end dates. Sale ends ${endDefault}. The Review Report opens a shareable summary; exporting also saves one automatically.`, `通过卖家中心 → 批量上传商品上传。设置促销价及起止日期。促销结束于 ${endDefault}。审阅报告会打开可分享的摘要；导出时也会自动保存一份。`)}</div>
+        <div style="font-size:0.74rem;color:var(--c-555870);max-width:520px;">${t(`Uploads via Seller Central → Add Products via Upload. Sets Sale Price + start/end dates. Sale ends ${endDefault}. The Review Report opens a shareable summary; exporting also opens one in a new tab (downloaded only if pop-ups are blocked).`, `通过卖家中心 → 批量上传商品上传。设置促销价及起止日期。促销结束于 ${endDefault}。审阅报告会打开可分享的摘要；导出时也会在新标签页中打开一份（仅在弹出窗口被拦截时才下载）。`)}</div>
       </div>
     </div>`;
 
@@ -5537,7 +5542,8 @@ function buildProposalReportHtml(model) {
   let ladderRows = `<tr><td>≤ ${model.threshold} ${dayW}</td><td>${L('none — healthy, no sale', '无 — 健康，不促销')}</td></tr>`;
   asc.forEach((rg, i) => {
     const isLast = i === asc.length - 1;
-    const label = isLast ? `&gt; ${rg.cover} ${dayW}, ${L('or stock with zero sales', '或零销量库存')}` : `&gt; ${rg.cover} ${dayW}`;
+    const cmp = i === 0 ? '&gt;' : '≥';   // rungs match with >= (first rung sits just past the threshold)
+    const label = isLast ? `${cmp} ${rg.cover} ${dayW}, ${L('or stock with zero sales', '或零销量库存')}` : `${cmp} ${rg.cover} ${dayW}`;
     ladderRows += `<tr><td>${label}</td><td>${rg.off}%</td></tr>`;
   });
 
@@ -5641,9 +5647,10 @@ function buildProposalReportHtml(model) {
     <tr><th>${L('Days of cover (incl. inbound)', '库存覆盖天数（含在途）')}</th><th>${L('Discount off normal price', '相对标准价的折扣')}</th></tr>
     ${ladderRows}
   </table></div>
-  <p>${L(`Prices are rounded to a .90 ending (promotional signal) and kept at least ${model.minOffPct}% below normal so Amazon shows the sale badge. Then four guardrails apply, using real CIF landed costs and Amazon's fee tables:`, `价格四舍五入至 .90 结尾（促销信号），并保持至少低于标准价 ${model.minOffPct}%，以便亚马逊显示促销徽章。随后应用四条防护规则，使用真实的CIF到岸成本和亚马逊费用表：`)}</p>
+  <p>${L(`Prices are rounded down to the nearest .90 ending (promotional signal) and kept at least ${model.minOffPct}% below normal so Amazon shows the sale badge. Then five guardrails apply, using real CIF landed costs and Amazon's fee tables:`, `价格向下取至最接近的 .90 结尾（促销信号），并保持至少低于标准价 ${model.minOffPct}%，以便亚马逊显示促销徽章。随后应用五条防护规则，使用真实的CIF到岸成本和亚马逊费用表：`)}</p>
   <ol>
-    <li><strong>${L('Break-even floor', '盈亏平衡下限')}</strong> — ${L('no sale price below landed cost + Amazon fees. Where the floor bites, the product sells exactly at cost (marked "at cost").', '促销价不低于到岸成本 + 亚马逊费用。当下限生效时，产品恰好按成本价销售（标记为"按成本"）。')}</li>
+    <li><strong>${L('Break-even floor', '盈亏平衡下限')}</strong> — ${L('no sale price below landed cost + Amazon fees. Where the floor bites, the product sells at cost — break-even rounded up to the cent, never below it (marked "at cost").', '促销价不低于到岸成本 + 亚马逊费用。当下限生效时，产品按成本价销售 — 盈亏平衡价向上取整到分，绝不低于它（标记为"按成本"）。')}</li>
+    <li><strong>${L('Blocked when no badge-worthy profit exists', '无可获利的徽章价时受阻')}</strong> — ${L(`if break-even sits above ${100 - model.minOffPct}% of the normal price, no sale price can be both profitable and badge-worthy, so the row is marked "blocked" and left for a human to decide (${model.excludedCounts.blocked} SKU(s)).`, `若盈亏平衡价高于标准价的 ${100 - model.minOffPct}%，则不存在既能盈利又能显示徽章的促销价，该行被标记为"受阻"，交由人工决定（${model.excludedCounts.blocked} 个SKU）。`)}</li>
     <li><strong>${L('Loss leaders excluded', '排除亏本引流品')}</strong> — ${L(`products whose normal price is already below break-even are priced that way deliberately; the tool never deepens the loss (${model.excludedCounts.lossLeader} SKU(s)).`, `标准价已低于盈亏平衡的产品是有意为之的定价；工具绝不加深亏损（${model.excludedCounts.lossLeader} 个SKU）。`)}</li>
     <li><strong>${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> — ${L(`products already selling below break-even through deals/coupons are not pushed further (${model.excludedCounts.promoEroded} SKU(s)).`, `已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压（${model.excludedCounts.promoEroded} 个SKU）。`)}</li>
     <li><strong>${L('Stockout guard', '缺货防护')}</strong> — ${L(`anything with under ${model.minRunwayDays} days of on-hand stock is held as "wait for inbound" rather than discounted, so a sale can never sell a product out before its replenishment lands (${c.held} SKU(s), section 4).`, `现有库存不足 ${model.minRunwayDays} 天的产品会被暂缓为"等待到货"而非打折，这样促销绝不会在补货到达前把产品卖光（${c.held} 个SKU，见第4节）。`)}</li>
@@ -5677,16 +5684,16 @@ function buildProposalReportHtml(model) {
 
   <h2>${L('7 · Monthly routine (how to run this next time)', '7 · 每月例程（下次如何运行）')}</h2>
   <ol>
-    <li><strong>${L('Download the three reports', '下载三份报告')}</strong> — ${L('open the tool, Sale Planner → click the three report links → set each date range to the last 30 days → export CSV.', '打开工具，促销计划 → 点击三个报告链接 → 将每个日期范围设为最近30天 → 导出CSV。')}</li>
+    <li><strong>${L('Download the three reports', '下载三份报告')}</strong> — ${L('open the tool, Sale Planner → click the three report links → set the Business and Ads reports to the last 30 days (Inventory Health is a current snapshot with no date range) → export CSV.', '打开工具，促销计划 → 点击三个报告链接 → 将业务报告和广告报告的日期范围设为最近30天（库存健康是当前快照，无日期范围）→ 导出CSV。')}</li>
     <li><strong>${L('Import', '导入')}</strong> — ${L('click Import Amazon Reports, select all three CSVs at once. When asked how many days the Business Report covers, enter its range (default 30).', '点击导入亚马逊报告，一次选择全部三个CSV。当询问业务报告涵盖多少天时，输入其范围（默认30）。')}</li>
-    <li><strong>${L('Optional but recommended', '可选但推荐')}</strong> — ${L('upload the latest shipment control sheet (Shipments xlsx); without it the tool still uses Amazon\'s own inbound numbers. If CIF costs changed, import the updated CIF CSV too.', '上传最新的货件控制表（货件xlsx）；没有它工具仍会使用亚马逊自身的在途数据。如果CIF成本有变，也请导入更新后的CIF CSV。')}</li>
-    <li><strong>${L('Open the Sale Planner', '打开促销计划')}</strong> — ${L('review the summary chips, then the flagged rows: at-cost floors, "wait for inbound", loss leaders. Adjust any price or untick any row; sale dates default to today → end of month.', '查看摘要标签，然后是被标记的行：成本下限、"等待到货"、亏本引流品。调整任何价格或取消勾选任何行；促销日期默认为今天 → 月末。')}</li>
-    <li><strong>${L('Export & upload', '导出并上传')}</strong> — ${L('Export Amazon Price File (which also saves this review report), then Seller Central → Catalog → Add Products via Upload. Check the processing report shows all rows accepted; badges appear within the hour.', '导出亚马逊价格文件（同时保存本审阅报告），然后卖家中心 → 商品目录 → 批量上传商品。检查处理报告显示所有行均被接受；徽章会在一小时内出现。')}</li>
+    <li><strong>${L('Optional but recommended', '可选但推荐')}</strong> — ${L('upload the latest shipment control sheet (Shipments xlsx); without it the tool still uses Amazon\'s own inbound numbers. If CIF costs changed, also import the updated CIF workbook (.xlsx/.xlsm or .csv) via Import CSV/XLSX.', '上传最新的货件控制表（货件xlsx）；没有它工具仍会使用亚马逊自身的在途数据。如果CIF成本有变，也请通过"导入CSV/XLSX"导入更新后的CIF工作簿（.xlsx/.xlsm 或 .csv）。')}</li>
+    <li><strong>${L('Open the Sale Planner', '打开促销计划')}</strong> — ${L(`review the summary chips, then the flagged rows: at-cost floors, "wait for inbound", loss leaders. Adjust any price or untick any row; sale dates default to today → end of month (end of next month if fewer than ${SALE_END_ROLL_DAYS} days remain).`, `查看摘要标签，然后是被标记的行：成本下限、"等待到货"、亏本引流品。调整任何价格或取消勾选任何行；促销日期默认为今天 → 月末（剩余不足 ${SALE_END_ROLL_DAYS} 天时为下月末）。`)}</li>
+    <li><strong>${L('Export & upload', '导出并上传')}</strong> — ${L('Export Amazon Price File (which also opens this review report in a new tab — downloaded only if pop-ups are blocked), then Seller Central → Catalog → Add Products via Upload. Check the processing report shows all rows accepted; badges appear within the hour.', '导出亚马逊价格文件（同时在新标签页中打开本审阅报告 — 仅在弹出窗口被拦截时才下载），然后卖家中心 → 商品目录 → 批量上传商品。检查处理报告显示所有行均被接受；徽章会在一小时内出现。')}</li>
     <li><strong>${L('Held-back SKUs', '暂缓的SKU')}</strong> — ${L('when inbound shipments land mid-month, re-open the planner: "wait" rows flip to sale candidates and can be uploaded as a top-up file the same way.', '当在途货件在月中到达时，重新打开计划："等待"行会转为促销候选，可用同样方式作为补充文件上传。')}</li>
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (573 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（573项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (594 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（594项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -5729,8 +5736,8 @@ function openProposalReport() {
 
 // RULE: rulesLiveData() reads the ACTUAL live constants + the live user threshold —
 // never a hardcoded copy. This is the truth-by-construction contract: because the pure
-// renderer buildRulesHtml() is fed these live values, the in-app summary can NEVER drift
-// from what the pricing engine actually does. Impure (reads state) → NOT mirrored in
+// renderer buildRulesHtml() is fed these live values, the NUMBERS in the in-app summary
+// cannot drift from the engine (the surrounding prose is still hand-written). Impure (reads state) → NOT mirrored in
 // test.js; buildRulesHtml() (pure) IS mirrored + tested.
 function rulesLiveData() {
   const thresholdDefault = PLANNER_COVER_THRESHOLD_DEFAULT;
@@ -5753,7 +5760,8 @@ function rulesLiveData() {
       clearanceDiscountPct: Math.round((1 - CLEARANCE_DISCOUNT) * 100), // 0.91 → 9
       endings: { your: PRICE_YOUR_END, list: PRICE_LIST_END, sale: PRICE_SALE_END, clearance: PRICE_DISC_END }
     },
-    saleEndRule: '<3 days left rolls to next month end',
+    saleEndRule: `fewer than ${SALE_END_ROLL_DAYS} days left (incl. today) rolls to next month end`,
+    saleEndRollDays: SALE_END_ROLL_DAYS,
     lang: state.lang
   };
 }
@@ -5783,10 +5791,11 @@ function buildRulesHtml(data) {
 
   // 2 — Discount ladder (parameterised from data.ladder + threshold; ascending like the report)
   const asc = [...data.ladder].sort((a, b) => a.cover - b.cover);
-  let ladderRows = `<tr><td>&le; ${data.thresholdDefault} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
+  let ladderRows = `<tr><td>&le; ${data.thresholdCurrent} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
   asc.forEach((rg, i) => {
     const isLast = i === asc.length - 1;
-    const label = isLast ? `&gt; ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `&gt; ${rg.cover} ${dayW}`;
+    const cmp = i === 0 ? '&gt;' : '&ge;';   // rungs match with >= (first rung sits just past the threshold)
+    const label = isLast ? `${cmp} ${rg.cover} ${dayW} ${L('(or stock with zero sales)', '（或零销量库存）')}` : `${cmp} ${rg.cover} ${dayW}`;
     ladderRows += `<tr><td>${label}</td><td>${Math.round(rg.off * 100)}% ${L('off Your Price', '低于您的售价')}</td></tr>`;
   });
   const s2 = `
@@ -5798,8 +5807,8 @@ function buildRulesHtml(data) {
       </table>
       <div style="font-size:0.72rem;color:var(--c-555870);margin-top:8px;line-height:1.5;">
         ${L(
-          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round to a .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
-          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格四舍五入至 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
+          `Default cover threshold <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong> (currently set to <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>). Prices round down to the nearest .90 ending (promo signal) and are held at least <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong> below Your Price so Amazon shows the sale badge.`,
+          `默认覆盖阈值 <strong style="color:var(--c-c5c8e0);">${data.thresholdDefault} ${dayW}</strong>（当前设为 <strong style="color:var(--c-c5c8e0);">${data.thresholdCurrent} ${dayW}</strong>）。价格向下取至最接近的 .90 结尾（促销信号），并保持至少低于您的售价 <strong style="color:var(--c-c5c8e0);">${data.minOffPct}%</strong>，以便亚马逊显示促销徽章。`
         )}
       </div>
     </div>`;
@@ -5809,11 +5818,11 @@ function buildRulesHtml(data) {
     <div class="card">
       <div class="card-title">${L('Guardrails', '防护规则')}</div>
       <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
-        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells exactly at cost.', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品恰好按成本价销售。')}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Break-even floor', '盈亏平衡下限')}</strong> &mdash; ${L('no sale price below landed cost + Amazon fees; where it bites, the product sells at cost (break-even rounded up to the cent, never below it).', '促销价不低于到岸成本 + 亚马逊费用；当其生效时，产品按成本价销售（盈亏平衡价向上取整到分，绝不低于它）。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Loss leaders excluded', '排除亏本引流品')}</strong> &mdash; ${L('a Your Price already below break-even is a deliberate loss leader &mdash; never deepened.', '标准价已低于盈亏平衡的产品是有意为之的亏本引流 &mdash; 绝不加深。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Promo-eroded excluded', '排除促销侵蚀品')}</strong> &mdash; ${L('products already selling below break-even via deals/coupons are not pushed further.', '已通过优惠/优惠券低于盈亏平衡销售的产品不再进一步下压。')}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Runway guard', '库存跑道防护')}</strong> &mdash; ${L(`under ${data.runwayDays} ${dayW} of on-hand sellable stock &rarr; "wait for inbound" instead of discounting now (a sale would risk a stockout before the shipment lands).`, `现有可售库存不足 ${data.runwayDays} ${dayW} &rarr; "等待到货"而非立即打折（促销可能在货件到达前售罄）。`)}</li>
-        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, '默认为当月最后一天；剩余不足 3 天时顺延至下月末。')}</li>
+        <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Sale window', '促销周期')}</strong> &mdash; ${L(`defaults to the last day of the current month; ${data.saleEndRule.replace(/</g, '&lt;')}.`, `默认为当月最后一天；剩余不足 ${data.saleEndRollDays} 天（含今天）时顺延至下月末。`)}</li>
       </ul>
     </div>`;
 
