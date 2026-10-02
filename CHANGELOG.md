@@ -7,6 +7,60 @@ Releases are named after the edit round rather than semantic versions. The app
 remains a single self-contained `index.html` — vanilla JS, no dependencies,
 no build step.
 
+## [Dated FBA Fees Round] — 2026-10-02
+
+Dated FBA fee engine contributed by the Codex PR (#1, `codex/date-aware-fba-2026`):
+`fba-rates.js` + `rates/amazon-us-2026.json` with all 54 official nonpeak/peak rows,
+dimensional weight, small/large bulky and extra-large brackets, the 3.5% fuel factor applied
+once from 2026-04-17, and a Sale Planner floor that takes the **highest** break-even across
+every date in the sale window. The review fixes below make the app integration safe to ship.
+The app is now `index.html` + `fba-rates.js` — still zero dependencies, no build step.
+
+### Added (2026-10-02)
+- **Amazon-calibrated fees** — the Fee Preview import stores Amazon's own per-SKU estimate
+  (`expected-fulfillment-fee-per-unit` + `your-price` + import date) as `inputs.amazonFee`.
+  Every quote becomes engine fee + (Amazon − engine at the import price/date), so Amazon's
+  actual offset applies in nonpeak AND peak while the peak table supplies the seasonal delta.
+  Against the Oct 1 Fee Preview the uncalibrated engine matched only 62/128 SKUs (65 ran
+  1.5–3% high, one small-bulky SKU ran $1.62 low); through the app path with calibration all
+  129 rows with an estimate now reproduce Amazon's figure within $0.01. Shown in the Calculator
+  and planner tooltips ("Calibrated to Amazon Fee Preview of <date>: ±$x").
+- **Fee-jump guard** — break-even is not monotonic across the $10/$50 FBA bands and referral
+  steps (small-standard 8 oz, fixed costs $5.20: floor $9.36, yet $10.00 nets −$0.36). Planner
+  suggestions are re-checked on every fee class in the window and stepped to the next `.90`
+  (then cent) that is profitable on all dates, or blocked (`fee_jump`) above the 5%-off cap.
+  The price-file export rejects any row — manual overrides included — that loses money on any
+  date, listing `SKU @ $price`.
+- **Rate-card expiry warning** — from 2026-12-15 the planner and Calculator warn that FBA rate
+  coverage ends 2027-01-14 and a new official card must be added.
+- **Packaged dimensions in the products CSV** — `length_in,width_in,height_in` in the export,
+  `products-template.csv` and the import (stored as `inputs.dimensions`, not only used for tier).
+
+### Fixed (2026-10-02)
+- **"$NaN" everywhere for products without dimensions** — `calcPrices` now returns an explicit
+  `fbaError`; the Portfolio table, products CSV export, check-ins, coupon, break-even volume,
+  What-if, stage guidance and Calculator show "needs dimensions" / 需要尺寸 instead. **Kill
+  Signal 3** is skipped unless break-even ACoS is finite (`acos < NaN` raised a false kill).
+- **Stale planner dates** — saved sale dates were reused forever. An end date before today now
+  falls back to today → default month end (saved), and the start date is clamped to today in
+  the planner, the price feed and the review report.
+- **Fee Preview unit columns** — the importer now reads the real `unit-of-dimension` /
+  `unit-of-weight` headers.
+- **Manufacturer Mode** uses the same band-aware solver as product pricing (it still ran the
+  old 12-iteration fixed point). Removed the unused `getFBAFee` wrapper and `sur` variable.
+- **Stage 3 "Suggested Next Target"** read a non-existent `prices.tacos` (crashed with no ACoS
+  check-in); it now uses the product's target ACoS.
+- **Tests test the shipped engine** — `test.js` no longer carries a hand copy of the deleted
+  flat-rate engine (old flat bulky/XL rates, "small standard 20 oz → last row"); it loads the
+  shipped fee functions from `index.html`. Stale `amazonSizeTierToAppTier` / `buildRulesHtml`
+  mirrors re-synced. `test-fba.js` adds 24 regressions (calibration ±, peak delta, fee-jump
+  probe, stale dates, expiry, NaN/K3 guards, real Fee Preview headers). 663 automated tests
+  (599 + 64).
+- **Docs** — How-to step 3 explains that the Fee Preview also backfills packaged dimensions and
+  Amazon's fee estimate (rows without dimensions are blocked). LOGIC.md §1.2–1.5, §2.1, §15.5,
+  §18, §19.7–19.8 document peak/nonpeak windows, highest-floor-across-window, the fee-jump
+  rule, calibration, expiry, and the restored "update `test-fba.js`" rate-update step.
+
 ## [Copy Accuracy Round] — 2026-10-01
 
 ### Fixed (2026-10-01)

@@ -1259,7 +1259,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
     <div style="display:flex;flex-direction:column;gap:8px;">
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="① Costs first — every product needs COGS" data-zh="① 先导入成本 — 每个产品都需要COGS">① Costs first — every product needs COGS</strong><br><span data-en="Import the latest partner CIF workbook via the &quot;Import CSV/XLSX&quot; button in the top bar. It accepts .xlsx / .xlsm / .csv and understands the Merchant SKU / ASIN / model_name / CIF headers. Also load &quot;⚡ Load my catalog (CIF seed, 173 products)&quot; if the catalog is fresh. Without COGS a row has no break-even floor and can be discounted below cost." data-zh="通过顶栏的&quot;Import CSV/XLSX&quot;按钮导入最新的合作方CIF工作簿。支持 .xlsx / .xlsm / .csv 格式，可识别 Merchant SKU / ASIN / model_name / CIF 表头。如果目录是新的，也请加载&quot;⚡ Load my catalog (CIF seed, 173 products)&quot;。没有COGS，某行就没有盈亏平衡下限，可能被折扣到成本价以下。">Import the latest partner CIF workbook via the &quot;Import CSV/XLSX&quot; button in the top bar. It accepts .xlsx / .xlsm / .csv and understands the Merchant SKU / ASIN / model_name / CIF headers. Also load &quot;⚡ Load my catalog (CIF seed, 173 products)&quot; if the catalog is fresh. Without COGS a row has no break-even floor and can be discounted below cost.</span><div style="margin-top:8px;background:var(--c-1a1d27);border-radius:6px;padding:8px 10px;font-size:0.72rem;color:var(--c-6b6f8a);line-height:1.6;"><strong style="color:var(--c-f59e0b);" data-en="NOTE" data-zh="注意">NOTE</strong> <span data-en="The bundled seed covers products up to 2026-07-18; any CIF workbook only covers products that existed at its export date — products launched later stay floorless. Import BOTH: the bundled catalog first, then the team's newest CIF workbook on top. Whenever the floorless warning names products, ask the team for an updated CIF export. Full floor/ladder spec: the 📐 Pricing Rules viewer below the planner table." data-zh="捆绑种子涵盖截至 2026-07-18 的产品；任何CIF工作簿仅涵盖其导出日期时已存在的产品 — 之后上架的产品仍无下限。请同时导入两者：先加载捆绑目录，再在其上导入团队最新的CIF工作簿。当无下限警告列出产品时，向团队索取更新的CIF导出。完整下限/阶梯规范见计划表下方的 📐 Pricing Rules 查看器。">The bundled seed covers products up to 2026-07-18; any CIF workbook only covers products that existed at its export date — products launched later stay floorless. Import BOTH: the bundled catalog first, then the team's newest CIF workbook on top. Whenever the floorless warning names products, ask the team for an updated CIF export. Full floor/ladder spec: the 📐 Pricing Rules viewer below the planner table.</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('csv-file').click()" data-en="Import CSV/XLSX" data-zh="导入CSV/XLSX">Import CSV/XLSX</button><button class="topbar-btn" style="font-size:0.72rem;background:var(--c-1a2a1a);border-color:var(--c-166534);color:var(--c-4ade80);" onclick="closeModalEl('planner-howto-modal');loadBundledCatalog()" data-en="⚡ Load bundled catalog" data-zh="⚡ 加载捆绑目录">⚡ Load bundled catalog</button></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="② Import the three Seller-Central reports" data-zh="② 导入三份卖家中心报告">② Import the three Seller-Central reports</strong><br><span data-en="Click &quot;⬆ Import Amazon Reports&quot; and multi-select all three at once: Business Report + Advertised product + Inventory Health. Enter the Business Report's day window when prompted (usually 30). It is OK to auto-create missing products. The Inventory Health report is required — without a fresh snapshot the planner warns and works off stale data. The FBA Fee Preview is not one of the three (the importer will say so if you select it here)." data-zh="点击&quot;⬆ Import Amazon Reports&quot;，一次多选全部三份：业务报告 + 推广商品 + 库存健康。出现提示时输入业务报告的天数窗口（通常为30）。可以自动创建缺失的产品。库存健康报告是必需的 — 没有最新快照，计划器会警告并使用过时数据。FBA费用预览不属于这三份（如果在此选择，导入器会提示）。">Click &quot;⬆ Import Amazon Reports&quot; and multi-select all three at once: Business Report + Advertised product + Inventory Health. Enter the Business Report's day window when prompted (usually 30). It is OK to auto-create missing products. The Inventory Health report is required — without a fresh snapshot the planner warns and works off stale data. The FBA Fee Preview is not one of the three (the importer will say so if you select it here).</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('amz-report-file').click()" data-en="⬆ Import Amazon Reports" data-zh="⬆ 导入亚马逊报告">⬆ Import Amazon Reports</button><a data-amzlink="business" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Open Business Report" data-zh="↗ 打开业务报告">↗ Open Business Report</a><a data-amzlink="ads" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-5b63f7);color:var(--c-818cf8);" data-en="↗ Open Ads Report" data-zh="↗ 打开广告报告">↗ Open Ads Report</a><a data-amzlink="inventory" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-7a5c00);color:var(--c-fcd34d);" data-en="↗ Open Inventory Health" data-zh="↗ 打开库存健康">↗ Open Inventory Health</a></div></div>
-      <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="③ Import the FBA Fee Preview" data-zh="③ 导入FBA费用预览">③ Import the FBA Fee Preview</strong><br><span data-en="Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier and weight onto auto-created products so their FBA fees and break-even floors are right. Do this every month, after step 2." data-zh="点击顶栏的&quot;⬆ Import Inventory&quot;导入FBA费用预览。它会将尺寸等级和重量回填到自动创建的产品上，使其FBA费用和盈亏平衡下限正确。每月在第2步之后执行此操作。">Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier and weight onto auto-created products so their FBA fees and break-even floors are right. Do this every month, after step 2.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('fba-preview-file').click()" data-en="⬆ Import Inventory" data-zh="⬆ 导入库存">⬆ Import Inventory</button><a data-amzlink="feePreview" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Open Fee Preview" data-zh="↗ 打开费用预览">↗ Open Fee Preview</a></div></div>
+      <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="③ Import the FBA Fee Preview" data-zh="③ 导入FBA费用预览">③ Import the FBA Fee Preview</strong><br><span data-en="Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier, weight, packaged dimensions and Amazon&#39;s own per-unit fulfillment fee estimate onto every product — the planner needs the dimensions for dimensional weight and the estimate for Amazon-calibrated fees. Rows without packaged dimensions are blocked (no verified fee floor). Do this every month, after step 2." data-zh="点击顶栏的&quot;⬆ Import Inventory&quot;导入FBA费用预览。它会将尺寸等级、重量、包装尺寸以及亚马逊自己的单件配送费估算回填到每个产品上 — 计划器需要包装尺寸来计算体积重量，需要该估算来按亚马逊校准费用。没有包装尺寸的行会被阻止（无已验证的费用下限）。每月在第2步之后执行此操作。">Click &quot;⬆ Import Inventory&quot; in the top bar and import the FBA Fee Preview. It backfills size tier, weight, packaged dimensions and Amazon&#39;s own per-unit fulfillment fee estimate onto every product — the planner needs the dimensions for dimensional weight and the estimate for Amazon-calibrated fees. Rows without packaged dimensions are blocked (no verified fee floor). Do this every month, after step 2.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('fba-preview-file').click()" data-en="⬆ Import Inventory" data-zh="⬆ 导入库存">⬆ Import Inventory</button><a data-amzlink="feePreview" target="_blank" rel="noopener" class="topbar-btn" style="font-size:0.72rem;border-color:var(--c-166534);color:var(--c-4ade80);" data-en="↗ Open Fee Preview" data-zh="↗ 打开费用预览">↗ Open Fee Preview</a></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="④ Optional: incoming shipments" data-zh="④ 可选：在途货件">④ Optional: incoming shipments</strong><br><span data-en="Click &quot;⬆ Shipments xlsx (optional)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;." data-zh="点击&quot;⬆ 货件xlsx（可选）&quot;导入团队的总体控制表。在途单位会提高管道覆盖，并可将库存紧张的行切换为&quot;等待&quot;。">Click &quot;⬆ Shipments xlsx (optional)&quot; to load the team's 总体控制表. Inbound units raise pipeline cover and can switch thin rows to &quot;wait&quot;.</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;"><button class="topbar-btn" style="font-size:0.72rem;" onclick="closeModalEl('planner-howto-modal');document.getElementById('shipments-file').click()" data-en="Import shipments xlsx" data-zh="导入货件xlsx">Import shipments xlsx</button></div></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="⑤ Review the planner table" data-zh="⑤ 审阅计划表">⑤ Review the planner table</strong><br><span data-en="The anchor is Your Price, discounted along the days-of-cover ladder and floored at break-even. Amber banners flag stale snapshots and floorless rows. Adjust any price or toggle inclusion per row before exporting." data-zh="锚点是您的售价，沿库存天数阶梯打折并以盈亏平衡价为下限。琥珀色横幅标记过时快照和无下限行。导出前可逐行调整价格或切换是否包含。">The anchor is Your Price, discounted along the days-of-cover ladder and floored at break-even. Amber banners flag stale snapshots and floorless rows. Adjust any price or toggle inclusion per row before exporting.</span></div>
       <div style="background:var(--c-13151f);border-radius:10px;padding:12px 14px;font-size:0.78rem;color:var(--c-8b8fa8);line-height:1.6;"><strong style="color:var(--c-e8eaf0);" data-en="⑥ Export the Amazon price file" data-zh="⑥ 导出亚马逊价格文件">⑥ Export the Amazon price file</strong><br><span data-en="Click &quot;⬇ Export Amazon Price File (.xlsx)&quot;. The confirm step lists stale data and any floorless SKUs before the file is built. Upload the file in Seller Central and check the processing report. The sale window defaults to month-end, and rolls to next month when fewer than 7 days remain." data-zh="点击&quot;⬇ Export Amazon Price File (.xlsx)&quot;。生成文件前，确认步骤会列出过时数据和任何无下限SKU。在卖家中心上传该文件并检查处理报告。促销窗口默认为月末，当剩余不足7天时顺延至下月。">Click &quot;⬇ Export Amazon Price File (.xlsx)&quot;. The confirm step lists stale data and any floorless SKUs before the file is built. Upload the file in Seller Central and check the processing report. The sale window defaults to month-end, and rolls to next month when fewer than 7 days remain.</span></div>
@@ -1647,20 +1647,24 @@ function exportJSON() {
 
 function exportCSV() {
   if (!state.products.length) { alert('No products to export.'); return; }
-  const cols = ['name','asin','size_tier','weight_oz','cogs','target_margin',
+  // RULE: packaged dimensions round-trip (length_in/width_in/height_in) — the fee engine needs
+  // them for dimensional weight; fbaError rows export "needs dimensions" instead of NaN.
+  const cols = ['name','asin','size_tier','weight_oz','length_in','width_in','height_in','cogs','target_margin',
     'list_price','your_price','sale_price','clearance_price',
     'net_margin_pct','fba_fee','referral_fee','other_costs_per_unit','break_even_acos_pct'];
   const q = v => (typeof v === 'string' && v.includes(',')) ? `"${v.replace(/"/g,'""')}"` : v;
   const rows = [cols.join(',')];
   state.products.forEach(p => {
     const r = calcPrices(p.inputs);
+    const n = (v, d) => (r.fbaError || !Number.isFinite(v)) ? q(needsDimsText()) : v.toFixed(d);
+    const dims = Array.isArray(p.inputs.dimensions) && p.inputs.dimensions.every(v => Number.isFinite(v) && v > 0) ? p.inputs.dimensions : ['','',''];
     rows.push([
       q(p.name), q(p.asin || ''),
-      p.inputs.sizetier, p.inputs.weight.toFixed(1),
+      p.inputs.sizetier, p.inputs.weight.toFixed(1), ...dims,
       p.inputs.cogs.toFixed(2), p.inputs.margin,
-      r.listP.toFixed(2), r.yp.toFixed(2), r.saleP.toFixed(2), r.discP.toFixed(2),
-      r.ypF.pct.toFixed(1), r.ypF.fba.toFixed(2), r.ypF.ref.toFixed(2),
-      r.ypF.otherCosts.toFixed(2), r.beAcos.toFixed(1)
+      n(r.listP,2), n(r.yp,2), n(r.saleP,2), n(r.discP,2),
+      n(r.ypF.pct,1), n(r.ypF.fba,2), n(r.ypF.ref,2),
+      r.ypF.otherCosts.toFixed(2), n(r.beAcos,1)
     ].join(','));
   });
   const blob = new Blob([rows.join('\n')], {type:'text/csv'});
@@ -1791,6 +1795,11 @@ function showImportReport(created, updated, skippedRows) {
 }
 
 function sizeTierFromDims(l,w,h,weightOz) { return FBA.sizeTier([l,w,h],weightOz); }
+// Packaged dimensions from a products-CSV row (length_in/width_in/height_in); null unless all three are positive numbers. PURE.
+function csvDimensions(row) {
+  const d = [row.length_in, row.width_in, row.height_in].map(v => parseFloat(v));
+  return d.every(v => Number.isFinite(v) && v > 0) ? d : null;
+}
 
 // RULE: Maps Amazon's "product-size-tier" export strings (FBA Fee Preview / Manage Inventory
 // reports) to this app's current buckets (ss/ls/sb/lb/xl). "Bulky" is Amazon's current term for what
@@ -1924,7 +1933,9 @@ function importProductRows(headers, rowObjs, filename, cifCogs) {
           existing.inputs.sizetier = sizeTierFromDims(parseFloat(row.length_in), parseFloat(row.width_in), parseFloat(row.height_in), wOz);
         }
 
-        if (row.length_in && row.width_in && row.height_in) existing.inputs.dimensions=[row.length_in,row.width_in,row.height_in].map(Number);
+        // RULE: CSV packaged dimensions are stored as inputs.dimensions (dimensional weight), not only used for the tier.
+        const exDims=csvDimensions(row);
+        if (exDims) existing.inputs.dimensions=exDims;
         if (has('cogs') && row.cogs)                         existing.inputs.cogs      = parseFloat(row.cogs);
         if (has('target_margin') && row.target_margin)        existing.inputs.margin    = parseFloat(row.target_margin);
         if (has('inbound_shipping') && row.inbound_shipping)  existing.inputs.inbound   = parseFloat(row.inbound_shipping);
@@ -1969,7 +1980,8 @@ function importProductRows(headers, rowObjs, filename, cifCogs) {
         } else {
           p.inputs.sizetier = 'ss';
         }
-        if (row.length_in && row.width_in && row.height_in) p.inputs.dimensions=[row.length_in,row.width_in,row.height_in].map(Number);
+        const newDims=csvDimensions(row);
+        if (newDims) p.inputs.dimensions=newDims;
         p.inputs.cogs        = numOr(row.cogs, 6);
         p.inputs.margin      = numOr(row.target_margin, 30);
         // RULE: CIF is landed cost incl. freight → default inbound_shipping to 0 for
@@ -2088,49 +2100,136 @@ function getReferralFee(catKey, price) {
 // Legacy metadata retained for the live Rules viewer; all charges use FBA.quote.
 const FEE_SCHEDULE = {effectiveFrom:FBA.CARD.periods.nonpeak.start, fuelSurchargeEffectiveFrom:FBA.CARD.fuel_surcharge.effective_start, tables:{FUEL_SURCHARGE:1+FBA.CARD.fuel_surcharge.rate}};
 const FUEL_SURCHARGE = FEE_SCHEDULE.tables.FUEL_SURCHARGE;
-function feeDate(inputs) { return inputs.feeDate || ymd(new Date()); }
-function baseFBA(inputs, price) { const q=FBA.quote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.base; }
-function totalFBA(inputs, price) { const q=FBA.quote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.total; }
-// Weight-only convenience quotes cannot claim a verified dimensional floor.
-function getFBAFee(tier,wOz,price,date=ymd(new Date()),dimensions) {
-  return baseFBA({sizetier:tier,weight:wOz,feeDate:date,dimensions},price);
+// RULE: FBA rate-card expiry warning — from FBA_EXPIRY_WARN_FROM onward the Sale Planner and
+// Calculator warn that the newest registered rate card ends on fbaCoverageEnd() (2027-01-14)
+// and a new official card must be added to fba-rates.js / rates/ before then. LOGIC.md §1.4
+const FBA_EXPIRY_WARN_FROM = '2026-12-15';
+function fbaCoverageEnd() {
+  let end = '';
+  for (const card of FBA.CARDS) for (const per of Object.values(card.periods)) if (per.end_inclusive > end) end = per.end_inclusive;
+  return end;
 }
+// PURE: returns the coverage end date when the warning should show on todayYmd, else null.
+function fbaExpiryWarning(todayYmd) {
+  return todayYmd >= FBA_EXPIRY_WARN_FROM ? fbaCoverageEnd() : null;
+}
+function fbaExpiryBannerText(end) {
+  return t(`FBA rate coverage ends ${end}. Add the next official Amazon rate card (fba-rates.js + rates/) before then — sale windows past ${end} are blocked.`,
+           `FBA费率覆盖至 ${end} 结束。请在此之前添加下一份亚马逊官方费率表（fba-rates.js + rates/）— 超过 ${end} 的促销周期将被阻止。`);
+}
+
+function feeDate(inputs) { return inputs.feeDate || ymd(new Date()); }
+
+// RULE: Amazon calibration — Amazon's own per-SKU estimate (`expected-fulfillment-fee-per-unit`
+// in the FBA Fee Preview, fuel included) is the authority for CURRENT fees. When a product has
+// inputs.amazonFee = {fee, price, date}, calibration = fee − engine.total(inputs, price, date) and
+// every quote becomes engine.total(inputs, price, date) + calibration — Amazon's actual offsets
+// BOTH nonpeak and peak; the peak table still supplies the seasonal delta. No amazonFee (or the
+// engine cannot quote the import date) → engine as-is. PURE. LOGIC.md §1.5
+function fbaCalibration(inputs) {
+  const a = inputs && inputs.amazonFee;
+  if (!a || !Number.isFinite(a.fee) || !(a.price > 0) || !FBA.validDate(a.date)) return null;
+  const q = FBA.quote(inputs, a.price, a.date);
+  if (q.error) return null;
+  return { amount: a.fee - q.total, fee: a.fee, price: a.price, date: a.date };
+}
+// Calibrated quote: the calibration is folded into the base so fuel (total − base) stays the engine's.
+function fbaQuote(inputs, price, date) {
+  const q = FBA.quote(inputs, price, date);
+  if (q.error) return q;
+  const cal = fbaCalibration(inputs);
+  if (!cal) return { ...q, calibration: null };
+  return { ...q, base: q.base + cal.amount, total: q.total + cal.amount, calibration: cal };
+}
+function fbaCalibrationText(cal) {
+  if (!cal) return '';
+  const amt = (cal.amount < 0 ? '−' : '+') + '$' + Math.abs(cal.amount).toFixed(2);
+  return t(`Calibrated to Amazon Fee Preview of ${cal.date}: ${amt}`, `已按 ${cal.date} 亚马逊费用预览校准：${amt}`);
+}
+function baseFBA(inputs, price) { const q=fbaQuote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.base; }
+function totalFBA(inputs, price) { const q=fbaQuote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.total; }
+// Bilingual "needs dimensions" label shown wherever an FBA fee cannot be verified (never "$NaN").
+function needsDimsText() { return t('needs dimensions', '需要尺寸'); }
+
+// RULE: saved planner dates never go stale — if the saved end date is before today (local
+// ymd()), the window falls back to today → defaultSaleEndYmd(today) and the saved dates are
+// updated; the start date is always clamped to today (never in the past). LOGIC.md §19.7
 function saleFeeWindow() {
-  const pl=state.planner||{};
-  return {start:pl.startDate ?? ymd(new Date()),end:pl.endDate ?? defaultSaleEndYmd(new Date())};
+  const now = new Date(), today = ymd(now);
+  const pl = state.planner || {};
+  let start = pl.startDate || today, end = pl.endDate || defaultSaleEndYmd(now);
+  if (FBA.validDate(end) && end < today) { start = today; end = defaultSaleEndYmd(now); }
+  if (FBA.validDate(start) && start < today) start = today;
+  if (state.planner) { state.planner.startDate = start; state.planner.endDate = end; }
+  return { start, end };
+}
+// One representative date per fee class in the window: each rate period plus the
+// independent fuel effective date. PURE.
+function saleFeeDates(start, end) {
+  const coverage = FBA.periodCoverage(start, end);
+  if (coverage.error) return { dates: [], error: coverage.error, coverage };
+  const dates = [];
+  for (const w of coverage.windows) {
+    dates.push(w.start);
+    const fuel = w.card.fuel_surcharge.effective_start;
+    if (fuel > w.start && fuel <= w.end_inclusive) dates.push(fuel);
+  }
+  return { dates, error: null, coverage };
 }
 function salePeriodFloor(inputs,start,end) {
-  const coverage=FBA.periodCoverage(start,end);
-  if (coverage.error) return {floor:null,error:coverage.error,coverage};
+  const fd = saleFeeDates(start, end), coverage = fd.coverage;
+  if (fd.error) return {floor:null,error:fd.error,coverage};
   const floors=[];
-  // Split at rate changes and the independent fuel effective date.
-  for (const w of coverage.windows) {
-    const dates=[w.start];
-    const fuel=w.card.fuel_surcharge.effective_start;
-    if (fuel>w.start && fuel<=w.end_inclusive) dates.push(fuel);
-    for (const date of dates) {
-      const q=FBA.quote(inputs,20,date);
-      if (q.error) return {floor:null,error:q.error,coverage};
-      const floor=solveMinPriceRaw({...inputs,margin:0,feeDate:date});
-      if (!Number.isFinite(floor)) return {floor:null,error:'Unable to establish break-even floor.',coverage};
-      floors.push(floor);
-    }
+  for (const date of fd.dates) {
+    const q=fbaQuote(inputs,20,date);
+    if (q.error) return {floor:null,error:q.error,coverage};
+    const floor=solveMinPriceRaw({...inputs,margin:0,feeDate:date});
+    if (!Number.isFinite(floor)) return {floor:null,error:'Unable to establish break-even floor.',coverage};
+    floors.push(floor);
   }
-  return {floor:Math.max(...floors),error:null,coverage};
+  return {floor:Math.max(...floors),error:null,coverage,calibration:fbaCalibration(inputs)};
 }
 
 function salePeriodMargin(inputs,price,start,end) {
-  const coverage=FBA.periodCoverage(start,end);
-  if(coverage.error) return null;
+  const fd = saleFeeDates(start, end);
+  if (fd.error) return null;
   const margins=[];
-  for(const w of coverage.windows) {
-    for(const date of [w.start,w.end_inclusive]) {
-      const wf=feeWaterfall({...inputs,feeDate:date},price);
-      if(!wf || !Number.isFinite(wf.netPct)) return null;
-      margins.push(wf.netPct);
-    }
+  for (const date of fd.dates) {
+    const wf=feeWaterfall({...inputs,feeDate:date},price);
+    if(!wf || !Number.isFinite(wf.netPct)) return null;
+    margins.push(wf.netPct);
   }
   return Math.min(...margins);
+}
+// Lowest net profit ($/unit) at `price` across every fee class in the window; null if unverifiable. PURE.
+function salePeriodNet(inputs,price,start,end) {
+  const fd = saleFeeDates(start, end);
+  if (fd.error || !(price > 0)) return null;
+  let low = Infinity;
+  for (const date of fd.dates) {
+    const wf = feeWaterfall({...inputs,feeDate:date},price);
+    if (!wf || !Number.isFinite(wf.net)) return null;
+    low = Math.min(low, wf.net);
+  }
+  return low;
+}
+
+// RULE: Fee-jump guard — break-even is NOT monotonic: the FBA $10/$50 price bands and referral
+// steps make a price just ABOVE the floor able to lose money (small-standard 8 oz, fixed costs
+// $5.20: floor $9.36, but $10.00 nets −$0.36). After suggestSalePrice, the sale price must net
+// ≥ $0 on EVERY fee class in the window; otherwise step up to the next .90 ending, then by cents,
+// until profitable on all dates. Returns null when nothing ≤ cap (the 5%-off ceiling) works →
+// the row is blocked ('fee_jump'). PURE. LOGIC.md §19.8
+function feeJumpSafePrice(inputs, price, cap, start, end) {
+  const ok = pr => { const n = salePeriodNet(inputs, pr, start, end); return n !== null && n >= -1e-9; };
+  if (ok(price)) return price;
+  let c = Math.floor(price) + PRICE_SALE_END;
+  if (c <= price + 1e-9) c += 1;
+  for (; c <= cap + 1e-9; c += 1) { const pr = +c.toFixed(2); if (ok(pr)) return pr; }
+  for (let cents = Math.round(price * 100) + 1; cents <= Math.round(cap * 100); cents++) {
+    if (ok(cents / 100)) return cents / 100;
+  }
+  return null;
 }
 
 // RULE: Price tier rounding — rounds UP to next occurrence of target cents ending
@@ -2154,9 +2253,13 @@ function calcPrices(inputs) {
   const otherCosts = inbound + placement + prep + storage + q4storage + ppc + returns + other + vinePerUnit;
   const totalFixed = cogs + otherCosts;
 
-  // RULE: Iterative price solver — 12 iterations to converge
-  // Needed because referral fee and FBA fee both depend on price itself
-  let yp = solveMinPriceRaw(inputs);
+  // RULE: Your Price = the band-aware solveMinPriceRaw() solution, rounded to .95.
+  // Needed because referral fee and FBA fee both depend on price itself.
+  // RULE: an unverifiable FBA fee (missing dimensions, no rate coverage…) returns an explicit
+  // `fbaError` — every consumer shows "needs dimensions" instead of computing with NaN.
+  const fbaCheck = fbaQuote(inputs, 20, feeDate(inputs));
+  let yp = fbaCheck.error ? null : solveMinPriceRaw(inputs);
+  const fbaError = fbaCheck.error || (yp === null ? 'Unable to solve a viable price.' : null);
   if (yp === null) yp=NaN;
   yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
 
@@ -2191,7 +2294,7 @@ function calcPrices(inputs) {
   return { yp, listP, saleP, discP, ypF, listF, saleF, discF,
     cogs, otherCosts, vinePerUnit, maxCPC, beAcos,
     targetRoas: 100/tacos, launchRoas: 100/lacos,
-    maxCPClaunch: yp * (lacos/100) * (cvr/100) };
+    maxCPClaunch: yp * (lacos/100) * (cvr/100), fbaError };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2264,10 +2367,12 @@ function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
   return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
 }
 
-// RULE: Unrounded minimum-price solver — the same fixed-point iteration as
-// calcPrices() but WITHOUT the .95 psychological rounding. Used by What-if mode
-// (and by tests for the COGS↔price round-trip property). 40 iterations for tight
-// convergence. Returns null when margin ≥ 100. LOGIC.md Section 15.5
+// RULE: Unrounded minimum-price solver — the solver behind calcPrices(), the planner floor
+// and calcMfg(), WITHOUT the .95 psychological rounding. Bisects inside each FBA price band /
+// referral step (edges below) so fee jumps cannot oscillate it, and returns the LOWEST price
+// that meets the margin. Returns null when margin ≥ 100 or the FBA fee is unverifiable.
+// NOTE: prices above this one are not guaranteed profitable — see feeJumpSafePrice().
+// LOGIC.md Sections 2.1, 15.5
 function solveMinPriceRaw(inputs) {
   if (!(inputs.margin < 100)) return null;
   const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
@@ -2373,8 +2478,10 @@ function checkKillSignals(product) {
     const prices = calcPrices(product.inputs);
     const daysInS3 = daysSince(product.stageStartDates.STAGE_3);
     // RULE: Kill Signal 3 — Persistent unprofitability in Stage 3
-    // Triggers only if BOTH: (a) ACoS never below break-even, AND (b) organic not growing
-    if (daysInS3 >= S3_KILL_DAYS) {
+    // Triggers only if BOTH: (a) ACoS never below break-even, AND (b) organic not growing.
+    // RULE: skipped when break-even ACoS is unverifiable (fbaError → NaN) — `x < NaN` is
+    // always false and would otherwise raise a FALSE kill signal.
+    if (daysInS3 >= S3_KILL_DAYS && Number.isFinite(prices.beAcos)) {
       const everBelowBE = product.checkins.some(c =>
         c.currentAcos !== undefined && c.currentAcos < prices.beAcos
       );
@@ -2485,15 +2592,16 @@ function getStageGuidance(product) {
   const s2Ready = daysS2 >= S2_MIN_DAYS && postVineAdSales >= S2_AD_SALES_TARGET;
 
   // S3 step-down suggestion
-  const suggestedAcos = latestAcos ? Math.max(
+  // RULE: no ACoS step-down suggestion while break-even ACoS is unverifiable (fbaError).
+  const suggestedAcos = !Number.isFinite(prices.beAcos) ? null : latestAcos ? Math.max(
     prices.beAcos + S3_ACOS_BUFFER,
     latestAcos - S3_ACOS_STEP
-  ) : prices.tacos;
+  ) : product.inputs.tacos;
 
   return {
     prices, lc, daysS1, daysS2, daysS3, inVineWindow, vineEnd,
     postVineAdSales, latestAcos, s1Ready, s2Ready, suggestedAcos,
-    beAcos: prices.beAcos
+    beAcos: prices.beAcos, fbaError: prices.fbaError
   };
 }
 
@@ -2547,6 +2655,8 @@ const INVENTORY_STATUS_META = {
 // CURRENCY & LANGUAGE
 // ═══════════════════════════════════════════════════════════════════════════
 function fmtC(usd) {
+  // RULE: a non-finite amount (unverifiable FBA fee) renders "needs dimensions", never "$NaN".
+  if (!Number.isFinite(usd)) return needsDimsText();
   if (state.currency === 'CNY') return '¥' + (usd * CNY_RATE).toFixed(2);
   return '$' + Math.abs(usd).toFixed(2);
 }
@@ -2565,6 +2675,11 @@ function setLang(l) {
 
 // Translation helper for JS-generated HTML
 function t(en, zh) { return state.lang === 'zh' ? zh : en; }
+// Warning block for any view whose prices depend on an unverifiable FBA fee (calcPrices().fbaError).
+function fbaErrorAlertHtml(err) {
+  return `<div class="alert warn">${t('FBA fee unverified — prices need packaged dimensions:', 'FBA费用未验证 — 价格需要包装尺寸：')} ${escHtml(err)} <button class="btn" onclick="openEditModal()">${t('Edit packaged dimensions / weight', '编辑包装尺寸/重量')}</button></div>`;
+}
+function fmtPctOrDims(v, digits = 1) { return Number.isFinite(v) ? v.toFixed(digits) + '%' : needsDimsText(); }
 
 function setCurr(c) {
   state.currency = c;
@@ -2831,14 +2946,23 @@ function waterfallHtml(p, prices) {
 }
 
 function renderCalcTab(p) {
-  const date=feeDate(p.inputs), quote=FBA.quote(p.inputs,20,date);
-  const context=quote.error ? quote.error : `${quote.period} base rate card ${quote.effectiveFrom} → ${quote.effectiveThrough}; quote date ${date}; billed ${quote.shippingWeightLb.toFixed(2)} lb; fuel factor ${quote.fuelFactor.toFixed(3)} (applied once).`;
-  if(quote.error) {
-    document.getElementById('calc-inputs-html').innerHTML=`<div class="alert warn">${escHtml(context)} <button class="btn" onclick="openEditModal()">Edit packaged dimensions / weight</button></div>`;
+  const date=feeDate(p.inputs), quote=fbaQuote(p.inputs,20,date);
+  const prices = calcPrices(p.inputs);
+  const expiryEnd = fbaExpiryWarning(ymd(new Date()));
+  const expiryHtml = expiryEnd ? `<div class="alert warn">${escHtml(fbaExpiryBannerText(expiryEnd))}</div>` : '';
+  if(prices.fbaError) {
+    document.getElementById('calc-inputs-html').innerHTML=expiryHtml + fbaErrorAlertHtml(prices.fbaError);
     document.getElementById('calc-outputs-html').innerHTML='';
     return;
   }
-  const prices = calcPrices(p.inputs);
+  const calText = fbaCalibrationText(quote.calibration);
+  const context=t(`${quote.period} base rate card ${quote.effectiveFrom} → ${quote.effectiveThrough}; quote date ${date}; billed ${quote.shippingWeightLb.toFixed(2)} lb; fuel factor ${quote.fuelFactor.toFixed(3)} (applied once).`,
+    `${quote.period === 'peak' ? '旺季' : '淡季'}基础费率表 ${quote.effectiveFrom} → ${quote.effectiveThrough}；报价日期 ${date}；计费重量 ${quote.shippingWeightLb.toFixed(2)} 磅；燃油系数 ${quote.fuelFactor.toFixed(3)}（仅计一次）。`)
+    + (calText ? ' ' + calText + '.' : '');
+  const calTip = quote.calibration
+    ? t(`Amazon's Fee Preview estimate ($${quote.calibration.fee.toFixed(2)} at $${quote.calibration.price.toFixed(2)} on ${quote.calibration.date}) is the authority for current fees. The difference to the rate-card engine is applied to every quote, nonpeak and peak.`,
+        `亚马逊费用预览估算（${quote.calibration.date}，售价 $${quote.calibration.price.toFixed(2)} 时 $${quote.calibration.fee.toFixed(2)}）是当前费用的权威依据。与费率表引擎的差额应用于所有报价（淡季与旺季）。`)
+    : t('No Amazon Fee Preview estimate imported — fees come from the published rate card only. Import the Fee Preview to calibrate.', '未导入亚马逊费用预览估算 — 费用仅来自公布的费率表。导入费用预览以校准。');
   const { yp, listP, saleP, discP, ypF, listF, saleF, discF, cogs, otherCosts,
     vinePerUnit, maxCPC, beAcos, maxCPClaunch } = prices;
   const pctOff = (a,b) => Math.round((1-b/a)*100);
@@ -2849,7 +2973,7 @@ function renderCalcTab(p) {
   const priceClass = curPrice ? classifyPrice(curPrice, prices) : null;
 
   document.getElementById('calc-inputs-html').innerHTML = `
-    <div class="alert warn">${escHtml(context)} <a href="${quote.source}" target="_blank" rel="noopener">Official rate card</a><br>Non-apparel / non-dangerous goods base fulfillment only; SIPP, low inventory, overmax and other charges require separate inputs. Peak fees follow FC shipment departure. Q4 storage remains separate; do not add peak fulfillment or fuel to that field.</div>
+    ${expiryHtml}<div class="alert warn" data-tip="${escHtml(calTip)}">${escHtml(context)} ⓘ <a href="${quote.source}" target="_blank" rel="noopener">${t('Official rate card', '官方费率表')}</a><br>${t('Non-apparel / non-dangerous goods base fulfillment only; SIPP, low inventory, overmax and other charges require separate inputs. Peak fees follow FC shipment departure. Q4 storage remains separate; do not add peak fulfillment or fuel to that field.', '仅限非服装/非危险品基础配送费；SIPP、低库存、超大件及其他费用需单独输入。旺季费用按运营中心发货日计算。第四季度仓储费单独计算；请勿在该字段加入旺季配送费或燃油费。')}</div>
     <div class="card">
       <div class="card-title">${t('Inputs Summary','输入摘要')}</div>
       <div style="font-size:0.75rem;color:var(--c-8b8fa8);line-height:1.7;">
@@ -2911,7 +3035,6 @@ function renderCalcTab(p) {
     ${discF.profit<0?`<div class="alert bad">${t('⚠ Clearance Price below break-even. Selling at a loss.','⚠ 清仓价低于盈亏平衡点，目前在亏损销售。')}</div>`:''}
     ${ypF.pct>=LOW_MARGIN_WARNING&&saleF.profit>=0&&discF.profit>=0?`<div class="alert good">${t(`✓ All price tiers profitable. Min clearance profit: ${fmtC(discF.profit)}/unit`,`✓ 所有价格层级均盈利。最低清仓利润：${fmtC(discF.profit)}/件`)}</div>`:''}
     ${(()=>{
-      const sur = p.inputs.surcharge ? FUEL_SURCHARGE : 1;
       const cliffs = [];
       if (yp >= 10 && yp < 10.50) {
         const saving = (totalFBA(p.inputs,yp) - totalFBA(p.inputs,9.95)).toFixed(2);
@@ -3089,16 +3212,16 @@ function renderStagesTab(p) {
       <div class="stage-card-sub">${t(`Goal: shift to profitability. Gradually reduce ACoS target. Day ${g.daysS3} in Stage 3.`,`目标：转向盈利。逐步降低ACoS目标。进入阶段3第${g.daysS3}天。`)}</div>
       <div class="stage-mode">m19 Mode: ACoS Target</div>
       <div class="g3" style="gap:8px;margin-bottom:10px;">
-        <div class="stat"><div class="stat-label">${t('Break-even ACoS (floor)','盈亏平衡ACoS（下限）')}</div><div class="stat-val red">${g.beAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Break-even ACoS (floor)','盈亏平衡ACoS（下限）')}</div><div class="stat-val red">${fmtPctOrDims(g.beAcos)}</div></div>
         <div class="stat"><div class="stat-label">${t('Current ACoS (last check-in)','当前ACoS（最近签到）')}</div><div class="stat-val ${g.latestAcos?g.latestAcos<g.beAcos?'green':'amber':''}">
           ${g.latestAcos !== undefined ? g.latestAcos.toFixed(1)+'%' : t('Not recorded','未记录')}</div></div>
-        <div class="stat"><div class="stat-label">${t('Suggested Next Target','建议下一目标')}</div><div class="stat-val blue">${g.suggestedAcos.toFixed(1)}%</div></div>
+        <div class="stat"><div class="stat-label">${t('Suggested Next Target','建议下一目标')}</div><div class="stat-val blue">${fmtPctOrDims(g.suggestedAcos)}</div></div>
       </div>
       <ul class="checklist">
         <li><div class="check-icon active">○</div>${t('Start ACoS target at Stage 2 historical ACoS — not theoretical target','以阶段2的历史ACoS为起点 — 不是理论目标')}</li>
         <li><div class="check-icon active">○</div>${t(`Reduce in ${S3_ACOS_STEP}pp steps (e.g. 38% → 35% → 32%). Wait ${S3_STEP_WAIT_DAYS} days between each step.`,`每次降低${S3_ACOS_STEP}个百分点（如38%→35%→32%），每步之间等待${S3_STEP_WAIT_DAYS}天。`)}</li>
         <li><div class="check-icon active">○</div>${t('Never drop more than 5pp at once — risks crashing impressions','单次降幅不超过5个百分点 — 否则展示量可能骤降')}</li>
-        <li><div class="check-icon active">○</div>${t(`Floor: ${g.beAcos.toFixed(1)}% (break-even). Keep target ${S3_ACOS_BUFFER}pp above floor: ${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%`,`下限：${g.beAcos.toFixed(1)}%（盈亏平衡）。目标保持在下限以上${S3_ACOS_BUFFER}个百分点：${(g.beAcos+S3_ACOS_BUFFER).toFixed(1)}%`)}</li>
+        <li><div class="check-icon active">○</div>${t(`Floor: ${fmtPctOrDims(g.beAcos)} (break-even). Keep target ${S3_ACOS_BUFFER}pp above floor: ${fmtPctOrDims(g.beAcos+S3_ACOS_BUFFER)}`,`下限：${fmtPctOrDims(g.beAcos)}（盈亏平衡）。目标保持在下限以上${S3_ACOS_BUFFER}个百分点：${fmtPctOrDims(g.beAcos+S3_ACOS_BUFFER)}`)}</li>
         <li><div class="check-icon ${g.latestAcos&&g.latestAcos<g.beAcos?'done':'active'}">${g.latestAcos&&g.latestAcos<g.beAcos?'✓':'○'}</div>${t('ACoS below break-even = every ad click is profitable','ACoS低于盈亏平衡 = 每次广告点击均盈利')}</li>
       </ul>
       <button class="grad-btn" onclick="advanceStage(getActiveProduct(),'STABLE')">${t('→ Mark as Stable & Profitable','→ 标记为稳定盈利')}</button>
@@ -3158,7 +3281,7 @@ function renderStagesTab(p) {
     </div>`;
   }
 
-  document.getElementById('stages-html').innerHTML = trackHtml + timelineHtml + guideHtml;
+  document.getElementById('stages-html').innerHTML = (g.fbaError ? fbaErrorAlertHtml(g.fbaError) : '') + trackHtml + timelineHtml + guideHtml;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3205,13 +3328,13 @@ function renderCheckinsTab(p) {
   }
 
   const sorted = [...p.checkins].reverse();
-  document.getElementById('checkin-history').innerHTML = trendHtml + `
+  document.getElementById('checkin-history').innerHTML = (prices.fbaError ? fbaErrorAlertHtml(prices.fbaError) : '') + trendHtml + `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <div class="card-title" style="margin:0;">${t('Check-in History','检查记录历史')} (${p.checkins.length})</div>
       <button class="topbar-btn" onclick="exportCheckinsCSV('${p.id}')" style="font-size:0.72rem;">${t('Export CSV','导出CSV')}</button>
     </div>
     <div class="checkin-list">${sorted.map((ci, i) => {
-      const priceClass = ci.currentPrice ? classifyPrice(ci.currentPrice, prices) : null;
+      const priceClass = (ci.currentPrice && !prices.fbaError) ? classifyPrice(ci.currentPrice, prices) : null;
       const tacos = ci.totalRevenue && ci.totalAdSpend ? (ci.totalAdSpend/ci.totalRevenue*100) : null;
       const inv = getInventoryStatus(ci.inventoryUnits, ci.unitsSold30, ci.periodDays);
       const invMeta = inv ? INVENTORY_STATUS_META[inv.status] : null;
@@ -3226,7 +3349,7 @@ function renderCheckinsTab(p) {
             <div class="checkin-cell-val">${ci.currentPrice ? fmtC(ci.currentPrice) : '—'}
               ${priceClass ? `<span class="price-match ${priceClass.cls}" style="font-size:0.58rem;">${priceClass.label}</span>` : ''}</div>
           </div>
-          <div class="checkin-cell"><div class="checkin-cell-label">ACoS</div><div class="checkin-cell-val" style="color:${ci.currentAcos?(ci.currentAcos<prices.beAcos?'var(--c-4ade80)':ci.currentAcos<prices.beAcos*1.5?'var(--c-f59e0b)':'var(--c-f87171)'):'var(--c-fff)'}">${ci.currentAcos !== undefined ? ci.currentAcos.toFixed(1)+'%' : '—'}</div></div>
+          <div class="checkin-cell"><div class="checkin-cell-label">ACoS</div><div class="checkin-cell-val" style="color:${ci.currentAcos&&!prices.fbaError?(ci.currentAcos<prices.beAcos?'var(--c-4ade80)':ci.currentAcos<prices.beAcos*1.5?'var(--c-f59e0b)':'var(--c-f87171)'):'var(--c-fff)'}">${ci.currentAcos !== undefined ? ci.currentAcos.toFixed(1)+'%' : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">Ad Sales (30d)</div><div class="checkin-cell-val">${ci.adSales !== undefined ? ci.adSales : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">TACoS</div><div class="checkin-cell-val" style="color:${tacos?(tacos<10?'var(--c-4ade80)':tacos<20?'var(--c-f59e0b)':'var(--c-f87171)'):'var(--c-fff)'}">${tacos !== null ? tacos.toFixed(1)+'%' : '—'}</div></div>
           <div class="checkin-cell"><div class="checkin-cell-label">Inventory (units)</div><div class="checkin-cell-val">${ci.inventoryUnits !== undefined ? ci.inventoryUnits : '—'}</div></div>
@@ -3347,11 +3470,16 @@ function calcMfg() {
   }
   const mfgPrice = landed / (1 - mMgn/100);
 
-  let yp = (mfgPrice + sOther) / (1 - sMgn/100);
-  for (let i = 0; i < 12; i++) {
-    const fba = totalFBA(mfgInputs,yp);
-    const ref = getReferralFee(catKey, yp);
-    yp = (mfgPrice + sOther + fba + ref) / (1 - sMgn/100);
+  // RULE: the maker calculator uses the SAME band-aware solver as product pricing
+  // (solveMinPriceRaw) — the seller's cost is the quote price + other costs.
+  let yp = solveMinPriceRaw({ ...mfgInputs, category: catKey, cogs: mfgPrice, margin: sMgn,
+    inbound: 0, placement: 0, prep: 0, storage: 0, q4storage: 0, ppc: 0, returns: 0, other: sOther,
+    vine: false, annualUnits: 1 });
+  if (yp === null) {
+    document.getElementById('mfg_seller_price').innerHTML=`<div class="alert warn">${t('No viable seller price at this margin.', '该利润率下没有可行的卖家售价。')}</div>`;
+    document.getElementById('mfg_amazon_tiers').innerHTML='';
+    document.getElementById('mfg_alerts').innerHTML='';
+    return;
   }
   yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
 
@@ -3623,7 +3751,8 @@ function renderPortfolio() {
   empty.style.display = 'none';
   tbody.innerHTML = state.products.map(p => {
     const r = calcPrices(p.inputs);
-    return `<tr data-pid="${p.id}">
+    // RULE: fbaError rows show "needs dimensions" (fmtC / fmtPctOrDims), never "$NaN".
+    return `<tr data-pid="${p.id}"${r.fbaError ? ` data-tip="${escHtml(r.fbaError)}"` : ''}>
       <td class="pt-name" onclick="portfolioSelectProduct('${p.id}')">${p.name}</td>
       <td class="pt-asin">${p.asin || '—'}</td>
       <td class="pt-num">${fmtC(p.inputs.cogs)}</td>
@@ -3632,7 +3761,7 @@ function renderPortfolio() {
       <td class="pt-num">${fmtC(r.yp)}</td>
       <td class="pt-num">${fmtC(r.saleP)}</td>
       <td class="pt-num">${fmtC(r.discP)}</td>
-      <td class="pt-margin-pct">${r.ypF.pct.toFixed(1)}%</td>
+      <td class="pt-margin-pct">${fmtPctOrDims(r.ypF.pct)}</td>
       <td class="pt-num">${fmtC(r.ypF.fba)}</td>
       <td class="pt-num">${fmtC(r.ypF.ref)}</td>
     </tr>`;
@@ -3654,7 +3783,7 @@ function updatePortfolioMargin(productId, newMargin) {
   td[5].textContent = fmtC(r.yp);
   td[6].textContent = fmtC(r.saleP);
   td[7].textContent = fmtC(r.discP);
-  td[8].textContent = r.ypF.pct.toFixed(1) + '%';
+  td[8].textContent = fmtPctOrDims(r.ypF.pct);
   td[9].textContent = fmtC(r.ypF.fba);
   td[10].textContent = fmtC(r.ypF.ref);
 }
@@ -3731,6 +3860,15 @@ function deleteSampleProduct(id) {
 // FBA FEE PREVIEW / INVENTORY IMPORT — creates product stubs from Amazon CSV
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Fee Preview cell pair → {fee, price, date} when BOTH are numeric (Amazon writes "--" when it
+// has no estimate); else null. PURE. LOGIC.md §1.5
+function parseAmazonFeeEstimate(feeRaw, priceRaw, dateYmd) {
+  const num = v => { const x = String(v ?? '').replace(/[$,\s]/g, ''); return /^\d+(\.\d+)?$/.test(x) ? Number(x) : NaN; };
+  const fee = num(feeRaw), price = num(priceRaw);
+  if (!Number.isFinite(fee) || !(price > 0)) return null;
+  return { fee, price, date: dateYmd };
+}
+
 function importFBAFeePreview(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -3757,8 +3895,16 @@ function importFBAFeePreview(event) {
     const tierCol    = fc('product size tier', 'size tier', 'size-tier', 'product-size');
     const weightCol  = fc('unit weight', 'item weight', 'package weight', 'weight');
     const dimCols=['longest side','median side','shortest side'].map(label=>fc(label));
-    const dimUnitCol=fc('dimension unit', 'dimensions unit');
-    const weightUnitCol=fc('weight unit');
+    // RULE: the real Fee Preview headers are `unit-of-dimension` / `unit-of-weight` (normalised
+    // to spaces above); older exports used "dimension unit" / "weight unit".
+    const dimUnitCol=fc('unit of dimension', 'dimension unit', 'dimensions unit');
+    const weightUnitCol=fc('unit of weight', 'weight unit');
+    // RULE: Amazon's own per-unit fulfillment estimate (fuel included) + the price it was quoted
+    // at → inputs.amazonFee, which calibrates every fee quote (fbaCalibration). Exact header match:
+    // `expected-future-fulfillment-fee-per-unit` must NOT be picked up.
+    const amzFeeCol=hdrs.indexOf('expected fulfillment fee per unit');
+    const yourPriceCol=hdrs.indexOf('your price');
+    const importYmd=ymd(new Date());
 
     if (asinCol === -1) {
       alert(t(
@@ -3795,6 +3941,7 @@ function importFBAFeePreview(event) {
       const dimUnits=(dimUnitCol>=0 ? cols[dimUnitCol] : 'inches').toLowerCase();
       const dimFactor=/^(in|inch|inches)$/.test(dimUnits)?1 : /^(cm|centimeters)$/.test(dimUnits)?1/2.54 : NaN;
       const packageDims=dimCols.every(c=>c>=0) ? dimCols.map(c=>Number(cols[c])*dimFactor) : null;
+      const amazonFee=parseAmazonFeeEstimate(amzFeeCol>=0 ? cols[amzFeeCol] : '', yourPriceCol>=0 ? cols[yourPriceCol] : '', importYmd);
 
       // RULE: an existing product (e.g. a stub auto-created from the weekly reports with
       // the default ss/8oz) gets its size tier and weight UPDATED from the Fee Preview —
@@ -3809,6 +3956,7 @@ function importFBAFeePreview(event) {
         const exOz = parseWeightToOz(weightRaw,weightUnits);
         if (exOz && Math.abs((existing.inputs.weight || 0) - exOz) > 0.05) { existing.inputs.weight = exOz; touched = true; }
         if (packageDims?.every(v=>Number.isFinite(v)&&v>0)) {existing.inputs.dimensions=packageDims; touched=true;}
+        if (amazonFee) {existing.inputs.amazonFee=amazonFee; touched=true;}
         if (touched) updated++; else skipped++;
         continue;
       }
@@ -3822,6 +3970,7 @@ function importFBAFeePreview(event) {
       const oz = parseWeightToOz(weightRaw,weightUnits);
       if (oz) p.inputs.weight = oz;
       if (packageDims?.every(v=>Number.isFinite(v)&&v>0)) p.inputs.dimensions=packageDims;
+      if (amazonFee) p.inputs.amazonFee=amazonFee;
       p.notes = t(
         'Imported from Amazon report. Open Edit to add COGS, target margin and ad costs.',
         '从亚马逊报告导入。请打开编辑添加货物成本、目标利润率和广告成本。'
@@ -3837,8 +3986,8 @@ function importFBAFeePreview(event) {
       ));
     } else if (created === 0) {
       alert(t(
-        `Updated size tier / weight on ${updated} existing product(s) from the report. ${skipped} unchanged.`,
-        `已根据报告更新 ${updated} 个现有产品的尺寸分级/重量。${skipped} 个未变化。`
+        `Updated size tier / weight / packaged dimensions / Amazon fee estimate on ${updated} existing product(s) from the report. ${skipped} unchanged.`,
+        `已根据报告更新 ${updated} 个现有产品的尺寸分级/重量/包装尺寸/亚马逊费用估算。${skipped} 个未变化。`
       ));
       saveToStorage();
       renderAll();
@@ -4340,7 +4489,7 @@ function renderWhatIf(p) {
       <div>
         <div class="g2" style="gap:8px;">
           ${isCogs
-            ? `<div class="inp"><label>${t('Desired selling price ($)','期望售价($)')}</label><input type="number" id="wi-price" step="0.01" min="0.01" value="${prices.yp.toFixed(2)}" oninput="calcWhatIf()"></div>`
+            ? `<div class="inp"><label>${t('Desired selling price ($)','期望售价($)')}</label><input type="number" id="wi-price" step="0.01" min="0.01" value="${Number.isFinite(prices.yp) ? prices.yp.toFixed(2) : ''}" oninput="calcWhatIf()"></div>`
             : `<div class="inp"><label>${t('COGS ($)','货物成本($)')}</label><input type="number" id="wi-cogs" step="0.01" min="0" value="${p.inputs.cogs.toFixed(2)}" oninput="calcWhatIf()"></div>`}
           <div class="inp"><label>${t('Target margin (%)','目标利润率(%)')}</label><input type="number" id="wi-margin" step="0.5" min="0" max="99" value="${p.inputs.margin}" oninput="calcWhatIf()"></div>
         </div>
@@ -4368,6 +4517,8 @@ function calcWhatIf() {
   if (_whatIfMode === 'cogs') {
     const price = parseFloat(document.getElementById('wi-price')?.value);
     const r = (price > 0 && margin >= 0 && margin < 100) ? solveMaxCOGS(p.inputs, price, margin) : null;
+    // RULE: unverifiable FBA fee → "needs dimensions", never a false "no COGS can hit this margin".
+    if (r && !Number.isFinite(r.fba)) { out.innerHTML = fbaErrorAlertHtml(fbaQuote(p.inputs, price, feeDate(p.inputs)).error || needsDimsText()); return; }
     if (!r) {
       out.innerHTML = `<div style="font-size:0.78rem;color:var(--c-555870);padding:8px 0;">${t('Enter a price and a margin below 100%.','请输入价格和低于100%的利润率。')}</div>`;
       return;
@@ -4396,6 +4547,7 @@ function calcWhatIf() {
     const inputs = { ...p.inputs, cogs, margin };
     const raw = solveMinPriceRaw(inputs);
     const r = calcPrices(inputs);
+    if (r.fbaError) { out.innerHTML = fbaErrorAlertHtml(r.fbaError); return; }
     out.innerHTML = `<div class="mfg-out" style="margin-top:0;background:var(--c-0f1020);border-color:var(--c-2a2a5e);">
       <div class="mfg-out-title" style="color:var(--c-818cf8);">${t('Minimum Viable Price','最低可行售价')}</div>
       <div class="mfg-row"><div class="mfg-row-l">${t('Exact break-point price','精确临界价格')}</div><div class="mfg-row-r white">${fmtC(raw)}</div></div>
@@ -4417,6 +4569,7 @@ function renderCouponCalc(p) {
   if (!el) return;
   const prices = calcPrices(p.inputs);
   const { yp, ypF } = prices;
+  const fbaErr = prices.fbaError; // RULE: coupon economics need a verified FBA fee
   const couponAmt = p.inputs.couponAmt || 0;
   const couponVol = p.inputs.couponVol || 0;
   const effectivePrice = Math.max(0, yp - couponAmt);
@@ -4441,7 +4594,7 @@ function renderCouponCalc(p) {
         <div class="alert info" style="font-size:0.73rem;">${t('Coupon keeps listed price intact — "Was" anchor and Typical Price baseline are unaffected. Safer for the May 2026 Typical Price rule than a price discount.','优惠券不影响挂牌价 — "原价"锚点和典型价格基准不受影响。相比价格折扣，对2026年5月典型价格规则更安全。')}</div>
       </div>
       <div>
-        ${couponAmt > 0 ? `
+        ${fbaErr ? fbaErrorAlertHtml(fbaErr) : couponAmt > 0 ? `
         <div class="mfg-out" style="margin-top:0;">
           <div class="mfg-out-title">${t('Coupon Economics','优惠券经济模型')}</div>
           <div class="mfg-row"><div class="mfg-row-l">${t('Customer pays','顾客实付')}</div><div class="mfg-row-r">${fmtC(effectivePrice)}</div></div>
@@ -4478,7 +4631,10 @@ function breakevenOutputHtml(p) {
   const overhead = p.inputs.monthlyOverhead || 0;
   const units = breakEvenUnits(overhead, profitPerUnit);
   let out;
-  if (overhead <= 0) {
+  // RULE: unverifiable FBA fee → "needs dimensions", never a false "can never cover overheads".
+  if (prices.fbaError) {
+    out = fbaErrorAlertHtml(prices.fbaError);
+  } else if (overhead <= 0) {
     out = `<div style="font-size:0.78rem;color:var(--c-555870);padding:8px 0;">${t('Enter your fixed monthly overheads to see how many units per month cover them.','输入每月固定开支，查看每月需售出多少件才能覆盖成本。')}</div>`;
   } else if (units === null) {
     out = `<div class="alert bad">${t('Contribution margin per unit is ≤ $0 at Your Price — this product can never cover fixed overheads. Review costs or raise the price.','您的售价下单件边际利润 ≤ $0 — 该产品无法覆盖固定开支。请检查成本或提高价格。')}</div>`;
@@ -4536,7 +4692,7 @@ function exportCheckinsCSV(productId) {
   const headers = ['date','current_price','price_tier','acos_pct','ad_sales_30d','total_revenue_30d','total_ad_spend_30d','tacos_pct','organic_growing','inventory_units','units_sold_30d','period_days','sales_velocity_per_day','days_of_cover','inventory_status','notes'];
   const rows = p.checkins.map(c => {
     const tacos = c.totalRevenue && c.totalAdSpend ? (c.totalAdSpend/c.totalRevenue*100).toFixed(1) : '';
-    const pc = c.currentPrice ? classifyPrice(c.currentPrice, prices) : null;
+    const pc = (c.currentPrice && !prices.fbaError) ? classifyPrice(c.currentPrice, prices) : null;
     const inv = getInventoryStatus(c.inventoryUnits, c.unitsSold30, c.periodDays);
     return [
       new Date(c.date).toISOString().slice(0,10),
@@ -5001,7 +5157,8 @@ function plannerRows() {
 
     // realized (actual transaction) price captures deals/coupons that yourPrice can't.
     const realized30 = (rd && rd.u30 > 0) ? rd.s30 / rd.u30 : null;
-    const marginAtRealized = (p.inputs.cogs > 0 && realized30 > 0) ? feeWaterfall(p.inputs, realized30).netPct : null;
+    const wfRealized = (p.inputs.cogs > 0 && realized30 > 0) ? feeWaterfall(p.inputs, realized30) : null;
+    const marginAtRealized = (wfRealized && Number.isFinite(wfRealized.netPct)) ? wfRealized.netPct : null;
 
     const trendAt = (s, u) => (rd && rd[u] > 0) ? rd[s] / rd[u] : null;
     const priceTrend = [ trendAt('s90', 'u90'), trendAt('s60', 'u60'), trendAt('s30', 'u30'), trendAt('s7', 'u7') ];
@@ -5020,7 +5177,16 @@ function plannerRows() {
       else pipelineCover = pipeUnits / velocity;
     }
 
-    const sug = feePlan.error ? {action:'blocked',reason:'fee_coverage',price:null} : suggestSalePrice({ yourPrice, available, daysOfCover, pipelineCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+    let sug = feePlan.error ? {action:'blocked',reason:'fee_coverage',price:null} : suggestSalePrice({ yourPrice, available, daysOfCover, pipelineCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+    // RULE: fee-jump guard (feeJumpSafePrice) — a suggested sale price must net ≥ $0 on every fee
+    // class in the window; step up past a $10/$50 band or referral jump, else block. Rows without
+    // COGS (floorless easy mode) are not checked — they have no cost to protect.
+    if (sug.action === 'sale' && breakEvenPrice !== null && sug.price > 0) {
+      const cap = +(yourPrice * (1 - SALE_MIN_OFF)).toFixed(2);
+      const safe = feeJumpSafePrice(p.inputs, sug.price, cap, saleWindow.start, saleWindow.end);
+      if (safe === null) sug = { action: 'blocked', reason: 'fee_jump', off: sug.off, floor: sug.floor };
+      else if (safe !== sug.price) sug = { ...sug, price: safe, feeJumpFrom: sug.price };
+    }
 
     return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, pipelineCover, breakEvenPrice, feePlan,
       marginAtYP, realized30, marginAtRealized, priceTrend, inbound, recAction: ship ? ship.recAction : '', sug, hasRd: !!rd };
@@ -5178,6 +5344,8 @@ function renderSalePlanner() {
   const {start:startDefault,end:endDefault}=saleFeeWindow();
   const feeCoverage=FBA.periodCoverage(startDefault,endDefault);
   guards += banner(escHtml(FBA.describe(feeCoverage)));
+  const expiryEnd = fbaExpiryWarning(ymd(today));
+  if (expiryEnd) guards += banner(escHtml(fbaExpiryBannerText(expiryEnd)));
   const feeErrors=rows.filter(r=>r.feePlan.error);
   if(feeErrors.length) guards+=banner(`${feeErrors.length} row(s) have no verified fee floor: ${feeErrors.slice(0,8).map(r=>escHtml(r.sku || r.p.name)+': '+escHtml(r.feePlan.error)).join('; ')}`);
   const controls = `
@@ -5221,6 +5389,7 @@ function renderSalePlanner() {
     overstock: t('overstock', '库存过剩'), no_sales: t('no sales', '零销量'),
     healthy: t('healthy cover', '库存健康'), no_stock: t('out of stock', '无库存'),
     fee_coverage: t('unverified FBA fees — add dates/dimensions', 'FBA费用未验证 — 补充日期/尺寸'),
+    fee_jump: t('loses money above floor (FBA/referral fee jump) within 5%-off cap', '下限以上因FBA/佣金跳档亏损（5%折扣上限内无盈利价）'),
     loss_leader: t('loss leader', '亏本引流'), below_breakeven_promo: t('already selling below break-even via promos', '已通过促销低于盈亏平衡价销售'),
     floor_above_5pct: t('break-even above 5%-off floor', '盈亏平衡价高于5%折扣下限'),
     no_price: t('no price', '无价格'), no_velocity: t('no velocity', '无销售速度')
@@ -5246,6 +5415,16 @@ function renderSalePlanner() {
     return `${dv}d ${cls ? `<span class="price-match ${cls}" style="font-size:0.55rem;">${INVENTORY_STATUS_META[st.status].label}</span>` : ''}${pipeLine}`;
   };
   const fmtTrend = arr => arr.map(v => v == null ? '·' : v.toFixed(1)).join(' → ');
+  // Suggestion-cell tooltip: whole-period floor, Amazon calibration, fee-jump step-up.
+  const feeTip = r => {
+    const parts = [];
+    if (r.feePlan.error) parts.push(r.feePlan.error);
+    if (r.breakEvenPrice != null) parts.push(t(`Whole-period break-even floor: $${r.breakEvenPrice.toFixed(2)}`, `整个周期盈亏平衡下限：$${r.breakEvenPrice.toFixed(2)}`));
+    const cal = fbaCalibration(r.p.inputs);
+    parts.push(cal ? fbaCalibrationText(cal) : t('Fees from the published rate card (no Amazon Fee Preview estimate imported)', '费用来自公布的费率表（未导入亚马逊费用预览估算）'));
+    if (r.sug.feeJumpFrom) parts.push(t(`Stepped up from $${r.sug.feeJumpFrom.toFixed(2)} — that price loses money on at least one date (fee jump)`, `已从 $${r.sug.feeJumpFrom.toFixed(2)} 上调 — 该价格在至少一个日期亏损（费用跳档）`));
+    return parts.join('<br>');
+  };
   const marginCell = r => {
     if (r.marginAtYP == null) return '—';
     const col = v => v < 0 ? 'var(--c-f87171)' : v < 10 ? 'var(--c-f59e0b)' : 'var(--c-4ade80)';
@@ -5275,7 +5454,7 @@ function renderSalePlanner() {
       <td class="pt-num">${coverBadge(r)}</td>
       <td class="pt-num">${inbTxt}</td>
       <td class="pt-num">${marginCell(r)}</td>
-      <td>${sugBadge(r.sug)}</td>
+      <td data-tip="${escHtml(feeTip(r))}">${sugBadge(r.sug)}</td>
       <td class="pt-num"><input type="number" min="0" step="0.01" value="${effPrice}" placeholder="${priceHint}" style="width:76px;background:var(--c-0f1219);border:1px solid var(--c-252836);border-radius:5px;color:var(--c-fff);padding:4px 6px;font-size:0.78rem;text-align:right;" onchange="plannerSetPrice('${r.p.id}', this.value)"></td>
       <td style="text-align:center;"><input type="checkbox" ${effInclude ? 'checked' : ''} onchange="plannerSetInclude('${r.p.id}', this.checked)"></td>
     </tr>`;
@@ -5343,17 +5522,24 @@ function collectPlanItems() {
 
 // ── F5: build + download the PriceAndQuantity .xlsx from checked planner rows ──
 function exportPriceFile() {
-  const start = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
-  const end = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
-  if (!FBA.validDate(start) || !FBA.validDate(end) || start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+  const rawStart = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
+  const rawEnd = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
+  if (!FBA.validDate(rawStart) || !FBA.validDate(rawEnd) || rawStart > rawEnd) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
 
-  const planner=_plannerEnsure(); planner.startDate=start; planner.endDate=end;
+  // RULE: the exported start date is never in the past — saleFeeWindow() clamps it to today.
+  const planner=_plannerEnsure(); planner.startDate=rawStart; planner.endDate=rawEnd;
+  const { start, end } = saleFeeWindow();
   const { items, noSku, noPrice, subFivePct } = collectPlanItems();
 
   const coverage=FBA.periodCoverage(start,end);
   if (coverage.error) {alert(coverage.error); return;}
   const unsafe=items.filter(it=>it.r.feePlan.error || (it.r.breakEvenPrice!==null && it.price+1e-9<it.r.breakEvenPrice));
-  if (unsafe.length) {alert('Cannot export below the whole-period floor or with unverified FBA fees: '+unsafe.map(it=>it.sku).join(', ')); return;}
+  if (unsafe.length) {alert(t('Cannot export below the whole-period floor or with unverified FBA fees: ', '无法导出低于整个周期下限或FBA费用未验证的价格：')+unsafe.map(it=>it.sku).join(', ')); return;}
+  // RULE: fee-jump export guard — every row with costs (incl. manual overrides) must net ≥ $0 on
+  // EVERY date in the window; a price just above a $10/$50 band or referral step can lose money
+  // even though it is above the floor. Rejected rows are listed by SKU.
+  const losing=items.filter(it=>it.r.breakEvenPrice!==null && !(salePeriodNet(it.r.p.inputs,it.price,start,end) >= -1e-9));
+  if (losing.length) {alert(t(`Cannot export: these prices lose money on at least one date in ${start} → ${end} (FBA band / referral fee jump). Raise them past the jump:\n\n`, `无法导出：以下价格在 ${start} → ${end} 内至少一天亏损（FBA价格段/佣金跳档）。请将价格提高到跳档以上：\n\n`)+losing.map(it=>`${it.sku} @ $${it.price.toFixed(2)}`).join('\n')); return;}
 
   if (!items.length) {
     const msg = noSku.length
@@ -5743,7 +5929,7 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (594 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（594项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s dated FBA rate cards, calibrated to Amazon\'s own Fee Preview estimate (663 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊按日期生效的FBA费率表定价，并按亚马逊费用预览估算校准（663项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -5772,9 +5958,11 @@ function deliverProposalReport(html, fileName) {
 
 // Open the review report from a direct user gesture (so it is not popup-blocked).
 function openProposalReport() {
-  const start = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
-  const end = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
-  if (!FBA.validDate(start) || !FBA.validDate(end) || start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+  const rawStart = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
+  const rawEnd = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
+  if (!FBA.validDate(rawStart) || !FBA.validDate(rawEnd) || rawStart > rawEnd) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+  const planner=_plannerEnsure(); planner.startDate=rawStart; planner.endDate=rawEnd;
+  const { start, end } = saleFeeWindow(); // never a past start date
   const model = buildProposalModel(start, end);
   const html = buildProposalReportHtml(model);
   deliverProposalReport(html, `PriceUpdate-Sale-${end}-report.html`);

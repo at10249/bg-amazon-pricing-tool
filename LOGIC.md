@@ -46,34 +46,76 @@ If adding a new category, add a new `case` with the category key and rate logic.
 - Price bands are `<10`, inclusive `10–50`, and `>50`. Incremental weight intervals round up; no packaging-weight add-on or dimension rounding is assumed.
 - Small standard uses actual packaged unit weight. Other supported tiers use the greater of unit and dimensional weight (`L×W×H / 139`); bulky and extra-large width/height have a 2-inch minimum. Extra-large 150+ uses unit fee weight when the unit itself exceeds 150lb.
 - Dimensions are sorted longest/median/shortest; size classification checks **length plus girth**, not girth alone. Small bulky and large bulky have distinct 2026 rates. Extra-large uses separate weight brackets and interval charges. Overmax is blocked pending a separate verified fee.
-- Save actual unit ounces and three packaged dimensions in inches; never overwrite actual weight with dimensional weight. Fee Preview imports dimensions and units, but never imports an estimated fee as a new base fee. Existing rows without dimensions require re-import/edit before a dimensional floor can be claimed. Known small-standard unit fees remain usable without dimensions.
+- Save actual unit ounces and three packaged dimensions in inches; never overwrite actual weight with dimensional weight. Fee Preview imports dimensions and units (`unit-of-dimension`, `unit-of-weight`) and Amazon's per-SKU fee estimate — the estimate is never a new *base* fee, it calibrates the engine (§1.5). Existing rows without dimensions require re-import/edit before a dimensional floor can be claimed. Known small-standard unit fees remain usable without dimensions.
+- **Missing / unverifiable fee → explicit error, never NaN.** `calcPrices()` returns `fbaError` (string) when the FBA quote fails (missing dimensions, overmax, no rate coverage). Every consumer — Portfolio table, products CSV export, check-ins, coupon, break-even volume, What-if, stage guidance, Calculator — shows **"needs dimensions" / 需要尺寸** (`fmtC` / `fmtPctOrDims` / `fbaErrorAlertHtml`) instead of "$NaN". Kill Signal 3 is skipped unless `Number.isFinite(beAcos)` (§7). **CODE LOCATION:** `index.html` → `calcPrices` (`fbaError`), `fmtC`, `fmtPctOrDims`, `fbaErrorAlertHtml`, `needsDimsText`.
 - These are non-apparel, non-dangerous-goods base rates. SIPP, low inventory, storage, inbound placement, returns and other charges are outside the rate card and must be accounted for separately.
 
 ### 1.3 Separate fuel and storage costs
 
-`FBA.quote` applies the optional fuel/logistics multiplier **once**, from April 17, 2026, to either nonpeak or peak base fees. Tables exclude it. Fee Preview estimates already include the surcharge and peak preview; they are not used as base fees.
+`FBA.quote` applies the optional fuel/logistics multiplier **once**, from April 17, 2026, to either nonpeak or peak base fees. Tables exclude it. Fee Preview estimates already include the surcharge; they are not used as base fees — only as a calibration offset (§1.5).
 
 The existing `surcharge` checkbox continues to control the factor. `q4storage` is a separate storage cost, retains its saved value (including zero), and must not contain manual fulfillment peak or fuel fees. The UI labels that distinction explicitly; no legacy cost is silently removed or reclassified.
 
 ### 1.4 Coverage, sale windows and rate updates
 
+**CODE LOCATION:** `fba-rates.js` → `FBA.season`, `FBA.windowFor`, `FBA.periodCoverage`; `index.html` → `saleFeeDates`, `salePeriodFloor`, `salePeriodMargin`, `salePeriodNet`, `FBA_EXPIRY_WARN_FROM`, `fbaCoverageEnd`, `fbaExpiryWarning`.
+
+**Peak / nonpeak windows (registered card):**
+
+| Window | Dates (inclusive) | Table |
+|---|---|---|
+| Nonpeak 2026 | 2026-01-15 → 2026-10-14 | nonpeak rows |
+| Holiday peak 2026 | 2026-10-15 → 2027-01-14 | peak rows |
+| Fuel/logistics 3.5% | from 2026-04-17, applied once to either table | — |
+
 `FBA.season` describes recurring seasonal boundaries, while `FBA.windowFor` requires an explicitly registered, dated official card. January 15, 2027 and future holiday seasons have **no assumed prices**. Invalid/blank/reversed dates or coverage gaps block safe sale planning and file generation.
 
-The planner persists start/end dates. `salePeriodFloor` computes break-even for every applicable rate window and fuel change, then uses the **highest** floor for the single sale price. It solves within price/referral bands to avoid fixed-point oscillation at fee jumps. Manual overrides cannot export below that floor. The existing coupon/promo erosion checks, `.90` suggestion rounding, minimum 5% discount, at-cost cent ceiling, inventory guards and named missing-COGS confirmation remain in place. Missing fee inputs block suggestions even when COGS are absent; missing COGS still means no cost floor.
+**Highest floor across the window.** One sale price runs for the whole sale window, so `salePeriodFloor` computes break-even at one representative date per *fee class* in the window (`saleFeeDates`: every rate period it touches plus the fuel effective date) and uses the **highest** floor. A sale from Oct 1–31 is floored at the peak break-even even though half of it is nonpeak. The solver works inside price/referral bands to avoid fixed-point oscillation at fee jumps. Planner/proposal margins (`salePeriodMargin`) use the lowest margin across the same dates.
 
-Planner/proposal margins use the lowest margin across the sale window. Quote timing is FC shipment departure, not order date: sellers should extend the planning window if shipments may depart after the sale ends.
+**Fee-jump rule.** Break-even is *not* monotonic — a price just above the floor can still lose money after an FBA band ($10 / $50) or referral step. See §19.8: suggestions are stepped up past the jump, and exports reject any losing price.
 
-To update: obtain the official complete next card, add explicit non-overlapping windows to `CARDS` in `fba-rates.js`, update the companion JSON and provenance, and run `npm test`. Never copy 2026 numbers into a future year on the basis of seasonal recurrence. Tests load the actual module/app functions and verify the module data against JSON; the older broad mirrored tests remain as legacy coverage.
+The existing coupon/promo erosion checks, `.90` suggestion rounding, minimum 5% discount, at-cost cent ceiling, inventory guards and named missing-COGS confirmation remain in place. Missing fee inputs block suggestions even when COGS are absent; missing COGS still means no cost floor. Sale-window dates never go stale (§19.7).
+
+Quote timing is FC shipment departure, not order date: sellers should extend the planning window if shipments may depart after the sale ends.
+
+**Expiry warning.** From `FBA_EXPIRY_WARN_FROM` = **2026-12-15**, the Sale Planner and Calculator show a banner that FBA rate coverage ends **2027-01-14** (`fbaCoverageEnd()` — the latest registered `end_inclusive`) and a new rate card must be added. After that date every sale window is blocked until the next card is registered.
+
+**Rate-update procedure:**
+1. Obtain the official, complete next rate card (all tiers, all three price bands, nonpeak and peak).
+2. Add it as an explicit, non-overlapping entry in `CARDS` in `fba-rates.js`; update the companion JSON in `rates/` and its provenance (source URL, retrieval date).
+3. Move `FBA_EXPIRY_WARN_FROM` in `index.html` to ~one month before the new card's last covered day.
+4. Update the test mirror: add rows/dates for the new card to **`test-fba.js`** (it asserts every row against the JSON) and adjust any pinned dates in `test.js` (`FEE_DATE`) if the old window no longer applies.
+5. Re-import the newest FBA Fee Preview so per-SKU Amazon calibration (§1.5) is refreshed.
+6. Run `npm test` (both `test.js` and `test-fba.js`).
+
+Never copy 2026 numbers into a future year on the basis of seasonal recurrence. `test.js` loads the shipped fee functions from `index.html` (no hand-copied fee engine); `test-fba.js` loads `fba-rates.js` and the actual app functions.
+
+### 1.5 Amazon-calibrated fees (Fee Preview estimate is the authority)
+
+**CODE LOCATION:** `index.html` → `parseAmazonFeeEstimate`, `importFBAFeePreview` (stores `inputs.amazonFee`), `fbaCalibration`, `fbaQuote`, `baseFBA`, `totalFBA`, `fbaCalibrationText`.
+
+Compared with Amazon's own per-SKU estimate (`expected-fulfillment-fee-per-unit` in the Oct 1 2026 Fee Preview, fuel included), the published-rate engine matched 62/128 SKUs to the cent, ran 1.5–3% **high** on 65 (e.g. large-standard over 3 lb consistently +$0.22 base) and ran **$1.62 low** on one small-bulky SKU — unsafe. Amazon's per-SKU figure is therefore the authority for current fees:
+
+- **Import:** when the Fee Preview's `expected-fulfillment-fee-per-unit` and `your-price` are both numeric, the product stores `inputs.amazonFee = { fee, price, date }` (date = local import date, `ymd()`). `"--"` (no estimate) stores nothing. `expected-future-fulfillment-fee-per-unit` is never used.
+- **Calibration:** `calibration = amazonFee.fee − engine.total(inputs, amazonFee.price, amazonFee.date)`.
+- **Every quote:** `fee(price, date) = engine.total(inputs, price, date) + calibration`. Amazon's actual offsets **both** nonpeak and peak; the peak table still supplies the seasonal delta. The calibration is folded into the base fee so the fuel segment stays the engine's 3.5%.
+- **No `amazonFee`** (or the engine cannot quote the import date) → engine as-is.
+- Shown in the Calculator rate-card banner (tooltip) and the Sale Planner suggestion tooltip: *"Calibrated to Amazon Fee Preview of <date>: ±$x"*.
+- Verified 2026-10-02: through the real import + fee path, all 129 Fee Preview rows with an estimate reproduce Amazon's figure within $0.01.
 
 ---
 
 ## 2. PRICE TIER CALCULATION
 
 ### 2.1 Your Price (primary selling price)
-**CODE LOCATION:** `index.html` → function `calc()`, iterative price solver loop
-**Rule:** Solved iteratively (12 iterations) from target margin. Formula each iteration:
-  `yourPrice = (totalCosts + fbaFee + referralFee) / (1 - targetMargin/100)`
-  Iterative because referralFee and fbaFee both depend on price itself.
+**CODE LOCATION:** `index.html` → function `calcPrices()` → `solveMinPriceRaw()`
+**Rule:** the lowest price where
+  `price × (1 − targetMargin/100) − totalCosts − fbaFee(price) − referralFee(price) ≥ 0`.
+  Because the FBA fee (price bands <$10 / $10–50 / >$50) and referral fee (category steps) both
+  jump with price, `solveMinPriceRaw` bisects **inside each band** (edges 10, 15, 20, 50, 75, 150,
+  250, 1500) and returns the first band's solution — no fixed-point iteration, so it cannot
+  oscillate across a fee jump. The same solver drives the planner floor and Manufacturer Mode.
+  Unverifiable FBA fee → `fbaError`, no price (§1.2).
 **Rounding:** `roundEnd(raw - 0.05, 0.95)` → always ends in .95
   Why .95: psychological pricing convention signalling "standard retail price".
   The -0.05 offset ensures we round UP to next .95 rather than staying below cost.
@@ -314,6 +356,9 @@ and add a matching case in `explainSignal()` (EN + ZH).
   hasn't reached break-even after 90 days AND organic isn't growing, the unit economics
   are likely structurally broken (price too low, competition too high, or wrong keywords).
 **Action on trigger:** Show "Kill Review" with detailed breakdown of cumulative spend vs revenue.
+**Guard:** skipped entirely unless `Number.isFinite(beAcos)` — a product with an unverifiable
+  FBA fee (missing dimensions → `fbaError`) has `beAcos = NaN`, and `acos < NaN` is always false,
+  which would otherwise raise a FALSE kill signal. (CODE: `checkKillSignals`, Stage 3 branch)
 
 ### Kill Signal 4: Ad Spend Ratio (Money Pit Alert)
 **Trigger:** Cumulative ad spend > SPEND_RATIO_THRESHOLD × cumulative total revenue
@@ -468,7 +513,12 @@ Required columns (header row must match, case-insensitive, whitespace-trimmed):
 Optional columns (omit = use default values from section 3):
 `sku, inbound_shipping, inbound_placement, prep_labelling, storage, q4_storage,
 ppc_per_unit, returns_allowance, vine_enrolled, vine_units, annual_units, other_overhead,
-target_acos, launch_acos, cvr, notes`
+target_acos, launch_acos, cvr, notes, length_in, width_in, height_in`
+
+`length_in, width_in, height_in` are the **packaged** dimensions in inches. When all three are
+positive numbers they are stored as `inputs.dimensions` (the fee engine's dimensional weight —
+`csvDimensions()`) and, when `size_tier` is absent, also pick the tier. The products CSV export
+(`exportCSV`) and `products-template.csv` carry the same three columns so dimensions round-trip.
 
 `sku` is the Amazon **Merchant SKU** — the join key used by the shipments import and the
 price-feed export. It is set on create and on update; a blank cell never clears an
@@ -584,7 +634,7 @@ Logic:
 2. Manufacturer enters their own margin target
 3. Quote price to seller = landedCost / (1 - mfgMargin/100)
 4. Seller's COGS = quote price
-5. Tool solves for minimum viable Amazon price using same iterative solver as seller calc
+5. Tool solves for minimum viable Amazon price using the same solver as product pricing (`solveMinPriceRaw`, §2.1); packaged dimensions are required for non-small-standard tiers
 6. Output shows: quote price, manufacturer profit, seller's minimum Amazon price, all four price tiers, seller's margin at each tier
 
 This helps manufacturers understand whether their pricing leaves the seller viable.
@@ -661,12 +711,14 @@ Two inversion modes, selectable via tabs:
   negative = current supplier is too expensive for this price/margin combo).
 - Returns `null` for non-positive price or margin ≥ 100%. `maxCogs` can be
   negative (impossible target) — the UI shows a red alert in that case.
+- Unverifiable FBA fee (missing dimensions) → the card shows "needs dimensions",
+  never a false "no COGS can hit this margin".
 
 **Mode B — lock COGS + margin, solve min price:**
-Reuses the main iterative solver, exposed as `solveMinPriceRaw()` — identical
-fixed-point iteration to `calcPrices()` but WITHOUT the .95 rounding, run for
-40 iterations. The UI shows both the exact break-point price and the rounded
-Your Price (via `calcPrices`), with the margin achieved at the rounded price.
+Reuses the main solver, `solveMinPriceRaw()` — the band-aware bisection behind
+`calcPrices()` (§2.1) but WITHOUT the .95 rounding. The UI shows both the exact
+break-point price and the rounded Your Price (via `calcPrices`), with the margin
+achieved at the rounded price. `fbaError` → "needs dimensions".
 
 **Round-trip property (tested):** solving max COGS from a price, then solving
 the raw price back from that COGS, returns the original price within $0.01
@@ -730,18 +782,22 @@ deliberately set to `0` to trigger the app's incomplete-setup banner; the user m
 Edit and fill in COGS, margin and other costs before the pricing is trustworthy.
 
 RULE (added 2026-08-30): rows whose ASIN already exists in the catalog are no longer
-skipped — their **size tier and weight are updated** from the report (nothing else is
-touched). Amazon is the source of truth for physical attributes; a stub auto-created by
+skipped — their **size tier, weight, packaged dimensions and Amazon fee estimate
+(`inputs.amazonFee`, §1.5) are updated** from the report (nothing else is touched). Amazon is the source of truth for physical attributes; a stub auto-created by
 the weekly import carries the default `ss`/8oz, which silently understates FBA fees and
 therefore the Sale Planner's break-even floor. Re-importing the Fee Preview after a
 weekly import corrects every floor. The summary reports created / updated / skipped.
 
 Column matching is fuzzy (substring match on lower-cased, `-`/`_`-stripped headers):
-ASIN, product name, product size tier, unit weight. Weight units are auto-detected from
-the column header (grams / oz / assumes lbs otherwise).
+ASIN, product name, product size tier, item package weight, longest/median/shortest side.
+Units come from the real per-row columns **`unit-of-weight`** (pounds / ounces / grams /
+kilograms) and **`unit-of-dimension`** (inches / centimeters); without them weight falls back
+to the header (grams / oz / assumes lbs). `expected-fulfillment-fee-per-unit` + `your-price`
+(exact header match — never the `expected-future-…` column) → `inputs.amazonFee` when both
+are numeric.
 
 Size tier strings from Amazon (e.g. `UsLargeStandardSize`, `SmallBulky`) are mapped to
-this app's 4 buckets via `amazonSizeTierToAppTier()` — see Section 18.3.
+this app's 5 buckets (ss/ls/sb/lb/xl) via `amazonSizeTierToAppTier()` — see Section 18.3.
 
 ### 18.2 Weekly check-in import (Business / Advertising / Inventory Health reports)
 **CODE LOCATION:** `index.html` → `importAmazonReport(event)`, `detectAmazonReport(hdrs)`,
@@ -803,14 +859,17 @@ filename.
 ### 18.3 Size tier string mapping
 **CODE LOCATION:** `index.html` → function `amazonSizeTierToAppTier(raw)`
 
-Maps Amazon's various size-tier export strings to this app's 4 buckets (`ss`/`ls`/`lb`/`xl`).
+Maps Amazon's various size-tier export strings to this app's 5 buckets (`ss`/`ls`/`sb`/`lb`/`xl`).
 Handles two real-world quirks:
 1. Amazon exports size tiers as concatenated camelCase with no separator
    (e.g. `UsSmallStandardSize`) — the function inserts a space at every
    lowercase→uppercase boundary before pattern-matching, otherwise a naive
    `/small.+standard/` regex never matches (zero characters between the words).
 2. "Bulky" is Amazon's current term for what used to be called "Oversize" on
-   Small/Medium items (e.g. `SmallBulky`, `LargeBulky`) — both map to this app's `lb`.
+   Small/Medium items. 2026 has distinct small-bulky and large-bulky rates, so
+   `SmallBulky` → `sb` and `LargeBulky` → `lb`; `UsExtraLarge…` → `xl`. Legacy
+   Small/Medium Oversize → `lb`, Large/Special Oversize → `xl` (dimensions decide the
+   charged tier in the engine anyway).
 
 Returns `null` for unrecognised strings; callers fall back to a default tier rather
 than guessing. Covered by `test.js` against real values pulled from an actual Amazon
@@ -1118,6 +1177,39 @@ of `renderSalePlanner()` (calls `openModalEl('planner-howto-modal')`), the stati
 `#planner-howto-modal` (a `.flow-modal-overlay`) with its inline step buttons and
 `a[data-amzlink]` links, and the `id === 'planner-howto-modal'` link-population branch in
 `openModalEl()`.
+
+### 19.7 Sale window dates never go stale
+**CODE LOCATION:** `index.html` → `saleFeeWindow()`, `plannerSetDate()`, `exportPriceFile()`,
+`openProposalReport()`
+
+The planner persists `state.planner.startDate` / `endDate`. Saved dates used to be reused
+forever, so a plan opened weeks later floored and exported a window that had already passed.
+RULE (all dates local `ymd()`, never `toISOString`):
+- saved end date **before today** → the window falls back to **today → `defaultSaleEndYmd(today)`**
+  and the saved dates are updated;
+- the start date is always **clamped to today** — the start shown in the planner and written to
+  the price feed is never in the past (export and the review report normalise through
+  `saleFeeWindow()` after validating the typed dates).
+
+### 19.8 Fee-jump guard (break-even is not monotonic)
+**CODE LOCATION:** `index.html` → `salePeriodNet()`, `feeJumpSafePrice()`, post-processing in
+`plannerRows()`, export check in `exportPriceFile()`; reason key `fee_jump` in `REASON_TXT`.
+
+`solveMinPriceRaw` returns the **lowest** profitable price, but FBA price bands ($10 / $50) and
+referral steps mean a price just **above** that floor can lose money. Reviewer probe:
+small-standard 8 oz, fixed costs $5.20 → floor **$9.36**, yet **$10.00 nets −$0.36** (the $10
+band adds $0.91 of FBA fee).
+
+- **Suggestions.** `suggestSalePrice` is unchanged. Afterwards, for rows with a cost floor,
+  `plannerRows` checks the suggested price nets ≥ $0 on **every fee class in the window**
+  (`salePeriodNet` over `saleFeeDates`). If not, `feeJumpSafePrice` steps up to the next **.90**
+  ending, then (if no .90 fits) by cents, until profitable on all dates. Nothing profitable at
+  or below the 5%-off cap (`yourPrice × 0.95`) → `blocked` / `fee_jump`. A stepped-up row keeps
+  `sug.feeJumpFrom` and says so in its tooltip.
+- **Export.** `exportPriceFile` rejects every row with costs whose **final** price — including a
+  manual override — loses money on any date in the window, listing `SKU @ $price`. No file is
+  built.
+- Floorless rows (no COGS) are not checked: they have no cost to protect (§19.5 still names them).
 
 ## 20. ZERO-DEPENDENCY XLSX READ / WRITE
 
