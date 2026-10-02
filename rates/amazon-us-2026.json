@@ -1,0 +1,740 @@
+{
+  "scope": "Amazon US FBA non-apparel, non-dangerous goods base fulfillment rates; excludes SIPP adjustments, low-inventory fees, overmax handling and other charges",
+  "retrieved_utc": "2026-10-01",
+  "source_url": "https://sellercentral.amazon.com/help/hub/reference/external/GABBX6GZPA8MSZGW?itemid=211&locale=en-us",
+  "retrieval_method": "Official Amazon page content surfaced in web search index; direct open returned JavaScript shell. All numeric rows obtained, not inferred from average increases.",
+  "currency": "USD",
+  "price_bands": [
+    {
+      "key": "lt10",
+      "min": 0,
+      "max_exclusive": 10
+    },
+    {
+      "key": "10to50",
+      "min_inclusive": 10,
+      "max_inclusive": 50
+    },
+    {
+      "key": "gt50",
+      "min_exclusive": 50
+    }
+  ],
+  "fuel_surcharge": {
+    "rate": 0.035,
+    "effective_start": "2026-04-17",
+    "included_in_tables": false,
+    "applies_to_peak": true
+  },
+  "periods": {
+    "nonpeak": {
+      "start": "2026-01-15",
+      "end_inclusive": "2026-10-14"
+    },
+    "peak": {
+      "start": "2026-10-15",
+      "end_inclusive": "2027-01-14"
+    }
+  },
+  "fee_timing": "Shipment departure from fulfillment center, not order date",
+  "rates": [
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.0,
+      "weight_lb_lte": 0.125,
+      "base_fees": [
+        2.43,
+        3.32,
+        3.58
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.125,
+      "weight_lb_lte": 0.25,
+      "base_fees": [
+        2.49,
+        3.42,
+        3.68
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.25,
+      "weight_lb_lte": 0.375,
+      "base_fees": [
+        2.56,
+        3.45,
+        3.71
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.375,
+      "weight_lb_lte": 0.5,
+      "base_fees": [
+        2.66,
+        3.54,
+        3.8
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.5,
+      "weight_lb_lte": 0.625,
+      "base_fees": [
+        2.77,
+        3.68,
+        3.94
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.625,
+      "weight_lb_lte": 0.75,
+      "base_fees": [
+        2.82,
+        3.78,
+        4.04
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.75,
+      "weight_lb_lte": 0.875,
+      "base_fees": [
+        2.92,
+        3.91,
+        4.17
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.875,
+      "weight_lb_lte": 1.0,
+      "base_fees": [
+        2.95,
+        3.96,
+        4.22
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.0,
+      "weight_lb_lte": 0.25,
+      "base_fees": [
+        2.91,
+        3.73,
+        3.99
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.25,
+      "weight_lb_lte": 0.5,
+      "base_fees": [
+        3.13,
+        3.95,
+        4.21
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.5,
+      "weight_lb_lte": 0.75,
+      "base_fees": [
+        3.38,
+        4.2,
+        4.46
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.75,
+      "weight_lb_lte": 1.0,
+      "base_fees": [
+        3.78,
+        4.6,
+        4.86
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.0,
+      "weight_lb_lte": 1.25,
+      "base_fees": [
+        4.22,
+        5.04,
+        5.3
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.25,
+      "weight_lb_lte": 1.5,
+      "base_fees": [
+        4.6,
+        5.42,
+        5.68
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.5,
+      "weight_lb_lte": 1.75,
+      "base_fees": [
+        4.75,
+        5.57,
+        5.83
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.75,
+      "weight_lb_lte": 2.0,
+      "base_fees": [
+        5.0,
+        5.82,
+        6.08
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.0,
+      "weight_lb_lte": 2.25,
+      "base_fees": [
+        5.1,
+        5.92,
+        6.18
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.25,
+      "weight_lb_lte": 2.5,
+      "base_fees": [
+        5.28,
+        6.1,
+        6.36
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.5,
+      "weight_lb_lte": 2.75,
+      "base_fees": [
+        5.44,
+        6.26,
+        6.52
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.75,
+      "weight_lb_lte": 3.0,
+      "base_fees": [
+        5.85,
+        6.67,
+        6.93
+      ]
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_standard",
+      "weight_lb_gt": 3,
+      "weight_lb_lte": 20,
+      "base_fees": [
+        6.15,
+        6.97,
+        7.23
+      ],
+      "increment_usd": 0.08,
+      "increment_lb": 0.25,
+      "increment_above_lb": 3
+    },
+    {
+      "period": "nonpeak",
+      "tier": "small_bulky",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        6.78,
+        7.55,
+        7.55
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "nonpeak",
+      "tier": "large_bulky",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        8.58,
+        9.35,
+        9.35
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "nonpeak",
+      "tier": "extra_large_0_50",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        25.56,
+        26.33,
+        26.33
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "nonpeak",
+      "tier": "extra_large_50_70",
+      "weight_lb_gt": 50,
+      "weight_lb_lte": 70,
+      "base_fees": [
+        36.55,
+        37.32,
+        37.32
+      ],
+      "increment_usd": 0.75,
+      "increment_lb": 1,
+      "increment_above_lb": 51
+    },
+    {
+      "period": "nonpeak",
+      "tier": "extra_large_70_150",
+      "weight_lb_gt": 70,
+      "weight_lb_lte": 150,
+      "base_fees": [
+        50.55,
+        51.32,
+        51.32
+      ],
+      "increment_usd": 0.75,
+      "increment_lb": 1,
+      "increment_above_lb": 71
+    },
+    {
+      "period": "nonpeak",
+      "tier": "extra_large_150_plus",
+      "weight_lb_gt": 150,
+      "weight_lb_lte": null,
+      "base_fees": [
+        194.18,
+        194.95,
+        194.95
+      ],
+      "increment_usd": 0.19,
+      "increment_lb": 1,
+      "increment_above_lb": 151
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.0,
+      "weight_lb_lte": 0.125,
+      "base_fees": [
+        2.62,
+        3.51,
+        3.77
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.125,
+      "weight_lb_lte": 0.25,
+      "base_fees": [
+        2.68,
+        3.61,
+        3.87
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.25,
+      "weight_lb_lte": 0.375,
+      "base_fees": [
+        2.76,
+        3.65,
+        3.91
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.375,
+      "weight_lb_lte": 0.5,
+      "base_fees": [
+        2.86,
+        3.74,
+        4.0
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.5,
+      "weight_lb_lte": 0.625,
+      "base_fees": [
+        2.98,
+        3.89,
+        4.15
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.625,
+      "weight_lb_lte": 0.75,
+      "base_fees": [
+        3.03,
+        3.99,
+        4.25
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.75,
+      "weight_lb_lte": 0.875,
+      "base_fees": [
+        3.14,
+        4.13,
+        4.39
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "small_standard",
+      "weight_lb_gt": 0.875,
+      "weight_lb_lte": 1.0,
+      "base_fees": [
+        3.17,
+        4.18,
+        4.44
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.0,
+      "weight_lb_lte": 0.25,
+      "base_fees": [
+        3.15,
+        3.97,
+        4.23
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.25,
+      "weight_lb_lte": 0.5,
+      "base_fees": [
+        3.39,
+        4.21,
+        4.47
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.5,
+      "weight_lb_lte": 0.75,
+      "base_fees": [
+        3.66,
+        4.48,
+        4.74
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 0.75,
+      "weight_lb_lte": 1.0,
+      "base_fees": [
+        4.07,
+        4.89,
+        5.15
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.0,
+      "weight_lb_lte": 1.25,
+      "base_fees": [
+        4.52,
+        5.34,
+        5.6
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.25,
+      "weight_lb_lte": 1.5,
+      "base_fees": [
+        4.91,
+        5.73,
+        5.99
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.5,
+      "weight_lb_lte": 1.75,
+      "base_fees": [
+        5.07,
+        5.89,
+        6.15
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 1.75,
+      "weight_lb_lte": 2.0,
+      "base_fees": [
+        5.33,
+        6.15,
+        6.41
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.0,
+      "weight_lb_lte": 2.25,
+      "base_fees": [
+        5.47,
+        6.29,
+        6.55
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.25,
+      "weight_lb_lte": 2.5,
+      "base_fees": [
+        5.67,
+        6.49,
+        6.75
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.5,
+      "weight_lb_lte": 2.75,
+      "base_fees": [
+        5.84,
+        6.66,
+        6.92
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 2.75,
+      "weight_lb_lte": 3.0,
+      "base_fees": [
+        6.26,
+        7.08,
+        7.34
+      ]
+    },
+    {
+      "period": "peak",
+      "tier": "large_standard",
+      "weight_lb_gt": 3,
+      "weight_lb_lte": 20,
+      "base_fees": [
+        6.69,
+        7.51,
+        7.77
+      ],
+      "increment_usd": 0.08,
+      "increment_lb": 0.25,
+      "increment_above_lb": 3
+    },
+    {
+      "period": "peak",
+      "tier": "small_bulky",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        7.82,
+        8.59,
+        8.59
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "peak",
+      "tier": "large_bulky",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        9.62,
+        10.39,
+        10.39
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "peak",
+      "tier": "extra_large_0_50",
+      "weight_lb_gt": 0,
+      "weight_lb_lte": 50,
+      "base_fees": [
+        28.29,
+        29.06,
+        29.06
+      ],
+      "increment_usd": 0.38,
+      "increment_lb": 1,
+      "increment_above_lb": 1
+    },
+    {
+      "period": "peak",
+      "tier": "extra_large_50_70",
+      "weight_lb_gt": 50,
+      "weight_lb_lte": 70,
+      "base_fees": [
+        39.36,
+        40.13,
+        40.13
+      ],
+      "increment_usd": 0.75,
+      "increment_lb": 1,
+      "increment_above_lb": 51
+    },
+    {
+      "period": "peak",
+      "tier": "extra_large_70_150",
+      "weight_lb_gt": 70,
+      "weight_lb_lte": 150,
+      "base_fees": [
+        54.97,
+        55.74,
+        55.74
+      ],
+      "increment_usd": 0.75,
+      "increment_lb": 1,
+      "increment_above_lb": 71
+    },
+    {
+      "period": "peak",
+      "tier": "extra_large_150_plus",
+      "weight_lb_gt": 150,
+      "weight_lb_lte": null,
+      "base_fees": [
+        202.69,
+        203.46,
+        203.46
+      ],
+      "increment_usd": 0.19,
+      "increment_lb": 1,
+      "increment_above_lb": 151
+    }
+  ],
+  "increment_rule": "base + increment_usd * max(0, ceil((shipping_weight_lb - increment_above_lb) / increment_lb)); fixed brackets use strict lower / inclusive upper bounds",
+  "size_tiers": [
+    {
+      "tier": "small_standard",
+      "max_weight_lb": 1,
+      "max_sides_in": [
+        15,
+        12,
+        0.75
+      ],
+      "weight_basis": "unit_weight"
+    },
+    {
+      "tier": "large_standard",
+      "max_weight_lb": 20,
+      "max_sides_in": [
+        18,
+        14,
+        8
+      ],
+      "weight_basis": "max(unit_weight,dimensional_weight)"
+    },
+    {
+      "tier": "small_bulky",
+      "max_weight_lb": 50,
+      "max_sides_in": [
+        37,
+        28,
+        20
+      ],
+      "max_length_plus_girth_in": 130,
+      "weight_basis": "max(unit_weight,dimensional_weight)"
+    },
+    {
+      "tier": "large_bulky",
+      "max_weight_lb": 50,
+      "max_sides_in": [
+        59,
+        33,
+        33
+      ],
+      "max_length_plus_girth_in": 130,
+      "weight_basis": "max(unit_weight,dimensional_weight)"
+    }
+  ],
+  "size_tier_source": "https://sellercentral.amazon.com/help/hub/reference/external/GG5KW835AHDJCH8W?locale=tr-TR",
+  "weight_notes": [
+    "Dimensions refer to fully packaged unit; sort longest, median, shortest. Length plus girth = longest + 2*(median+shortest).",
+    "Dimensional weight pounds = cubic inches / 139; bulky and extra-large use at least 2 inches for width and height.",
+    "Fee weight: unit weight only for small_standard and extra_large_150_plus; otherwise greater of unit and dimensional weight.",
+    "Use specific dimensional-weight page criteria: Small standard uses unit weight <= 16 oz for tier selection; other size tiers use max(unit,dimensional). Generic product-tier table footnote says max weight, but the specific page explicitly states the small-standard exception.",
+    "No per-dimension rounding instruction was verified; do not import old forum packaging-weight add-ons."
+  ],
+  "cautions": [
+    "As of Oct 1 nonpeak is effective, but October month crosses Oct 15 peak transition. Preserve agreed runbook rate assumption; evaluate peak separately if site is static.",
+    "Fee Preview and Revenue Calculator already reflect surcharge and offer peak preview. Do not blindly multiply a surcharge-inclusive export by 1.035.",
+    "SIPP program discounts standard certified products and adds charges for non-certified bulky products; those adjustments need separate status/rates.",
+    "Extra-large up to 150 lb exceeding 96 inches longest side or 130 inches length plus girth incurs separate overmax fee.",
+    "The ratecard supplies base fees only. It does not establish that a seller-specific fee equals the base tariff."
+  ],
+  "dimensional_weight_source": "https://sellercentral.amazon.com/help/hub/reference/external/G53Z9EKF8VVZVH29?locale=es-ES",
+  "rounding_verification": "The 2026 source examples confirm ceil to 4 oz interval above 3 lb for non-apparel large standard (3.35 lb => 2 intervals), and ceil to lb for bulky (7.9 lb => 7 intervals above first lb). No per-dimension rounding was verified."
+}

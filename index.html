@@ -939,15 +939,17 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
                 <select id="m_sizetier" onchange="calcMfg()">
                   <option value="ss">Small Standard (≤16oz)</option>
                   <option value="ls">Large Standard (up to 20lb)</option>
+                  <option value="sb">Small Bulky (2026)</option>
                   <option value="lb">Large Bulky</option>
-                  <option value="xl">Extra-Large (&lt;50lb)</option>
+                  <option value="xl">Extra-Large (weight brackets)</option>
                 </select>
               </div>
             </div>
             <div class="g2">
-              <div class="inp"><label>Shipping Weight (oz) <span class="req">REQUIRED</span></label><input type="number" id="m_weight" value="8" min="0.1" step="0.1" oninput="calcMfg()"></div>
+              <div class="inp"><label>Packaged Unit Weight (oz) <span class="req">REQUIRED</span></label><input type="number" id="m_weight" value="8" min="0.1" step="0.1" oninput="calcMfg()"></div>
               <div class="inp"><label>Seller's Other Costs ($/unit) <span class="opt">typical: $2.50</span></label><input type="number" id="m_other" value="2.50" min="0" step="0.01" oninput="calcMfg()"><div class="hint">PPC, storage, returns, overhead. Ask seller or use $2.50.</div></div>
             </div>
+            <div class="g3"><div class="inp"><label>Packaged length (in)</label><input id="m_length" type="number" min="0" step="0.01" oninput="calcMfg()"></div><div class="inp"><label>Packaged width (in)</label><input id="m_width" type="number" min="0" step="0.01" oninput="calcMfg()"></div><div class="inp"><label>Packaged height (in)</label><input id="m_height" type="number" min="0" step="0.01" oninput="calcMfg()"></div></div>
             <label class="check-row"><input type="checkbox" id="m_surcharge" checked onchange="calcMfg()"> Include 3.5% FBA fuel surcharge (from Apr 17 2026)</label>
           </div>
         </div>
@@ -1298,16 +1300,18 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
         </select>
       </div>
       <div class="g2" style="gap:8px;">
-        <div class="inp"><label data-tip='<strong>FBA Size Tiers (2026)</strong><table><tr><td>Small Std (ss)</td><td>≤15"×12"×0.75" · ≤1 lb</td></tr><tr><td>Large Std (ls)</td><td>≤18"×14"×8" · ≤20 lbs</td></tr><tr><td>Large Bulky (lb)</td><td>≤59"×33"×33" · girth ≤130" · ≤50 lbs</td></tr><tr><td>Extra-Large (xl)</td><td>Exceeds Large Bulky limits</td></tr></table>Use the dimension calculator ↓ to auto-select.'>Size Tier ⓘ <span class="req">REQUIRED</span></label>
+        <div class="inp"><label data-tip='<strong>FBA Size Tiers (2026)</strong><table><tr><td>Small Std (ss)</td><td>≤15"×12"×0.75" · ≤1 lb</td></tr><tr><td>Large Std (ls)</td><td>≤18"×14"×8" · ≤20 lbs</td></tr><tr><td>Small Bulky (sb)</td><td>≤37"×28"×20" · length + girth ≤130" · ≤50 lbs</td></tr><tr><td>Large Bulky (lb)</td><td>≤59"×33"×33" · length + girth ≤130" · ≤50 lbs</td></tr><tr><td>Extra-Large (xl)</td><td>Exceeds Large Bulky limits</td></tr></table>Use the dimension calculator ↓ to auto-select.'>Size Tier ⓘ <span class="req">REQUIRED</span></label>
           <select id="f-sizetier">
             <option value="ss">Small Standard</option>
             <option value="ls">Large Standard</option>
+            <option value="sb">Small Bulky (2026)</option>
             <option value="lb">Large Bulky</option>
             <option value="xl">Extra-Large</option>
           </select>
         </div>
-        <div class="inp"><label data-tip='<strong>Packaged weight in ounces</strong>Use whichever is greater:<br>• Actual weight of packaged unit<br>• Dimensional weight: (L×W×H in inches) ÷ 139<br>Amazon charges the higher of the two values.'>Weight (oz) ⓘ <span class="req">REQUIRED</span></label><input type="number" id="f-weight" value="8" min="0.1" step="0.1" oninput="calcDimTier()"></div>
+        <div class="inp"><label data-tip='<strong>Packaged weight in ounces</strong>Enter actual packaged unit weight. Save packaged dimensions below; the engine computes chargeable weight separately (small standard uses unit weight).'>Unit Weight (oz) ⓘ <span class="req">REQUIRED</span></label><input type="number" id="f-weight" value="8" min="0.1" step="0.1" oninput="calcDimTier()"></div>
       </div>
+      <div class="inp"><label>FBA shipment quote date (blank = today)</label><input type="date" id="f-fee-date"></div>
       <div style="grid-column:1/-1;margin-top:2px;">
         <div style="font-size:0.68rem;color:var(--c-555870);cursor:pointer;user-select:none;" onclick="toggleDimCalc(this)">📐 <span>Calculate from dimensions...</span></div>
         <div id="dim-calc" style="display:none;background:var(--c-13151f);border-radius:8px;padding:10px 12px;margin-top:6px;border:1px solid var(--c-1e2130);">
@@ -1352,7 +1356,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
     </div>
     <div class="g3">
       <div class="inp"><label data-tip='<strong>Monthly FBA storage fee per unit</strong>Based on cubic feet of space used:<br>Jan–Sep: $0.78/cu ft · Oct–Dec: $2.40/cu ft<br>Typical per-unit cost: $0.05–$0.25 at 45-day turnover.<br><a href="https://sellercentral.amazon.com/help/hub/reference/G200612770" target="_blank">FBA storage rates →</a>'>Storage per unit/mo ($) ⓘ <span class="typ">typical: $0.10</span></label><input type="number" id="f-storage" value="0.10" step="0.01" min="0"><div class="hint">Avg across ~45-day sell-through</div></div>
-      <div class="inp"><label data-tip='<strong>Q4 storage surcharge (Oct–Dec only)</strong>FBA storage is 3× higher in Q4:<br>Base: $0.78/cu ft → Q4: $2.40/cu ft<br>Especially costly for large or slow-moving items.<br>Set to $0 if your product does not sell in Q4.'>Q4 Storage Surcharge ($/unit) ⓘ <span class="typ">typical: $0.00</span></label><input type="number" id="f-q4storage" value="0.00" step="0.01" min="0"><div class="hint">Oct–Dec only. $2.40/cu ft vs $0.87</div></div>
+      <div class="inp"><label data-tip='<strong>Q4 storage surcharge (Oct–Dec only)</strong>FBA storage is 3× higher in Q4:<br>Base: $0.78/cu ft → Q4: $2.40/cu ft<br>Especially costly for large or slow-moving items.<br>Set to $0 if your product does not sell in Q4.'>Q4 Storage Surcharge ($/unit) ⓘ <span class="typ">typical: $0.00</span></label><input type="number" id="f-q4storage" value="0.00" step="0.01" min="0"><div class="hint">Storage only; automatic holiday fulfillment rates are already included. Do not enter a fulfillment peak or fuel surcharge here.</div></div>
       <div class="inp"><label data-tip='<strong>Blended PPC cost per unit</strong>Total monthly ad spend ÷ total units sold.<br>Unlike ACoS (ad spend ÷ ad revenue), this is your true per-unit ad cost.<br>Typical: $0.80–$2.50/unit for standard products.<br>Use actual blended figure from Advertising Console.'>PPC per unit ($) ⓘ <span class="typ">typical: $1.50</span></label><input type="number" id="f-ppc" value="1.50" step="0.01" min="0"><div class="hint">Total ad spend ÷ units sold (blended)</div></div>
     </div>
     <div class="g3">
@@ -1438,6 +1442,7 @@ input[type=checkbox]{width:auto;accent-color:var(--c-5b63f7);cursor:pointer;flex
 
 <div id="tt"></div>
 
+<script src="fba-rates.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
 // RULE: ALL BUSINESS LOGIC CONSTANTS ARE DEFINED HERE FOR EASY LLM MODIFICATION
@@ -1732,7 +1737,7 @@ function headersCarryCIF(rawHeaders) {
   return (rawHeaders || []).some(h => String(h === undefined || h === null ? '' : h).trim().toLowerCase() === 'cif');
 }
 
-const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
+const VALID_SIZE_TIERS = ['ss','ls','sb','lb','xl'];
 function validateCSVRow(row, isUpdate) {
   const errors = [];
   const v = f => (row[f] ?? '').toString().trim();
@@ -1785,22 +1790,11 @@ function showImportReport(created, updated, skippedRows) {
   openModalEl('import-report-modal');
 }
 
-function sizeTierFromDims(l, w, h, weightOz) {
-  const dims = [l, w, h].sort((a, b) => b - a);
-  const longest = dims[0], median = dims[1], shortest = dims[2];
-  const weightLbs = weightOz / 16;
-  const girth = 2 * (median + shortest);
-  const dimWeightLbs = (l * w * h) / 139;
-  const billedLbs = Math.max(weightLbs, dimWeightLbs);
-  if (longest <= 15 && median <= 12 && shortest <= 0.75 && billedLbs <= 1) return 'ss';
-  if (longest <= 18 && median <= 14 && shortest <= 8 && billedLbs <= 20) return 'ls';
-  if (longest <= 59 && median <= 33 && shortest <= 33 && girth <= 130 && billedLbs <= 50) return 'lb';
-  return 'xl';
-}
+function sizeTierFromDims(l,w,h,weightOz) { return FBA.sizeTier([l,w,h],weightOz); }
 
 // RULE: Maps Amazon's "product-size-tier" export strings (FBA Fee Preview / Manage Inventory
-// reports) to this app's 4 buckets (ss/ls/lb/xl). "Bulky" is Amazon's current term for what
-// used to be called "Oversize" on Small/Medium items — both map to this app's 'lb' tier.
+// reports) to this app's current buckets (ss/ls/sb/lb/xl). "Bulky" is Amazon's current term for what
+// used to be called "Oversize" on Small/Medium items — current SmallBulky maps to 'sb'; legacy oversize tiers require dimensions.
 // Returns null if the string doesn't match any known pattern (caller should fall back to a default).
 function amazonSizeTierToAppTier(raw) {
   // Amazon's export values are often camelCase with zero separator (e.g. "UsSmallStandardSize") —
@@ -1808,7 +1802,9 @@ function amazonSizeTierToAppTier(raw) {
   const s = (raw || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[-_]+/g, ' ');
   if (/small.+standard|standard.+small/.test(s)) return 'ss';
   if (/large.+standard|standard.+large/.test(s)) return 'ls';
+  if (/small.+bulky/.test(s)) return 'sb';
   if (/bulky/.test(s)) return 'lb';
+  if (/extra.+large/.test(s)) return 'xl';
   if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
   if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
   if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
@@ -1922,12 +1918,13 @@ function importProductRows(headers, rowObjs, filename, cifCogs) {
         if (weightOz != null) existing.inputs.weight = weightOz;
         const wOz = weightOz ?? existing.inputs.weight;
 
-        if (has('size_tier') && ['ss','ls','lb','xl'].includes(row.size_tier)) {
+        if (has('size_tier') && ['ss','ls','sb','lb','xl'].includes(row.size_tier)) {
           existing.inputs.sizetier = row.size_tier;
         } else if (row.length_in && row.width_in && row.height_in) {
           existing.inputs.sizetier = sizeTierFromDims(parseFloat(row.length_in), parseFloat(row.width_in), parseFloat(row.height_in), wOz);
         }
 
+        if (row.length_in && row.width_in && row.height_in) existing.inputs.dimensions=[row.length_in,row.width_in,row.height_in].map(Number);
         if (has('cogs') && row.cogs)                         existing.inputs.cogs      = parseFloat(row.cogs);
         if (has('target_margin') && row.target_margin)        existing.inputs.margin    = parseFloat(row.target_margin);
         if (has('inbound_shipping') && row.inbound_shipping)  existing.inputs.inbound   = parseFloat(row.inbound_shipping);
@@ -1965,13 +1962,14 @@ function importProductRows(headers, rowObjs, filename, cifCogs) {
         p.inputs.category = CAT_MAP[row.category?.toLowerCase()] || '15';
         const weightOz = row.weight_lb ? parseFloat(row.weight_lb) * 16 : numOr(row.weight_oz, 8);
         p.inputs.weight = weightOz;
-        if (['ss','ls','lb','xl'].includes(row.size_tier)) {
+        if (['ss','ls','sb','lb','xl'].includes(row.size_tier)) {
           p.inputs.sizetier = row.size_tier;
         } else if (row.length_in && row.width_in && row.height_in) {
           p.inputs.sizetier = sizeTierFromDims(parseFloat(row.length_in), parseFloat(row.width_in), parseFloat(row.height_in), weightOz);
         } else {
           p.inputs.sizetier = 'ss';
         }
+        if (row.length_in && row.width_in && row.height_in) p.inputs.dimensions=[row.length_in,row.width_in,row.height_in].map(Number);
         p.inputs.cogs        = numOr(row.cogs, 6);
         p.inputs.margin      = numOr(row.target_margin, 30);
         // RULE: CIF is landed cost incl. freight → default inbound_shipping to 0 for
@@ -2086,55 +2084,53 @@ function getReferralFee(catKey, price) {
   }
 }
 
-// RULE: FBA fee schedule — versioned, dated block. ALL fulfillment fee numbers
-// (weight tables, oversize flat rates, over-48oz formula, fuel surcharge) live
-// in this ONE structure. When Amazon publishes a new rate card, swap this whole
-// block for the new one and update `effectiveFrom` — nothing else needs editing.
-// Update procedure: LOGIC.md Section 1.4.
-// Structure of SS/LS rows: [max_oz, price_band_<10, price_band_10-50, price_band_>50]
-// Source: Amazon Seller Central, effective January 15, 2026 (surcharge April 17, 2026)
-const FEE_SCHEDULE = {
-  effectiveFrom: '2026-01-15',              // FBA rate card effective date
-  fuelSurchargeEffectiveFrom: '2026-04-17', // Fuel & logistics surcharge start date
-  tables: {
-    SS: [
-      [2,2.43,3.32,3.58],[4,2.49,3.42,3.68],[6,2.56,3.45,3.71],[8,2.66,3.54,3.80],
-      [10,2.77,3.68,3.94],[12,2.82,3.78,4.04],[14,2.92,3.91,4.17],[16,2.95,3.96,4.22]
-    ],
-    LS: [
-      [4,2.91,3.73,3.99],[8,3.13,3.95,4.21],[12,3.38,4.20,4.46],[16,3.78,4.60,4.86],
-      [20,4.22,5.04,5.30],[24,4.60,5.42,5.68],[28,4.75,5.57,5.83],[32,5.00,5.82,6.08],
-      [36,5.10,5.92,6.18],[40,5.28,6.10,6.36],[44,5.44,6.26,6.52],[48,5.85,6.67,6.93]
-    ],
-    LS_OVER_48OZ_BASES: [6.15,6.97,7.23], // Large Standard 3lb+ base by price band
-    LS_OVER_48OZ_STEP: 0.08,              // + per 4oz above 48oz
-    LB: [9.61,10.10,10.84],               // Large Bulky flat rates by price band
-    XL: [26.33,27.12,28.01],              // Extra-Large flat rates by price band
-    FUEL_SURCHARGE: 1.035                 // 3.5% fuel surcharge multiplier on all FBA fees
-  }
-};
-// Aliases read from the schedule — do NOT put fee numbers here.
-const SS_TABLE = FEE_SCHEDULE.tables.SS;
-const LS_TABLE = FEE_SCHEDULE.tables.LS;
-// RULE: Fuel & logistics surcharge multiplier applied to every FBA fee (LOGIC.md §1.3)
+// Versioned official base rates: fba-rates.js / rates/amazon-us-2026.json.
+// Legacy metadata retained for the live Rules viewer; all charges use FBA.quote.
+const FEE_SCHEDULE = {effectiveFrom:FBA.CARD.periods.nonpeak.start, fuelSurchargeEffectiveFrom:FBA.CARD.fuel_surcharge.effective_start, tables:{FUEL_SURCHARGE:1+FBA.CARD.fuel_surcharge.rate}};
 const FUEL_SURCHARGE = FEE_SCHEDULE.tables.FUEL_SURCHARGE;
+function feeDate(inputs) { return inputs.feeDate || ymd(new Date()); }
+function baseFBA(inputs, price) { const q=FBA.quote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.base; }
+function totalFBA(inputs, price) { const q=FBA.quote(inputs,price,feeDate(inputs)); return q.error ? NaN : q.total; }
+// Weight-only convenience quotes cannot claim a verified dimensional floor.
+function getFBAFee(tier,wOz,price,date=ymd(new Date()),dimensions) {
+  return baseFBA({sizetier:tier,weight:wOz,feeDate:date,dimensions},price);
+}
+function saleFeeWindow() {
+  const pl=state.planner||{};
+  return {start:pl.startDate ?? ymd(new Date()),end:pl.endDate ?? defaultSaleEndYmd(new Date())};
+}
+function salePeriodFloor(inputs,start,end) {
+  const coverage=FBA.periodCoverage(start,end);
+  if (coverage.error) return {floor:null,error:coverage.error,coverage};
+  const floors=[];
+  // Split at rate changes and the independent fuel effective date.
+  for (const w of coverage.windows) {
+    const dates=[w.start];
+    const fuel=w.card.fuel_surcharge.effective_start;
+    if (fuel>w.start && fuel<=w.end_inclusive) dates.push(fuel);
+    for (const date of dates) {
+      const q=FBA.quote(inputs,20,date);
+      if (q.error) return {floor:null,error:q.error,coverage};
+      const floor=solveMinPriceRaw({...inputs,margin:0,feeDate:date});
+      if (!Number.isFinite(floor)) return {floor:null,error:'Unable to establish break-even floor.',coverage};
+      floors.push(floor);
+    }
+  }
+  return {floor:Math.max(...floors),error:null,coverage};
+}
 
-function getFBAFee(tier, wOz, price) {
-  // RULE: Price band selection — three bands affect fee
-  const b = price < 10 ? 0 : price <= 50 ? 1 : 2;
-  if (tier === 'ss') {
-    for (const r of SS_TABLE) if (wOz <= r[0]) return r[b+1];
-    return SS_TABLE[SS_TABLE.length-1][b+1];
+function salePeriodMargin(inputs,price,start,end) {
+  const coverage=FBA.periodCoverage(start,end);
+  if(coverage.error) return null;
+  const margins=[];
+  for(const w of coverage.windows) {
+    for(const date of [w.start,w.end_inclusive]) {
+      const wf=feeWaterfall({...inputs,feeDate:date},price);
+      if(!wf || !Number.isFinite(wf.netPct)) return null;
+      margins.push(wf.netPct);
+    }
   }
-  if (tier === 'ls') {
-    // RULE: Large Standard 3lb+ formula: base + $0.08 per 4oz above 48oz
-    if (wOz > 48) { const bases=FEE_SCHEDULE.tables.LS_OVER_48OZ_BASES; return bases[b]+Math.ceil((wOz-48)/4)*FEE_SCHEDULE.tables.LS_OVER_48OZ_STEP; }
-    for (const r of LS_TABLE) if (wOz <= r[0]) return r[b+1];
-    return FEE_SCHEDULE.tables.LS_OVER_48OZ_BASES[1]; // unreachable fallback (6.97, as before)
-  }
-  if (tier === 'lb') return FEE_SCHEDULE.tables.LB[b];   // RULE: Large Bulky flat rates by price band
-  if (tier === 'xl') return FEE_SCHEDULE.tables.XL[b];   // RULE: Extra-Large flat rates by price band
-  return 3.96;
+  return Math.min(...margins);
 }
 
 // RULE: Price tier rounding — rounds UP to next occurrence of target cents ending
@@ -2160,19 +2156,13 @@ function calcPrices(inputs) {
 
   // RULE: Iterative price solver — 12 iterations to converge
   // Needed because referral fee and FBA fee both depend on price itself
-  let yp = totalFixed / (1 - margin/100);
-  for (let i = 0; i < 12; i++) {
-    const fbaB = getFBAFee(sizetier, weight, yp);
-    const fba  = fbaB * (surcharge ? FUEL_SURCHARGE : 1.0);
-    const ref  = getReferralFee(category, yp);
-    yp = (totalFixed + fba + ref) / (1 - margin/100);
-  }
+  let yp = solveMinPriceRaw(inputs);
+  if (yp === null) yp=NaN;
   yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
 
   // Helper: get all fee breakdown at a given price
   const getAll = (price) => {
-    const fbaB = getFBAFee(sizetier, weight, price);
-    const fba  = fbaB * (surcharge ? FUEL_SURCHARGE : 1.0);
+    const fba  = totalFBA(inputs, price);
     const ref  = getReferralFee(category, price);
     const profit = price - cogs - fba - ref - otherCosts;
     return { fba, ref, profit, pct: profit/price*100, otherCosts };
@@ -2219,7 +2209,7 @@ function priceSensitivity(inputs, basePrice) {
   return SENSITIVITY_OFFSETS.map(offset => {
     const price = +(basePrice + offset).toFixed(2);
     if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
-    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? FUEL_SURCHARGE : 1.0);
+    const fba = totalFBA(inputs, price);
     const ref = getReferralFee(inputs.category, price);
     const profit = price - inputs.cogs - fba - ref - otherCosts;
     return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
@@ -2234,8 +2224,8 @@ function priceSensitivity(inputs, basePrice) {
 function feeWaterfall(inputs, price) {
   if (!(price > 0)) return null;
   const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
-  const fbaBase = getFBAFee(inputs.sizetier, inputs.weight, price);
-  const fuel = inputs.surcharge ? fbaBase * (FUEL_SURCHARGE - 1) : 0;
+  const fbaBase = baseFBA(inputs, price);
+  const fuel = totalFBA(inputs, price) - fbaBase;
   const ref = getReferralFee(inputs.category, price);
   const logistics = inputs.inbound + inputs.placement + inputs.prep + inputs.storage + inputs.q4storage;
   const returnsOverhead = inputs.returns + inputs.other + vinePerUnit;
@@ -2268,7 +2258,7 @@ function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
   const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
   const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
     + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
-  const fba = getFBAFee(inputs.sizetier, inputs.weight, targetPrice) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
+  const fba = totalFBA(inputs, targetPrice);
   const ref = getReferralFee(inputs.category, targetPrice);
   const maxCogs = targetPrice * (1 - targetMarginPct / 100) - fba - ref - otherCosts;
   return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
@@ -2284,13 +2274,25 @@ function solveMinPriceRaw(inputs) {
   const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
     + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
   const totalFixed = inputs.cogs + otherCosts;
-  let yp = totalFixed / (1 - inputs.margin / 100);
-  for (let i = 0; i < 40; i++) {
-    const fba = getFBAFee(inputs.sizetier, inputs.weight, yp) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
-    const ref = getReferralFee(inputs.category, yp);
-    yp = (totalFixed + fba + ref) / (1 - inputs.margin / 100);
+  // Solve inside each price/referral band: fee jumps must not oscillate the solver.
+  const edges=[0,10,15,20,50,75,150,250,1500,1e9];
+  const net=price=>price*(1-inputs.margin/100)-totalFixed-totalFBA(inputs,price)-getReferralFee(inputs.category,price);
+  if (!Number.isFinite(totalFBA(inputs,20))) return null;
+  for (let i=0;i<edges.length-1;i++) {
+    let lo=edges[i], hi=edges[i+1];
+    if (i && lo===50) lo+=1e-8;
+    if (hi===10) hi-=1e-8;
+    if (net(lo)>=0) return lo;
+    // Check just inside upper boundary, then the exact boundary separately.
+    const inside=hi-1e-8;
+    if (net(inside)>=0) {
+      hi=inside;
+      for (let n=0;n<80;n++) { const mid=(lo+hi)/2; if(net(mid)>=0) hi=mid; else lo=mid; }
+      return hi;
+    }
+    if (net(hi)>=0) return hi;
   }
-  return yp;
+  return null;
 }
 
 // RULE: Break-even volume = fixed monthly overheads ÷ contribution margin per unit,
@@ -2829,6 +2831,13 @@ function waterfallHtml(p, prices) {
 }
 
 function renderCalcTab(p) {
+  const date=feeDate(p.inputs), quote=FBA.quote(p.inputs,20,date);
+  const context=quote.error ? quote.error : `${quote.period} base rate card ${quote.effectiveFrom} → ${quote.effectiveThrough}; quote date ${date}; billed ${quote.shippingWeightLb.toFixed(2)} lb; fuel factor ${quote.fuelFactor.toFixed(3)} (applied once).`;
+  if(quote.error) {
+    document.getElementById('calc-inputs-html').innerHTML=`<div class="alert warn">${escHtml(context)} <button class="btn" onclick="openEditModal()">Edit packaged dimensions / weight</button></div>`;
+    document.getElementById('calc-outputs-html').innerHTML='';
+    return;
+  }
   const prices = calcPrices(p.inputs);
   const { yp, listP, saleP, discP, ypF, listF, saleF, discF, cogs, otherCosts,
     vinePerUnit, maxCPC, beAcos, maxCPClaunch } = prices;
@@ -2840,6 +2849,7 @@ function renderCalcTab(p) {
   const priceClass = curPrice ? classifyPrice(curPrice, prices) : null;
 
   document.getElementById('calc-inputs-html').innerHTML = `
+    <div class="alert warn">${escHtml(context)} <a href="${quote.source}" target="_blank" rel="noopener">Official rate card</a><br>Non-apparel / non-dangerous goods base fulfillment only; SIPP, low inventory, overmax and other charges require separate inputs. Peak fees follow FC shipment departure. Q4 storage remains separate; do not add peak fulfillment or fuel to that field.</div>
     <div class="card">
       <div class="card-title">${t('Inputs Summary','输入摘要')}</div>
       <div style="font-size:0.75rem;color:var(--c-8b8fa8);line-height:1.7;">
@@ -2904,11 +2914,11 @@ function renderCalcTab(p) {
       const sur = p.inputs.surcharge ? FUEL_SURCHARGE : 1;
       const cliffs = [];
       if (yp >= 10 && yp < 10.50) {
-        const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,9.95)*sur).toFixed(2);
+        const saving = (totalFBA(p.inputs,yp) - totalFBA(p.inputs,9.95)).toFixed(2);
         cliffs.push(t(`⚡ Price band cliff: ${fmtC(yp)} is just above the $10 FBA tier. Pricing at $9.95 saves $${saving}/unit in FBA fees.`,`⚡ 价格段临界点：${fmtC(yp)} 刚超过 $10 FBA 费率段。定价 $9.95 可节省 $${saving}/件 FBA费用。`));
       }
       if (yp >= 50 && yp < 50.50) {
-        const saving = (getFBAFee(p.inputs.sizetier,p.inputs.weight,yp)*sur - getFBAFee(p.inputs.sizetier,p.inputs.weight,49.95)*sur).toFixed(2);
+        const saving = (totalFBA(p.inputs,yp) - totalFBA(p.inputs,49.95)).toFixed(2);
         cliffs.push(t(`⚡ Price band cliff: ${fmtC(yp)} is just above the $50 FBA tier. Pricing at $49.95 saves $${saving}/unit in FBA fees.`,`⚡ 价格段临界点：${fmtC(yp)} 刚超过 $50 FBA 费率段。定价 $49.95 可节省 $${saving}/件 FBA费用。`));
       }
       return cliffs.map(c=>`<div class="alert warn">${c}</div>`).join('');
@@ -3326,17 +3336,26 @@ function calcMfg() {
   const sOther  = parseFloat(document.getElementById('m_other').value) || 2.5;
   const sur     = document.getElementById('m_surcharge').checked;
 
+  const mfgInputs={sizetier:tier,weight:wOz,surcharge:sur,
+    dimensions:['m_length','m_width','m_height'].map(id=>parseFloat(document.getElementById(id).value))};
+  const quote=FBA.quote(mfgInputs,20,ymd(new Date()));
+  if(quote.error) {
+    document.getElementById('mfg_seller_price').innerHTML=`<div class="alert warn">${escHtml(quote.error)}</div>`;
+    document.getElementById('mfg_amazon_tiers').innerHTML='';
+    document.getElementById('mfg_alerts').innerHTML='';
+    return;
+  }
   const mfgPrice = landed / (1 - mMgn/100);
 
   let yp = (mfgPrice + sOther) / (1 - sMgn/100);
   for (let i = 0; i < 12; i++) {
-    const fba = getFBAFee(tier, wOz, yp) * (sur ? FUEL_SURCHARGE : 1.0);
+    const fba = totalFBA(mfgInputs,yp);
     const ref = getReferralFee(catKey, yp);
     yp = (mfgPrice + sOther + fba + ref) / (1 - sMgn/100);
   }
   yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
 
-  const ypFba = getFBAFee(tier, wOz, yp) * (sur ? FUEL_SURCHARGE : 1.0);
+  const ypFba = totalFBA(mfgInputs,yp);
   const ypRef = getReferralFee(catKey, yp);
   const ypProfit = yp - mfgPrice - sOther - ypFba - ypRef;
   const ypPct = ypProfit/yp*100;
@@ -3346,7 +3365,7 @@ function calcMfg() {
   let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1-PRICE_DISC_END), PRICE_DISC_END);
   if (discP >= saleP) discP -= 1;
   const listP = roundEnd(yp * LIST_PREMIUM - (1-PRICE_LIST_END), PRICE_LIST_END);
-  const getM = (pr) => { const f=getFBAFee(tier,wOz,pr)*(sur?FUEL_SURCHARGE:1); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
+  const getM = (pr) => { const f=totalFBA(mfgInputs,pr); const r=getReferralFee(catKey,pr); return ((pr-mfgPrice-sOther-f-r)/pr*100).toFixed(1); };
   const pctOff = (a,b) => Math.round((1-b/a)*100);
 
   document.getElementById('mfg_seller_price').innerHTML = `
@@ -3391,7 +3410,9 @@ function openAddModal() {
   document.getElementById('f-asin').value = '';
   document.getElementById('f-category').value = d.category;
   document.getElementById('f-sizetier').value = d.sizetier;
+  document.getElementById('f-fee-date').value='';
   document.getElementById('f-weight').value = d.weight;
+  ['dim-l','dim-w','dim-h'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-cogs').value = d.cogs;
   document.getElementById('f-margin').value = d.margin;
   document.getElementById('f-inbound').value = d.inbound;
@@ -3427,7 +3448,9 @@ function openEditModal() {
   document.getElementById('f-asin').value = p.asin;
   document.getElementById('f-category').value = p.inputs.category;
   document.getElementById('f-sizetier').value = p.inputs.sizetier;
+  document.getElementById('f-fee-date').value=p.inputs.feeDate || '';
   document.getElementById('f-weight').value = p.inputs.weight;
+  ['dim-l','dim-w','dim-h'].forEach((id,i)=>document.getElementById(id).value=p.inputs.dimensions?.[i] ?? '');
   document.getElementById('f-cogs').value = p.inputs.cogs;
   document.getElementById('f-margin').value = p.inputs.margin;
   document.getElementById('f-inbound').value = p.inputs.inbound;
@@ -3460,9 +3483,11 @@ function saveProduct() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { alert('Product name is required.'); return; }
   const inputs = {
+    feeDate: document.getElementById('f-fee-date').value || undefined,
     category: document.getElementById('f-category').value,
     sizetier: document.getElementById('f-sizetier').value,
     weight: parseFloat(document.getElementById('f-weight').value) || 8,
+    dimensions: ['dim-l','dim-w','dim-h'].map(id=>parseFloat(document.getElementById(id).value)),
     cogs: parseFloat(document.getElementById('f-cogs').value) || 6,
     margin: parseFloat(document.getElementById('f-margin').value) || 30,
     inbound: parseFloat(document.getElementById('f-inbound').value) || 0,
@@ -3731,6 +3756,9 @@ function importFBAFeePreview(event) {
     const nameCol    = fc('product name', 'item name', 'title');
     const tierCol    = fc('product size tier', 'size tier', 'size-tier', 'product-size');
     const weightCol  = fc('unit weight', 'item weight', 'package weight', 'weight');
+    const dimCols=['longest side','median side','shortest side'].map(label=>fc(label));
+    const dimUnitCol=fc('dimension unit', 'dimensions unit');
+    const weightUnitCol=fc('weight unit');
 
     if (asinCol === -1) {
       alert(t(
@@ -3742,12 +3770,14 @@ function importFBAFeePreview(event) {
 
     // Weight: detect units from column header; default to lbs (US Amazon standard)
     const wHdr = weightCol !== -1 ? hdrs[weightCol] : '';
-    const parseWeightToOz = val => {
-      const num = parseFloat((val || '').replace(/[^\d.]/g, ''));
-      if (!num) return null;
-      if (wHdr.includes('gram') || / g$/.test(wHdr) || /\(g\)/.test(wHdr)) return +(num * 0.035274).toFixed(1);
-      if (wHdr.includes('oz') || wHdr.includes('ounce')) return +num.toFixed(1);
-      return +(num * 16).toFixed(1); // assume lbs
+    const parseWeightToOz = (val, units) => {
+      const num = Number((val || '').replace(/,/g, '').trim());
+      if (!(num>0) || !Number.isFinite(num)) return null;
+      const unit=(units || wHdr).toLowerCase();
+      if (unit.includes('kg') || unit.includes('kilogram')) return num*35.27396195;
+      if (unit.includes('gram') || unit==='g' || /\(g\)/.test(unit)) return num / 28.349523125;
+      if (unit.includes('oz') || unit.includes('ounce')) return num;
+      return num * 16; // assume lbs
     };
 
     let created = 0, updated = 0, skipped = 0;
@@ -3761,6 +3791,10 @@ function importFBAFeePreview(event) {
       const name     = nameCol   !== -1 ? (cols[nameCol]   || '').trim() : '';
       const tierRaw  = tierCol   !== -1 ? (cols[tierCol]   || '').trim() : '';
       const weightRaw= weightCol !== -1 ? (cols[weightCol] || '').trim() : '';
+      const weightUnits=weightUnitCol>=0 ? cols[weightUnitCol] : '';
+      const dimUnits=(dimUnitCol>=0 ? cols[dimUnitCol] : 'inches').toLowerCase();
+      const dimFactor=/^(in|inch|inches)$/.test(dimUnits)?1 : /^(cm|centimeters)$/.test(dimUnits)?1/2.54 : NaN;
+      const packageDims=dimCols.every(c=>c>=0) ? dimCols.map(c=>Number(cols[c])*dimFactor) : null;
 
       // RULE: an existing product (e.g. a stub auto-created from the weekly reports with
       // the default ss/8oz) gets its size tier and weight UPDATED from the Fee Preview —
@@ -3772,8 +3806,9 @@ function importFBAFeePreview(event) {
         let touched = false;
         const exTier = amazonSizeTierToAppTier(tierRaw);
         if (exTier && existing.inputs.sizetier !== exTier) { existing.inputs.sizetier = exTier; touched = true; }
-        const exOz = parseWeightToOz(weightRaw);
+        const exOz = parseWeightToOz(weightRaw,weightUnits);
         if (exOz && Math.abs((existing.inputs.weight || 0) - exOz) > 0.05) { existing.inputs.weight = exOz; touched = true; }
+        if (packageDims?.every(v=>Number.isFinite(v)&&v>0)) {existing.inputs.dimensions=packageDims; touched=true;}
         if (touched) updated++; else skipped++;
         continue;
       }
@@ -3784,8 +3819,9 @@ function importFBAFeePreview(event) {
       p.inputs.cogs = 0;  // explicitly mark as incomplete — triggers setup banner
       const tier = amazonSizeTierToAppTier(tierRaw);
       if (tier) p.inputs.sizetier = tier;
-      const oz = parseWeightToOz(weightRaw);
+      const oz = parseWeightToOz(weightRaw,weightUnits);
       if (oz) p.inputs.weight = oz;
+      if (packageDims?.every(v=>Number.isFinite(v)&&v>0)) p.inputs.dimensions=packageDims;
       p.notes = t(
         'Imported from Amazon report. Open Edit to add COGS, target margin and ad costs.',
         '从亚马逊报告导入。请打开编辑添加货物成本、目标利润率和广告成本。'
@@ -4929,6 +4965,7 @@ function suggestSalePrice(o) {
 
 // Build one planner row per product from all imported data sources.
 function plannerRows() {
+  const saleWindow=saleFeeWindow();
   const threshold = (state.planner && state.planner.coverThreshold > 0) ? state.planner.coverThreshold : PLANNER_COVER_THRESHOLD_DEFAULT;
   const rdAll = (state.reportData && state.reportData.byAsin) ? state.reportData.byAsin : {};
   const ships = (state.shipments && state.shipments.bySku) ? state.shipments.bySku : {};
@@ -4958,8 +4995,9 @@ function plannerRows() {
       else daysOfCover = available / velocity;
     }
 
-    const breakEvenPrice = p.inputs.cogs > 0 ? solveMinPriceRaw({ ...p.inputs, margin: 0 }) : null;
-    const marginAtYP = (p.inputs.cogs > 0 && yourPrice > 0) ? feeWaterfall(p.inputs, yourPrice).netPct : null;
+    const feePlan=salePeriodFloor(p.inputs,saleWindow.start,saleWindow.end);
+    const breakEvenPrice = p.inputs.cogs > 0 ? feePlan.floor : null;
+    const marginAtYP = (p.inputs.cogs > 0 && yourPrice > 0) ? salePeriodMargin(p.inputs,yourPrice,saleWindow.start,saleWindow.end) : null;
 
     // realized (actual transaction) price captures deals/coupons that yourPrice can't.
     const realized30 = (rd && rd.u30 > 0) ? rd.s30 / rd.u30 : null;
@@ -4982,14 +5020,15 @@ function plannerRows() {
       else pipelineCover = pipeUnits / velocity;
     }
 
-    const sug = suggestSalePrice({ yourPrice, available, daysOfCover, pipelineCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
+    const sug = feePlan.error ? {action:'blocked',reason:'fee_coverage',price:null} : suggestSalePrice({ yourPrice, available, daysOfCover, pipelineCover, coverThreshold: threshold, breakEvenPrice, realizedPrice: realized30 });
 
-    return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, pipelineCover, breakEvenPrice,
+    return { p, asin, sku, yourPrice, activeSale, velocity, available, daysOfCover, pipelineCover, breakEvenPrice, feePlan,
       marginAtYP, realized30, marginAtRealized, priceTrend, inbound, recAction: ship ? ship.recAction : '', sug, hasRd: !!rd };
   });
 }
 // ── planner override + control mutators ──
 function _plannerEnsure() { if (!state.planner) state.planner = { coverThreshold: PLANNER_COVER_THRESHOLD_DEFAULT, overrides: {} }; if (!state.planner.overrides) state.planner.overrides = {}; return state.planner; }
+function plannerSetDate(key,value) { const pl=_plannerEnsure(); pl[key]=value; saveToStorage(); renderSalePlanner(); }
 function plannerSetThreshold(v) { const pl = _plannerEnsure(); const n = parseInt(v, 10); pl.coverThreshold = (n > 0 ? n : PLANNER_COVER_THRESHOLD_DEFAULT); saveToStorage(); renderSalePlanner(); }
 function plannerSetInclude(pid, checked) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; pl.overrides[pid].include = !!checked; saveToStorage(); renderSalePlanner(); }
 function plannerSetPrice(pid, val) { const pl = _plannerEnsure(); if (!pl.overrides[pid]) pl.overrides[pid] = {}; const n = parseFloat(val); pl.overrides[pid].price = (n > 0 ? +n.toFixed(2) : undefined); saveToStorage(); renderSalePlanner(); }
@@ -5062,7 +5101,7 @@ function renderSalePlanner() {
       <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
         <div style="flex:1;min-width:0;">
       <div style="font-size:1.1rem;font-weight:800;color:var(--c-fff);">${t('Sale Planner — month-end sale on slow movers', '促销计划 — 月末清理滞销库存')}</div>
-      <div style="font-size:0.75rem;color:var(--c-555870);margin-top:2px;">${t('Combines Inventory Health (stock + price), Business (revenue/velocity) and the optional shipments xlsx. Suggestions anchor on Your Price and are floored at break-even. Ads data feeds check-ins only, not suggestions.', '综合库存健康（库存+价格）、业务（收入/销售速度）和可选的货件xlsx。建议以您的售价为基准，并以盈亏平衡价为下限。广告数据仅用于检查记录，不影响建议。')}</div>
+      <div style="font-size:0.75rem;color:var(--c-555870);margin-top:2px;">${t('Combines Inventory Health (stock + price), Business (revenue/velocity) and the optional shipments xlsx. Suggestions anchor on Your Price and use the highest break-even floor across the entire sale window. Ads data feeds check-ins only, not suggestions.', '综合库存健康（库存+价格）、业务（收入/销售速度）和可选的货件xlsx。建议以您的售价为基准，并以盈亏平衡价为下限。广告数据仅用于检查记录，不影响建议。')}</div>
         </div>
         <button class="topbar-btn" onclick="openModalEl('planner-howto-modal')" title="${t('Step-by-step monthly workflow', '分步月度工作流程')}" style="white-space:nowrap;">${t('❓ How to use', '❓ 使用方法')}</button>
       </div>
@@ -5136,13 +5175,16 @@ function renderSalePlanner() {
                          '然后重新导入团队最新的CIF工作簿 — 见 ❓ 使用方法。'));
   }
 
-  const startDefault = ymd(today);
-  const endDefault = defaultSaleEndYmd(today);
+  const {start:startDefault,end:endDefault}=saleFeeWindow();
+  const feeCoverage=FBA.periodCoverage(startDefault,endDefault);
+  guards += banner(escHtml(FBA.describe(feeCoverage)));
+  const feeErrors=rows.filter(r=>r.feePlan.error);
+  if(feeErrors.length) guards+=banner(`${feeErrors.length} row(s) have no verified fee floor: ${feeErrors.slice(0,8).map(r=>escHtml(r.sku || r.p.name)+': '+escHtml(r.feePlan.error)).join('; ')}`);
   const controls = `
     <div class="card">
       <div class="g3" style="gap:12px;">
-        <div class="inp"><label>${t('Sale start date', '促销开始日期')}</label><input type="date" id="sp-start" value="${startDefault}"></div>
-        <div class="inp"><label>${t('Sale end date (month end)', '促销结束日期（月末）')}</label><input type="date" id="sp-end" value="${endDefault}"></div>
+        <div class="inp"><label>${t('Sale start date', '促销开始日期')}</label><input type="date" id="sp-start" value="${startDefault}" onchange="plannerSetDate('startDate',this.value)"></div>
+        <div class="inp"><label>${t('Sale end date (month end)', '促销结束日期（月末）')}</label><input type="date" id="sp-end" value="${endDefault}" onchange="plannerSetDate('endDate',this.value)"></div>
         <div class="inp"><label>${t('Days-of-cover threshold', '库存覆盖天数阈值')}</label><input type="number" id="sp-threshold" min="1" step="1" value="${pl.coverThreshold}" onchange="plannerSetThreshold(this.value)"></div>
       </div>
       <div class="hint" style="margin-top:4px;">${t('Suggestions anchor on Your Price. Products with COGS get a break-even floor; without COGS = easy mode, ladder only. Cover counts sellable + inbound stock (pipeline); rows with under 45 days of on-hand stock wait for inbound instead of discounting.', '建议以您的售价为基准。有COGS的产品设盈亏平衡下限；无COGS = 简易模式，仅使用折扣阶梯。库存覆盖天数计入可售+在途库存（管道）；现有可售库存不足45天的产品将等待到货，而非立即促销。')}</div>
@@ -5178,6 +5220,7 @@ function renderSalePlanner() {
   const REASON_TXT = {
     overstock: t('overstock', '库存过剩'), no_sales: t('no sales', '零销量'),
     healthy: t('healthy cover', '库存健康'), no_stock: t('out of stock', '无库存'),
+    fee_coverage: t('unverified FBA fees — add dates/dimensions', 'FBA费用未验证 — 补充日期/尺寸'),
     loss_leader: t('loss leader', '亏本引流'), below_breakeven_promo: t('already selling below break-even via promos', '已通过促销低于盈亏平衡价销售'),
     floor_above_5pct: t('break-even above 5%-off floor', '盈亏平衡价高于5%折扣下限'),
     no_price: t('no price', '无价格'), no_velocity: t('no velocity', '无销售速度')
@@ -5300,11 +5343,17 @@ function collectPlanItems() {
 
 // ── F5: build + download the PriceAndQuantity .xlsx from checked planner rows ──
 function exportPriceFile() {
-  const start = (document.getElementById('sp-start') || {}).value || ymd(new Date());
-  const end = (document.getElementById('sp-end') || {}).value || defaultSaleEndYmd(new Date());
-  if (start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+  const start = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
+  const end = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
+  if (!FBA.validDate(start) || !FBA.validDate(end) || start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
 
+  const planner=_plannerEnsure(); planner.startDate=start; planner.endDate=end;
   const { items, noSku, noPrice, subFivePct } = collectPlanItems();
+
+  const coverage=FBA.periodCoverage(start,end);
+  if (coverage.error) {alert(coverage.error); return;}
+  const unsafe=items.filter(it=>it.r.feePlan.error || (it.r.breakEvenPrice!==null && it.price+1e-9<it.r.breakEvenPrice));
+  if (unsafe.length) {alert('Cannot export below the whole-period floor or with unverified FBA fees: '+unsafe.map(it=>it.sku).join(', ')); return;}
 
   if (!items.length) {
     const msg = noSku.length
@@ -5399,6 +5448,7 @@ function escHtml(s) {
 // in buildProposalReportHtml / escHtml. Not mirrored in test.js — tested via the
 // hand-built fixture model passed straight to buildProposalReportHtml.
 function buildProposalModel(startYmd, endYmd) {
+  const planner=_plannerEnsure(); planner.startDate=startYmd; planner.endDate=endYmd;
   const { rows, items } = collectPlanItems();
   const threshold = (state.planner && state.planner.coverThreshold > 0) ? state.planner.coverThreshold : PLANNER_COVER_THRESHOLD_DEFAULT;
 
@@ -5412,7 +5462,7 @@ function buildProposalModel(startYmd, endYmd) {
   const included = items.map(it => {
     const r = it.r, sug = r.sug;
     const newPrice = it.price;
-    const marginAtNew = (r.p.inputs.cogs > 0 && newPrice > 0) ? feeWaterfall(r.p.inputs, newPrice).netPct : null;
+    const marginAtNew = (r.p.inputs.cogs > 0 && newPrice > 0) ? salePeriodMargin(r.p.inputs,newPrice,startYmd,endYmd) : null;
     const offPct = r.yourPrice > 0 ? Math.round((1 - newPrice / r.yourPrice) * 100) : 0;
     const decisionCover = (r.pipelineCover !== undefined && r.pipelineCover !== null) ? r.pipelineCover : r.daysOfCover;
     return {
@@ -5722,9 +5772,9 @@ function deliverProposalReport(html, fileName) {
 
 // Open the review report from a direct user gesture (so it is not popup-blocked).
 function openProposalReport() {
-  const start = (document.getElementById('sp-start') || {}).value || ymd(new Date());
-  const end = (document.getElementById('sp-end') || {}).value || defaultSaleEndYmd(new Date());
-  if (start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
+  const start = (document.getElementById('sp-start') || {}).value ?? saleFeeWindow().start;
+  const end = (document.getElementById('sp-end') || {}).value ?? saleFeeWindow().end;
+  if (!FBA.validDate(start) || !FBA.validDate(end) || start > end) { alert(t('Sale start date must be on or before the end date.', '促销开始日期必须早于或等于结束日期。')); return; }
   const model = buildProposalModel(start, end);
   const html = buildProposalReportHtml(model);
   deliverProposalReport(html, `PriceUpdate-Sale-${end}-report.html`);
@@ -5751,6 +5801,7 @@ function rulesLiveData() {
     stockoutDays: STOCKOUT_RISK_DAYS,
     reorderDays: REORDER_SOON_DAYS,
     agedDays: AGED_INVENTORY_DAYS,
+    feeCoverageDescription: FBA.describe(FBA.periodCoverage(saleFeeWindow().start,saleFeeWindow().end)),
     feeEffectiveFrom: FEE_SCHEDULE.effectiveFrom,
     fuelEffectiveFrom: FEE_SCHEDULE.fuelSurchargeEffectiveFrom,
     fuelSurchargePct: Math.round((FEE_SCHEDULE.tables.FUEL_SURCHARGE - 1) * 1000) / 10, // 1.035 → 3.5
@@ -5859,7 +5910,7 @@ function buildRulesHtml(data) {
     <div class="card">
       <div class="card-title">${L('Fee assumptions', '费用假设')}</div>
       <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
-        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> ${escHtml(data.feeCoverageDescription || '')} &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Fuel &amp; logistics surcharge', '燃油与物流附加费')}</strong> &mdash; ${L(`${data.fuelSurchargePct}% on top of every FBA fee${data.fuelEffectiveFrom ? ` (from ${data.fuelEffectiveFrom})` : ''}.`, `每笔 FBA 费用之上加收 ${data.fuelSurchargePct}%${data.fuelEffectiveFrom ? `（自 ${data.fuelEffectiveFrom} 起）` : ''}。`)}</li>
         <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Referral fees', '推荐费')}</strong> &mdash; ${L('category-based, see full document.', '基于类目，详见完整文档。')}</li>
       </ul>
@@ -6177,32 +6228,12 @@ function calcDimTier() {
   if (!resultEl) return;
   if (!l || !w || !h) { resultEl.textContent = ''; return; }
 
-  const dims = [l, w, h].sort((a, b) => b - a);
-  const longest = dims[0], median = dims[1], shortest = dims[2];
-  const weightLbs = weightOz / 16;
-  const girth = 2 * (median + shortest);
-  const dimWeightLbs = (l * w * h) / 139;
-  const billedLbs = Math.max(weightLbs, dimWeightLbs);
+  const tier=FBA.sizeTier([l,w,h],weightOz);
+  const sel=document.getElementById('f-sizetier');
+  if(sel && tier) sel.value=tier;
+  const q=FBA.physical({sizetier:tier,weight:weightOz,dimensions:[l,w,h]});
+  resultEl.textContent=q.error || `${tier}: unit ${q.unitWeightLb.toFixed(2)} lb; dimensional ${q.dimensionalWeightLb?.toFixed(2) ?? 'not applicable'} lb; billed ${q.shippingWeightLb.toFixed(2)} lb`;
 
-  let tier, tierName;
-  if (longest <= 15 && median <= 12 && shortest <= 0.75 && billedLbs <= 1) {
-    tier = 'ss'; tierName = 'Small Standard';
-  } else if (longest <= 18 && median <= 14 && shortest <= 8 && billedLbs <= 20) {
-    tier = 'ls'; tierName = 'Large Standard';
-  } else if (longest <= 59 && median <= 33 && shortest <= 33 && girth <= 130 && billedLbs <= 50) {
-    tier = 'lb'; tierName = 'Large Bulky';
-  } else {
-    tier = 'xl'; tierName = 'Extra-Large';
-  }
-
-  const sel = document.getElementById('f-sizetier');
-  if (sel) sel.value = tier;
-
-  let note = '';
-  if (dimWeightLbs > weightLbs) {
-    note = ` · DIM weight ${dimWeightLbs.toFixed(1)} lbs applies (heavier than actual ${weightLbs.toFixed(1)} lbs)`;
-  }
-  resultEl.innerHTML = `→ <strong>${tierName}</strong>${note}`;
 }
 
 // ─── LANDED COST CALCULATOR (CNY → USD COGS) ───

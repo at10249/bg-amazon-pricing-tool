@@ -4,7 +4,7 @@ A self-contained, single-file web app for Amazon FBA sellers to calculate pricin
 track product lifecycles, manage advertising stages (m19 compatible), and decide when to
 kill or continue products.
 
-No server required. No build step. No dependencies. Open `index.html` in any browser.
+No server required. No build step. No dependencies. Keep `index.html` and `fba-rates.js` together and open `index.html` in any browser.
 
 Release history: see **[CHANGELOG.md](CHANGELOG.md)**.
 
@@ -337,3 +337,9 @@ This is designed to be forked and modified. A few guidelines:
 ## License
 
 MIT — do whatever you want with it.
+
+### Dated FBA fees and sale-period safety (October 2026)
+
+The calculator quotes the selected shipment date (blank uses today). The Sale Planner shows applicable rate windows and uses the highest break-even floor across the entire date range. October 15, 2026 through January 14, 2027 uses the published peak card; January 15, 2027 requires a new verified card. Missing coverage or packaged dimensions blocks a claimed safe plan. Re-import Fee Preview to backfill unit weight and dimensions; imported fee estimates are never multiplied again. Keep any Q4 storage input for storage only.
+
+Rates cover US non-apparel/non-dangerous-goods base fulfillment. See `rates/amazon-us-2026.json` and LOGIC §1 for sources, exclusions, date timing and update instructions. `npm test` runs the legacy suite plus shipped-code FBA regressions. There is no build or lint command in this static repository.

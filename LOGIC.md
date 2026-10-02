@@ -37,93 +37,33 @@ If adding a new category, add a new `case` with the category key and rate logic.
 
 ---
 
-### 1.2 FBA Fulfillment Fees — Standard Size (2026 rate card)
-**Source:** Amazon Seller Central fee schedule, effective January 15, 2026
-**CODE LOCATION:** `index.html` → versioned constant `FEE_SCHEDULE` (all FBA fee numbers), aliases `SS_TABLE`/`LS_TABLE`, function `getFBAFee(tier, wOz, price)`
-**Last verified:** April 2026
+### 1.2 Dated US non-apparel FBA rates
 
-Structure: fees are indexed by [max_weight_oz, price_band_<$10, price_band_$10-$50, price_band_>$50]
+**CODE LOCATION:** `fba-rates.js` (`FBA.quote`, `FBA.physical`, `FBA.periodCoverage`); authoritative data and citations in `rates/amazon-us-2026.json`.
+**Verified:** October 2, 2026 against official Amazon search-index content; direct help-page opens return a JavaScript shell.
 
-Small Standard (up to 16oz, fits in a shoebox):
-| Max oz | <$10  | $10–$50 | >$50  |
-|--------|-------|---------|-------|
-| 2      | $2.43 | $3.32   | $3.58 |
-| 4      | $2.49 | $3.42   | $3.68 |
-| 6      | $2.56 | $3.45   | $3.71 |
-| 8      | $2.66 | $3.54   | $3.80 |
-| 10     | $2.77 | $3.68   | $3.94 |
-| 12     | $2.82 | $3.78   | $4.04 |
-| 14     | $2.92 | $3.91   | $4.17 |
-| 16     | $2.95 | $3.96   | $4.22 |
+- All 54 published base rows cover nonpeak January 15–October 14, 2026 and holiday peak October 15, 2026–January 14, 2027.
+- Price bands are `<10`, inclusive `10–50`, and `>50`. Incremental weight intervals round up; no packaging-weight add-on or dimension rounding is assumed.
+- Small standard uses actual packaged unit weight. Other supported tiers use the greater of unit and dimensional weight (`L×W×H / 139`); bulky and extra-large width/height have a 2-inch minimum. Extra-large 150+ uses unit fee weight when the unit itself exceeds 150lb.
+- Dimensions are sorted longest/median/shortest; size classification checks **length plus girth**, not girth alone. Small bulky and large bulky have distinct 2026 rates. Extra-large uses separate weight brackets and interval charges. Overmax is blocked pending a separate verified fee.
+- Save actual unit ounces and three packaged dimensions in inches; never overwrite actual weight with dimensional weight. Fee Preview imports dimensions and units, but never imports an estimated fee as a new base fee. Existing rows without dimensions require re-import/edit before a dimensional floor can be claimed. Known small-standard unit fees remain usable without dimensions.
+- These are non-apparel, non-dangerous-goods base rates. SIPP, low inventory, storage, inbound placement, returns and other charges are outside the rate card and must be accounted for separately.
 
-Large Standard (up to 20lb):
-| Max oz | <$10  | $10–$50 | >$50  |
-|--------|-------|---------|-------|
-| 4      | $2.91 | $3.73   | $3.99 |
-| 8      | $3.13 | $3.95   | $4.21 |
-| 12     | $3.38 | $4.20   | $4.46 |
-| 16     | $3.78 | $4.60   | $4.86 |
-| 20     | $4.22 | $5.04   | $5.30 |
-| 24     | $4.60 | $5.42   | $5.68 |
-| 28     | $4.75 | $5.57   | $5.83 |
-| 32     | $5.00 | $5.82   | $6.08 |
-| 36     | $5.10 | $5.92   | $6.18 |
-| 40     | $5.28 | $6.10   | $6.36 |
-| 44     | $5.44 | $6.26   | $6.52 |
-| 48     | $5.85 | $6.67   | $6.93 |
-| 3lb+   | $6.15 + $0.08/4oz above 48oz | $6.97 + $0.08/4oz | $7.23 + $0.08/4oz |
+### 1.3 Separate fuel and storage costs
 
-Large Bulky (was Oversize Small/Medium): $9.61 / $10.10 / $10.84 by price band
-Extra-Large (<50lb): $26.33 / $27.12 / $28.01 by price band
+`FBA.quote` applies the optional fuel/logistics multiplier **once**, from April 17, 2026, to either nonpeak or peak base fees. Tables exclude it. Fee Preview estimates already include the surcharge and peak preview; they are not used as base fees.
 
-**TO UPDATE:** See Section 1.4 — all FBA fee numbers live in the single `FEE_SCHEDULE` block.
+The existing `surcharge` checkbox continues to control the factor. `q4storage` is a separate storage cost, retains its saved value (including zero), and must not contain manual fulfillment peak or fuel fees. The UI labels that distinction explicitly; no legacy cost is silently removed or reclassified.
 
----
+### 1.4 Coverage, sale windows and rate updates
 
-### 1.3 Fuel & Logistics Surcharge
-**Source:** Amazon announcement, effective April 17, 2026
-**CODE LOCATION:** `index.html` → constant `FUEL_SURCHARGE` (read from `FEE_SCHEDULE.tables.FUEL_SURCHARGE`), applied everywhere as `surcharge ? FUEL_SURCHARGE : 1.0` on top of the FBA base fee
-**Rate:** 3.5% on top of all FBA fulfillment fees (multiplier `1.035`)
+`FBA.season` describes recurring seasonal boundaries, while `FBA.windowFor` requires an explicitly registered, dated official card. January 15, 2027 and future holiday seasons have **no assumed prices**. Invalid/blank/reversed dates or coverage gaps block safe sale planning and file generation.
 
-**TO UPDATE:** Change `FUEL_SURCHARGE` inside the `FEE_SCHEDULE` block (Section 1.4).
-E.g. if the surcharge becomes 4%, set it to `1.04`.
+The planner persists start/end dates. `salePeriodFloor` computes break-even for every applicable rate window and fuel change, then uses the **highest** floor for the single sale price. It solves within price/referral bands to avoid fixed-point oscillation at fee jumps. Manual overrides cannot export below that floor. The existing coupon/promo erosion checks, `.90` suggestion rounding, minimum 5% discount, at-cost cent ceiling, inventory guards and named missing-COGS confirmation remain in place. Missing fee inputs block suggestions even when COGS are absent; missing COGS still means no cost floor.
 
----
+Planner/proposal margins use the lowest margin across the sale window. Quote timing is FC shipment departure, not order date: sellers should extend the planning window if shipments may depart after the sale ends.
 
-### 1.4 Fee Schedule Versioning — how to update rates
-**CODE LOCATION:** `index.html` → constant `FEE_SCHEDULE`
-
-All FBA fulfillment fee numbers are wrapped in ONE dated structure:
-
-```js
-const FEE_SCHEDULE = {
-  effectiveFrom: '2026-01-15',              // rate card effective date
-  fuelSurchargeEffectiveFrom: '2026-04-17', // surcharge start date
-  tables: {
-    SS: [...],                  // Small Standard rows: [max_oz, <$10, $10–$50, >$50]
-    LS: [...],                  // Large Standard rows (same shape)
-    LS_OVER_48OZ_BASES: [...],  // 3lb+ base fee by price band
-    LS_OVER_48OZ_STEP: 0.08,    // added per 4oz above 48oz
-    LB: [...],                  // Large Bulky flat rates by price band
-    XL: [...],                  // Extra-Large flat rates by price band
-    FUEL_SURCHARGE: 1.035       // multiplier on every FBA fee
-  }
-};
-```
-
-**Update procedure when Amazon changes rates:**
-1. Get the new rate card from Seller Central (see README "Fee Table Sources").
-2. Replace the entire `FEE_SCHEDULE` block with the new numbers and set
-   `effectiveFrom` to the new rate card's effective date.
-3. Do NOT edit fee numbers anywhere else — `getFBAFee()`, the price solver and
-   the fuel surcharge all read exclusively from this block (via the aliases
-   `SS_TABLE`, `LS_TABLE`, `FUEL_SURCHARGE`).
-4. Update the mirrored tables at the top of `test.js` and the expected dollar
-   amounts in its fee tests, then run `npm test`.
-5. Update Sections 1.2 / 1.3 of this document.
-
-Referral fees (Section 1.1) are percentage rules, not tables — they stay in
-`getReferralFee()`.
+To update: obtain the official complete next card, add explicit non-overlapping windows to `CARDS` in `fba-rates.js`, update the companion JSON and provenance, and run `npm test`. Never copy 2026 numbers into a future year on the basis of seasonal recurrence. Tests load the actual module/app functions and verify the module data against JSON; the older broad mirrored tests remain as legacy coverage.
 
 ---
 
