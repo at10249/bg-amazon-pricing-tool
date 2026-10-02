@@ -49,90 +49,30 @@ function getReferralFee(catKey, price) {
   }
 }
 
-const SS_TABLE = [
-  [2,2.43,3.32,3.58],[4,2.49,3.42,3.68],[6,2.56,3.45,3.71],[8,2.66,3.54,3.80],
-  [10,2.77,3.68,3.94],[12,2.82,3.78,4.04],[14,2.92,3.91,4.17],[16,2.95,3.96,4.22]
-];
-const LS_TABLE = [
-  [4,2.91,3.73,3.99],[8,3.13,3.95,4.21],[12,3.38,4.20,4.46],[16,3.78,4.60,4.86],
-  [20,4.22,5.04,5.30],[24,4.60,5.42,5.68],[28,4.75,5.57,5.83],[32,5.00,5.82,6.08],
-  [36,5.10,5.92,6.18],[40,5.28,6.10,6.36],[44,5.44,6.26,6.52],[48,5.85,6.67,6.93]
-];
-
-function getFBAFee(tier, wOz, price) {
-  const b = price < 10 ? 0 : price <= 50 ? 1 : 2;
-  if (tier === 'ss') {
-    for (const r of SS_TABLE) if (wOz <= r[0]) return r[b+1];
-    return SS_TABLE[SS_TABLE.length-1][b+1];
-  }
-  if (tier === 'ls') {
-    if (wOz > 48) { const bases=[6.15,6.97,7.23]; return bases[b]+Math.ceil((wOz-48)/4)*0.08; }
-    for (const r of LS_TABLE) if (wOz <= r[0]) return r[b+1];
-    return 6.97;
-  }
-  if (tier === 'lb') return [9.61,10.10,10.84][b];
-  if (tier === 'xl') return [26.33,27.12,28.01][b];
-  return 3.96;
-}
-
 function roundEnd(raw, cents) {
   let c = Math.floor(raw) + cents;
   while (c < raw) c += 1;
   return c;
 }
 
-function calcPrices(inputs) {
-  const { category, sizetier, weight, cogs, margin, inbound, placement, prep,
-    storage, q4storage, ppc, returns, vine, vineUnits, annualUnits, other,
-    tacos, lacos, cvr, surcharge } = inputs;
-  const vinePerUnit = vine ? (VINE_COST / Math.max(annualUnits, 1)) : 0;
-  const otherCosts = inbound + placement + prep + storage + q4storage + ppc + returns + other + vinePerUnit;
-  const totalFixed = cogs + otherCosts;
-  let yp = totalFixed / (1 - margin/100);
-  for (let i = 0; i < 12; i++) {
-    const fbaB = getFBAFee(sizetier, weight, yp);
-    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
-    const ref  = getReferralFee(category, yp);
-    yp = (totalFixed + fba + ref) / (1 - margin/100);
-  }
-  yp = roundEnd(yp - (1 - PRICE_YOUR_END), PRICE_YOUR_END);
-  const getAll = (price) => {
-    const fbaB = getFBAFee(sizetier, weight, price);
-    const fba  = fbaB * (surcharge ? 1.035 : 1.0);
-    const ref  = getReferralFee(category, price);
-    const profit = price - cogs - fba - ref - otherCosts;
-    return { fba, ref, profit, pct: profit/price*100, otherCosts };
-  };
-  const listP = roundEnd(yp * LIST_PREMIUM - (1 - PRICE_LIST_END), PRICE_LIST_END);
-  const saleP = roundEnd(yp * SALE_DISCOUNT - (1 - PRICE_SALE_END), PRICE_SALE_END);
-  // Guard: for cheap products (<~$8), rounding can push discP above saleP — step down one dollar
-  let discP = roundEnd(saleP * CLEARANCE_DISCOUNT - (1 - PRICE_DISC_END), PRICE_DISC_END);
-  if (discP >= saleP) discP -= 1;
-  const ypF    = getAll(yp);
-  const listF  = getAll(listP);
-  const saleF  = getAll(saleP);
-  const discF  = getAll(discP);
-  const maxCPC = yp * (tacos/100) * (cvr/100);
-  const beAcos = ypF.pct;
-  return { yp, listP, saleP, discP, ypF, listF, saleF, discF,
-    cogs, otherCosts, vinePerUnit, maxCPC, beAcos,
-    targetRoas: 100/tacos, launchRoas: 100/lacos,
-    maxCPClaunch: yp * (lacos/100) * (cvr/100) };
+// ── FBA fee engine + pricing solvers: SHIPPED code, NOT mirrored ─────────────
+// The dated rate engine (fba-rates.js + rates/amazon-us-2026.json) replaced the old flat
+// SS/LS/bulky/XL tables. A hand copy here would test a stale engine, so these functions are
+// extracted from index.html and evaluated in this scope. Rate-card rows, seasons, coverage,
+// calibration, fee-jump and planner regressions live in test-fba.js.
+const FBA = require('./fba-rates');
+const _APP_HTML = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+function _appSource(name) {
+  const start = _APP_HTML.indexOf('\nfunction ' + name + '(') + 1;
+  if (start < 1) throw new Error('index.html is missing function ' + name);
+  const lineEnd = _APP_HTML.indexOf('\n', start);
+  const end = _APP_HTML.slice(start, lineEnd).trim().endsWith('}') ? lineEnd : _APP_HTML.indexOf('\n}', start) + 2;
+  return _APP_HTML.slice(start, end);
 }
-
-function priceSensitivity(inputs, basePrice) {
-  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
-  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
-    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
-  return SENSITIVITY_OFFSETS.map(offset => {
-    const price = +(basePrice + offset).toFixed(2);
-    if (price <= 0) return { offset, price, fba: NaN, ref: NaN, profit: NaN, pct: NaN, valid: false, isCurrent: offset === 0 };
-    const fba = getFBAFee(inputs.sizetier, inputs.weight, price) * (inputs.surcharge ? 1.035 : 1.0);
-    const ref = getReferralFee(inputs.category, price);
-    const profit = price - inputs.cogs - fba - ref - otherCosts;
-    return { offset, price, fba, ref, profit, pct: profit / price * 100, valid: true, isCurrent: offset === 0 };
-  });
-}
+for (const name of ['feeDate', 'fbaCalibration', 'fbaQuote', 'baseFBA', 'totalFBA', 'calcPrices',
+  'priceSensitivity', 'feeWaterfall', 'solveMaxCOGS', 'solveMinPriceRaw']) eval(_appSource(name)); // eslint-disable-line no-eval
+// Fixed fee date so results do not drift when today crosses the Oct 15 peak boundary.
+const FEE_DATE = '2026-10-01';
 
 function breakEvenUnits(monthlyOverheads, profitPerUnit) {
   if (!(monthlyOverheads > 0)) return 0;
@@ -145,60 +85,6 @@ function landedCostUSD(cnyPrice, rate, dutyPct, freightPerUnit) {
   const goodsDuty = (cnyPrice / rate) * (1 + (dutyPct > 0 ? dutyPct : 0) / 100);
   const freight = freightPerUnit > 0 ? freightPerUnit : 0;
   return { goodsDuty, freight, total: goodsDuty + freight };
-}
-
-const FUEL_SURCHARGE = 1.035;
-
-function feeWaterfall(inputs, price) {
-  if (!(price > 0)) return null;
-  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
-  const fbaBase = getFBAFee(inputs.sizetier, inputs.weight, price);
-  const fuel = inputs.surcharge ? fbaBase * (FUEL_SURCHARGE - 1) : 0;
-  const ref = getReferralFee(inputs.category, price);
-  const logistics = inputs.inbound + inputs.placement + inputs.prep + inputs.storage + inputs.q4storage;
-  const returnsOverhead = inputs.returns + inputs.other + vinePerUnit;
-  const net = price - ref - fbaBase - fuel - inputs.cogs - logistics - inputs.ppc - returnsOverhead;
-  return {
-    price,
-    segments: [
-      { key: 'referral',        amount: ref },
-      { key: 'fba',             amount: fbaBase },
-      { key: 'fuel',            amount: fuel },
-      { key: 'cogs',            amount: inputs.cogs },
-      { key: 'logistics',       amount: logistics },
-      { key: 'ppc',             amount: inputs.ppc },
-      { key: 'returnsOverhead', amount: returnsOverhead },
-      { key: 'net',             amount: net }
-    ],
-    net,
-    netPct: net / price * 100
-  };
-}
-
-function solveMaxCOGS(inputs, targetPrice, targetMarginPct) {
-  if (!(targetPrice > 0) || !(targetMarginPct < 100)) return null;
-  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
-  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
-    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
-  const fba = getFBAFee(inputs.sizetier, inputs.weight, targetPrice) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
-  const ref = getReferralFee(inputs.category, targetPrice);
-  const maxCogs = targetPrice * (1 - targetMarginPct / 100) - fba - ref - otherCosts;
-  return { maxCogs, fba, ref, otherCosts, gap: maxCogs - inputs.cogs };
-}
-
-function solveMinPriceRaw(inputs) {
-  if (!(inputs.margin < 100)) return null;
-  const vinePerUnit = inputs.vine ? (VINE_COST / Math.max(inputs.annualUnits, 1)) : 0;
-  const otherCosts = inputs.inbound + inputs.placement + inputs.prep + inputs.storage
-    + inputs.q4storage + inputs.ppc + inputs.returns + inputs.other + vinePerUnit;
-  const totalFixed = inputs.cogs + otherCosts;
-  let yp = totalFixed / (1 - inputs.margin / 100);
-  for (let i = 0; i < 40; i++) {
-    const fba = getFBAFee(inputs.sizetier, inputs.weight, yp) * (inputs.surcharge ? FUEL_SURCHARGE : 1);
-    const ref = getReferralFee(inputs.category, yp);
-    yp = (totalFixed + fba + ref) / (1 - inputs.margin / 100);
-  }
-  return yp;
 }
 
 function classifyPrice(currentPrice, prices) {
@@ -231,21 +117,25 @@ function getInventoryStatus(inventoryUnits, unitsSold, periodDays) {
 }
 
 function amazonSizeTierToAppTier(raw) {
+  // Amazon's export values are often camelCase with zero separator (e.g. "UsSmallStandardSize") —
+  // split camelCase word boundaries into spaces before matching, or "small.+standard" never matches.
   const s = (raw || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[-_]+/g, ' ');
   if (/small.+standard|standard.+small/.test(s)) return 'ss';
   if (/large.+standard|standard.+large/.test(s)) return 'ls';
+  if (/small.+bulky/.test(s)) return 'sb';
   if (/bulky/.test(s)) return 'lb';
+  if (/extra.+large/.test(s)) return 'xl';
   if (/small.+oversize|oversize.+small/.test(s)) return 'lb';
   if (/medium.+oversize|oversize.+medium/.test(s)) return 'lb';
   if (/large.+oversize|oversize.+large/.test(s)) return 'xl';
   if (/special.+oversize|oversize.+special/.test(s)) return 'xl';
-  return null;
+  return null; // unknown → caller uses default
 }
 
 const CAT_MAP = { home:'15',beauty:'15b',grocery:'15c',apparel:'17',shoes:'15s',
   electronics:'8',computers:'8c',camera:'8cam',pc:'6p',appliances:'6',
   jewelry:'20j',watches:'16w',giftcards:'20',amazon_accessories:'45',books:'12' };
-const VALID_SIZE_TIERS = ['ss','ls','lb','xl'];
+const VALID_SIZE_TIERS = ['ss','ls','sb','lb','xl'];
 
 // RULE: product/CIF import header aliases (case-insensitive, trimmed). Lets the partner's
 // real CIF workbook (`Merchant SKU, ASIN, FNSKU, model_name, CIF`) import as-is.
@@ -319,7 +209,8 @@ function checkKillSignals(product) {
   if (lc === 'STAGE_3') {
     const prices = calcPrices(product.inputs);
     const daysInS3 = daysSince(product.stageStartDates.STAGE_3);
-    if (daysInS3 >= S3_KILL_DAYS) {
+    // RULE: skipped when break-even ACoS is unverifiable (fbaError → NaN): no false K3.
+    if (daysInS3 >= S3_KILL_DAYS && Number.isFinite(prices.beAcos)) {
       const everBelowBE = product.checkins.some(c => c.currentAcos !== undefined && c.currentAcos < prices.beAcos);
       const organicGrowing = product.checkins.slice(-3).some(c => c.organicGrowing === 'yes');
       if (!everBelowBE && !organicGrowing) signals.push('Kill Signal 3');
@@ -892,7 +783,7 @@ function buildProposalReportHtml(model) {
   </ol>
 
   <div class="foot">
-    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s current fee tables (594 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊当前费用表定价（594项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
+    <strong>${L('Sources & method.', '来源与方法。')}</strong> ${L('Every price was computed from the imported Amazon exports and priced by the app\'s fee engine against Amazon\'s dated FBA rate cards, calibrated to Amazon\'s own Fee Preview estimate (663 automated tests). Sale prices anchor on the normal price, step down the days-of-cover ladder, and are floored at landed cost + fees where CIF data is present.', '每个价格均根据导入的亚马逊导出数据计算，并由应用的费用引擎依据亚马逊按日期生效的FBA费率表定价，并按亚马逊费用预览估算校准（663项自动化测试）。促销价以标准价为基准，沿库存覆盖天数阶梯递减，并在有CIF数据时以到岸成本 + 费用为下限。')}</div>
   </div>`;
 
   return `<!doctype html><html lang="${model.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">` +
@@ -910,6 +801,7 @@ function buildRulesHtml(data) {
   const tr = data.tierRules;
   const end = tr.endings;
 
+  // 1 — How a sale price is decided
   const s1 = `
     <div class="card">
       <div class="card-title">${L('How a sale price is decided', '促销价如何确定')}</div>
@@ -921,6 +813,7 @@ function buildRulesHtml(data) {
       </div>
     </div>`;
 
+  // 2 — Discount ladder (parameterised from data.ladder + threshold; ascending like the report)
   const asc = [...data.ladder].sort((a, b) => a.cover - b.cover);
   let ladderRows = `<tr><td>&le; ${data.thresholdCurrent} ${dayW}</td><td>${L('no sale &mdash; healthy', '不促销 &mdash; 健康')}</td></tr>`;
   asc.forEach((rg, i) => {
@@ -944,6 +837,7 @@ function buildRulesHtml(data) {
       </div>
     </div>`;
 
+  // 3 — Guardrails
   const s3 = `
     <div class="card">
       <div class="card-title">${L('Guardrails', '防护规则')}</div>
@@ -956,6 +850,7 @@ function buildRulesHtml(data) {
       </ul>
     </div>`;
 
+  // 4 — Inventory status thresholds
   const s4 = `
     <div class="card">
       <div class="card-title">${L('Inventory status thresholds', '库存状态阈值')}</div>
@@ -968,6 +863,7 @@ function buildRulesHtml(data) {
       </table>
     </div>`;
 
+  // 5 — Price tiers
   const s5 = `
     <div class="card">
       <div class="card-title">${L('Price tiers', '价格层级')}</div>
@@ -982,16 +878,18 @@ function buildRulesHtml(data) {
       </table>
     </div>`;
 
+  // 6 — Fees
   const s6 = `
     <div class="card">
       <div class="card-title">${L('Fee assumptions', '费用假设')}</div>
       <ul style="list-style:none;padding:0;margin:0;font-size:0.78rem;color:var(--c-c5c8e0);line-height:1.5;">
-        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
+        <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('FBA fee schedule', 'FBA费用表')}</strong> ${escHtml(data.feeCoverageDescription || '')} &mdash; ${L(`effective ${data.feeEffectiveFrom} (fees vary across 3 price bands: &lt;$10, $10&ndash;$50, &gt;$50).`, `生效日期 ${data.feeEffectiveFrom}（费用按 3 个价格区间变化：&lt;$10、$10&ndash;$50、&gt;$50）。`)}</li>
         <li style="padding:6px 0;border-bottom:1px solid var(--c-1e2130);"><strong style="color:var(--c-e8eaf0);">${L('Fuel &amp; logistics surcharge', '燃油与物流附加费')}</strong> &mdash; ${L(`${data.fuelSurchargePct}% on top of every FBA fee${data.fuelEffectiveFrom ? ` (from ${data.fuelEffectiveFrom})` : ''}.`, `每笔 FBA 费用之上加收 ${data.fuelSurchargePct}%${data.fuelEffectiveFrom ? `（自 ${data.fuelEffectiveFrom} 起）` : ''}。`)}</li>
         <li style="padding:6px 0;"><strong style="color:var(--c-e8eaf0);">${L('Referral fees', '推荐费')}</strong> &mdash; ${L('category-based, see full document.', '基于类目，详见完整文档。')}</li>
       </ul>
     </div>`;
 
+  // 7 — The edit loop (F3 wording)
   const s7 = `
     <div class="alert info" style="margin-top:4px;">
       ${L(
@@ -1284,51 +1182,54 @@ eq(getReferralFee('16w',2000),255.00,  'Watches tiered: $2000 → ($1500×16%) +
 eq(getReferralFee('20',  50),  10.00,  'Gift cards 20%: $50 → $10.00');
 eq(getReferralFee('12',  10),   3.30,  'Books 15% + $1.80 closing: $10 → $3.30');
 
-// ─── 2. getFBAFee ────────────────────────────────────────────────────────────
-describe('getFBAFee — Small Standard (all bands)');
+// ─── 2. FBA base fee (shipped baseFBA / dated rate engine) ───────────────────
+// Rates come from fba-rates.js (nonpeak 2026-01-15 → 2026-10-14 here, FEE_DATE). Full 54-row,
+// peak, bulky, extra-large and dimensional-weight coverage is in test-fba.js — no flat
+// bulky/XL rate is asserted anywhere any more.
+const fbaB = (tier, oz, price, dimensions) => baseFBA({ sizetier: tier, weight: oz, dimensions, feeDate: FEE_DATE }, price);
+describe('baseFBA — Small Standard (all bands)');
 
 // Price band assignment: <$10 = band 0, $10–$50 = band 1, >$50 = band 2
-eq(getFBAFee('ss', 2,  5), 2.43, 'SS 2oz / <$10 band');
-eq(getFBAFee('ss', 2, 20), 3.32, 'SS 2oz / $10-50 band');
-eq(getFBAFee('ss', 2, 60), 3.58, 'SS 2oz / >$50 band');
-eq(getFBAFee('ss', 8,  5), 2.66, 'SS 8oz / <$10 band');
-eq(getFBAFee('ss', 8, 20), 3.54, 'SS 8oz / $10-50 band');
-eq(getFBAFee('ss', 8, 60), 3.80, 'SS 8oz / >$50 band');
-eq(getFBAFee('ss',16,  5), 2.95, 'SS 16oz (max table row) / <$10 band');
-eq(getFBAFee('ss',16, 20), 3.96, 'SS 16oz / $10-50 band');
-eq(getFBAFee('ss',16, 60), 4.22, 'SS 16oz / >$50 band');
-eq(getFBAFee('ss',20, 20), 3.96, 'SS 20oz (above max 16oz) → last row');
+eq(fbaB('ss', 2,  5), 2.43, 'SS 2oz / <$10 band');
+eq(fbaB('ss', 2, 20), 3.32, 'SS 2oz / $10-50 band');
+eq(fbaB('ss', 2, 60), 3.58, 'SS 2oz / >$50 band');
+eq(fbaB('ss', 8,  5), 2.66, 'SS 8oz / <$10 band');
+eq(fbaB('ss', 8, 20), 3.54, 'SS 8oz / $10-50 band');
+eq(fbaB('ss', 8, 60), 3.80, 'SS 8oz / >$50 band');
+eq(fbaB('ss',16,  5), 2.95, 'SS 16oz / <$10 band');
+eq(fbaB('ss',16, 20), 3.96, 'SS 16oz / $10-50 band');
+eq(fbaB('ss',16, 60), 4.22, 'SS 16oz / >$50 band');
+is(Number.isNaN(fbaB('ss', 20, 20)), 'SS 20oz (over 1 lb) → NaN, never a guessed "last row" fee');
 
-describe('getFBAFee — price band boundaries');
+describe('baseFBA — price band boundaries');
 // $10.00 is in the $10–50 band (not <$10); $9.99 is <$10
-eq(getFBAFee('ss', 8, 10),    3.54, 'SS price=10.00 → $10-50 band');
-eq(getFBAFee('ss', 8,  9.99), 2.66, 'SS price=9.99 → <$10 band');
+eq(fbaB('ss', 8, 10),    3.54, 'SS price=10.00 → $10-50 band');
+eq(fbaB('ss', 8,  9.99), 2.66, 'SS price=9.99 → <$10 band');
 // $50.00 is in $10–50 band; $50.01 is >$50
-eq(getFBAFee('ss', 8, 50),    3.54, 'SS price=50.00 → $10-50 band');
-eq(getFBAFee('ss', 8, 50.01), 3.80, 'SS price=50.01 → >$50 band');
+eq(fbaB('ss', 8, 50),    3.54, 'SS price=50.00 → $10-50 band');
+eq(fbaB('ss', 8, 50.01), 3.80, 'SS price=50.01 → >$50 band');
 
-describe('getFBAFee — Large Standard');
-eq(getFBAFee('ls',  4,  5), 2.91, 'LS 4oz / <$10 band');
-eq(getFBAFee('ls',  4, 20), 3.73, 'LS 4oz / $10-50 band');
-eq(getFBAFee('ls',  4, 60), 3.99, 'LS 4oz / >$50 band');
-eq(getFBAFee('ls', 48, 20), 6.67, 'LS 48oz (last table row) / $10-50 band');
-// >48oz: bases[band] + ceil((oz-48)/4) × $0.08
-eq(getFBAFee('ls', 50, 20), 7.05, 'LS 50oz / $10-50: 6.97 + ceil(2/4)×0.08 = $7.05');
-eq(getFBAFee('ls', 52, 20), 7.05, 'LS 52oz / $10-50: 6.97 + ceil(4/4)×0.08 = $7.05');
-eq(getFBAFee('ls', 56, 20), 7.13, 'LS 56oz / $10-50: 6.97 + ceil(8/4)×0.08 = $7.13');
-eq(getFBAFee('ls', 50,  5), 6.23, 'LS 50oz / <$10: 6.15 + 0.08 = $6.23');
-eq(+getFBAFee('ls',50, 60).toFixed(2), 7.31, 'LS 50oz / >$50: 7.23 + 0.08 = $7.31');
+describe('baseFBA — Large Standard (needs packaged dimensions)');
+const LS_DIMS = [4, 4, 2]; // small box: dimensional weight 0.23 lb never exceeds the unit weight below
+eq(fbaB('ls',  4,  5, LS_DIMS), 2.91, 'LS 4oz / <$10 band');
+eq(fbaB('ls',  4, 20, LS_DIMS), 3.73, 'LS 4oz / $10-50 band');
+eq(fbaB('ls',  4, 60, LS_DIMS), 3.99, 'LS 4oz / >$50 band');
+eq(fbaB('ls', 48, 20, LS_DIMS), 6.67, 'LS 48oz (3 lb row) / $10-50 band');
+// >3 lb: base + ceil((lb − 3) / 0.25) × $0.08
+eq(+fbaB('ls', 50, 20, LS_DIMS).toFixed(2), 7.05, 'LS 50oz / $10-50: 6.97 + 1×0.08 = $7.05');
+eq(+fbaB('ls', 52, 20, LS_DIMS).toFixed(2), 7.05, 'LS 52oz / $10-50: 6.97 + 1×0.08 = $7.05');
+eq(+fbaB('ls', 56, 20, LS_DIMS).toFixed(2), 7.13, 'LS 56oz / $10-50: 6.97 + 2×0.08 = $7.13');
+eq(+fbaB('ls', 50,  5, LS_DIMS).toFixed(2), 6.23, 'LS 50oz / <$10: 6.15 + 0.08 = $6.23');
+eq(+fbaB('ls', 50, 60, LS_DIMS).toFixed(2), 7.31, 'LS 50oz / >$50: 7.23 + 0.08 = $7.31');
+is(Number.isNaN(fbaB('ls', 32, 20)), 'LS without packaged dimensions → NaN (dimensional weight unverifiable)');
 
-describe('getFBAFee — Large Bulky & Extra-Large (flat by band)');
-eq(getFBAFee('lb', 100,  5),  9.61, 'LB / <$10');
-eq(getFBAFee('lb', 100, 25), 10.10, 'LB / $10-50');
-eq(getFBAFee('lb', 100, 60), 10.84, 'LB / >$50');
-eq(getFBAFee('xl', 200,  5), 26.33, 'XL / <$10');
-eq(getFBAFee('xl', 200, 25), 27.12, 'XL / $10-50');
-eq(getFBAFee('xl', 200, 60), 28.01, 'XL / >$50');
+describe('baseFBA — bulky / extra-large are dimension-based (no flat rate)');
+is(Number.isNaN(fbaB('lb', 100, 25)), 'Large Bulky without dimensions → NaN, not a flat fee');
+is(Number.isNaN(fbaB('xl', 200, 25)), 'Extra-Large without dimensions → NaN, not a flat fee');
+is(fbaB('lb', 100, 25, [38, 10, 6]) > 0, 'Large Bulky with dimensions → priced by the dated engine');
 
-// 3.5% fuel surcharge applied externally
-eq(+(getFBAFee('ss',16,20) * 1.035).toFixed(2), 4.10, 'SS 16oz $20 + 3.5% surcharge = $4.10');
+// 3.5% fuel surcharge: total = base × 1.035 (applied once)
+eq(+totalFBA({ sizetier: 'ss', weight: 16, surcharge: true, feeDate: FEE_DATE }, 20).toFixed(2), 4.10, 'SS 16oz $20 + 3.5% surcharge = $4.10');
 
 // ─── 3. roundEnd ─────────────────────────────────────────────────────────────
 describe('roundEnd');
@@ -1357,7 +1258,7 @@ const base = {
   inbound: 0.50, placement: 0, prep: 0.25,
   storage: 0.10, q4storage: 0, ppc: 1.50, returns: 0.30, other: 0.20,
   vine: false, vineUnits: 20, annualUnits: 500,
-  tacos: 25, lacos: 60, cvr: 12, surcharge: true
+  tacos: 25, lacos: 60, cvr: 12, surcharge: true, feeDate: FEE_DATE
 };
 const p = calcPrices(base);
 
@@ -1399,10 +1300,10 @@ is(highP.ypF.profit > 0, `Profit positive at yp ($${highP.ypF.profit.toFixed(2)}
 
 describe('calcPrices — Large Standard product');
 
-// LS 32oz, 28% margin: FBA band $10-50, LS_TABLE at 32oz → $5.82
+// LS 32oz, 28% margin: FBA band $10-50, large-standard 2 lb row → $5.82
 // 5.82 × 1.035 = $6.02 with surcharge
 const ls = calcPrices({
-  ...base, sizetier: 'ls', weight: 32,
+  ...base, sizetier: 'ls', weight: 32, dimensions: LS_DIMS,
   cogs: 8, margin: 28,
   inbound: 0.80, placement: 0.20, prep: 0.25,
   storage: 0.15, q4storage: 0, ppc: 1.50, returns: 0.40, other: 0.20
@@ -1419,9 +1320,9 @@ describe('calcPrices — price ordering invariants');
 for (const [label, inputs] of [
   ['standard SS 30% margin', base],
   ['high-price >$50 SS',     {...base, cogs:20, margin:35}],
-  ['large standard LS',      {...base, sizetier:'ls', weight:32, cogs:8, margin:28}],
-  ['large bulky LB',         {...base, sizetier:'lb', weight:120, cogs:12, margin:32}],
-  ['extra-large XL',         {...base, sizetier:'xl', weight:300, cogs:25, margin:30}],
+  ['large standard LS',      {...base, sizetier:'ls', weight:32, dimensions:LS_DIMS, cogs:8, margin:28}],
+  ['large bulky LB',         {...base, sizetier:'lb', weight:120, dimensions:[38,10,6], cogs:12, margin:32}],
+  ['extra-large XL',         {...base, sizetier:'xl', weight:300, dimensions:[60,10,2], cogs:25, margin:30}],
   ['cheap SS <$10 band',     {...base, cogs:1, margin:20, inbound:0.10, ppc:0.30, prep:0.10, returns:0.10, storage:0.05, other:0.05}],
   ['Vine enrolled',          {...base, vine:true, annualUnits:500}],
   ['no fuel surcharge',      {...base, surcharge:false}],
@@ -1484,6 +1385,13 @@ is(p.ypF.profit   > 0, `Profit at yp: $${p.ypF.profit.toFixed(2)}`);
 is(p.listF.profit > 0, `Profit at listP: $${p.listF.profit.toFixed(2)}`);
 is(p.saleF.profit > 0, `Profit at saleP: $${p.saleF.profit.toFixed(2)}`);
 is(p.discF.profit > 0, `Profit at discP: $${p.discF.profit.toFixed(2)}`);
+
+describe('calcPrices — unverifiable FBA fee (NaN guard)');
+// Missing packaged dimensions on a non-small-standard product: explicit fbaError, never "$NaN" maths.
+const noDims = calcPrices({ ...base, sizetier: 'ls', weight: 32 });
+is(typeof noDims.fbaError === 'string' && noDims.fbaError.length > 0, `fbaError set: "${noDims.fbaError}"`);
+is(Number.isNaN(noDims.yp) && Number.isNaN(noDims.beAcos), 'yp / beAcos are NaN (consumers must show "needs dimensions")');
+is(p.fbaError === null, 'verified product → fbaError null');
 
 // ─── 5. classifyPrice ────────────────────────────────────────────────────────
 describe('classifyPrice');
@@ -1564,6 +1472,21 @@ is(!checkKillSignals(s2Product(61, [25, 25])).signals.includes('Kill Signal 2'),
 is(!checkKillSignals(s2Product(25, [5,  5])).signals.includes('Kill Signal 2'),
   'K2 suppressed: only 25 days in S2 (below 60-day threshold)');
 
+describe('checkKillSignals — Kill Signal 3 needs a verified break-even ACoS');
+const s3Product = (inputs, acos) => ({
+  lifecycle: 'STAGE_3',
+  inputs,
+  stageStartDates: { STAGE_1: daysAgo(200), STAGE_2: daysAgo(150), STAGE_3: daysAgo(95) },
+  checkins: [{ date: daysAgo(5), currentAcos: acos }],
+  createdAt: daysAgo(200)
+});
+is(checkKillSignals(s3Product(base, 95)).signals.includes('Kill Signal 3'),
+  'K3 fires: 95 days S3, ACoS 95% never below break-even, organic flat');
+is(!checkKillSignals(s3Product(base, 5)).signals.includes('Kill Signal 3'),
+  'K3 clear: ACoS 5% below break-even');
+is(!checkKillSignals(s3Product({ ...base, sizetier: 'ls', weight: 32 }, 5)).signals.includes('Kill Signal 3'),
+  'K3 skipped when break-even ACoS is NaN (missing dimensions) — no false kill signal');
+
 describe('checkKillSignals — Kill Signal 4 (ad spend money pit)');
 
 const spendProduct = (revenue, spend) => ({
@@ -1600,8 +1523,8 @@ is(!checkKillSignals(withCheckin(5)).warnings.length > 0,  'No stale warning: la
 // ─── 7. Known pricing gotcha — $9.99 vs $10.00 FBA band ─────────────────────
 describe('Price band boundary — $9.99 vs $10.00 (critical Amazon gotcha)');
 
-const fee_999  = getFBAFee('ss', 8,  9.99);
-const fee_1000 = getFBAFee('ss', 8, 10.00);
+const fee_999  = fbaB('ss', 8,  9.99);
+const fee_1000 = fbaB('ss', 8, 10.00);
 is(fee_999 < fee_1000,
   `FBA at $9.99 ($${fee_999}) < FBA at $10.00 ($${fee_1000}) — band boundary works`);
 eq(fee_999,  2.66, 'FBA at $9.99: <$10 band → $2.66');
@@ -1741,7 +1664,7 @@ is(rawP <= p.yp, `raw price ($${rawP.toFixed(2)}) ≤ rounded Your Price ($${p.y
 is(p.yp - rawP < 1, 'rounded price is within $1 above the raw solution (.95 round-up)');
 // At the fixed point, margin is exactly the target
 {
-  const fba = getFBAFee(base.sizetier, base.weight, rawP) * FUEL_SURCHARGE;
+  const fba = totalFBA(base, rawP);
   const ref = getReferralFee(base.category, rawP);
   const profit = rawP - base.cogs - 2.85 - fba - ref;
   eq(+(profit / rawP * 100).toFixed(3), 30, 'margin at raw price = exactly 30%');
@@ -1916,8 +1839,9 @@ describe('amazonSizeTierToAppTier — real-world Amazon FBA size tier strings');
 
 eq(amazonSizeTierToAppTier('UsSmallStandardSize'), 'ss', 'Real CIF export value: UsSmallStandardSize → ss');
 eq(amazonSizeTierToAppTier('UsLargeStandardSize'), 'ls', 'Real CIF export value: UsLargeStandardSize → ls');
-eq(amazonSizeTierToAppTier('SmallBulky'), 'lb', 'Real CIF export value: SmallBulky → lb (was silently falling through to null before the fix)');
-eq(amazonSizeTierToAppTier('LargeBulky'), 'lb', 'LargeBulky → lb (this app has no separate large-bulky bucket)');
+eq(amazonSizeTierToAppTier('SmallBulky'), 'sb', 'Real CIF export value: SmallBulky → sb (2026 small-bulky tier)');
+eq(amazonSizeTierToAppTier('LargeBulky'), 'lb', 'LargeBulky → lb');
+eq(amazonSizeTierToAppTier('UsExtraLarge'), 'xl', 'UsExtraLarge → xl');
 eq(amazonSizeTierToAppTier('Small Oversize'), 'lb', 'Legacy term: Small Oversize → lb');
 eq(amazonSizeTierToAppTier('Medium Oversize'), 'lb', 'Legacy term: Medium Oversize → lb');
 eq(amazonSizeTierToAppTier('Large Oversize'), 'xl', 'Legacy term: Large Oversize → xl');

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Amazon FBA pricing and advertising stage tool",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js && node test-fba.js"
   },
   "engines": {
     "node": ">=16"

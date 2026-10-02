@@ -4,7 +4,7 @@ A self-contained, single-file web app for Amazon FBA sellers to calculate pricin
 track product lifecycles, manage advertising stages (m19 compatible), and decide when to
 kill or continue products.
 
-No server required. No build step. No dependencies. Open `index.html` in any browser.
+No server required. No build step. No dependencies. Keep `index.html` and `fba-rates.js` together and open `index.html` in any browser.
 
 Release history: see **[CHANGELOG.md](CHANGELOG.md)**.
 
@@ -33,8 +33,9 @@ Ten improvements shipped in a second round (still a single dependency-free `inde
 - **Sidebar search** — filter products by name/ASIN (appears at 6+ products)
 - **Dark/light theme toggle** — persisted, follows your OS setting on first visit
 - **Auto-backup nudge** — reminds you to Export JSON after 30 days without a backup
-- **Versioned fee schedule** — all FBA fee numbers in one dated `FEE_SCHEDULE`
-  block; future Amazon rate changes are a single block swap (LOGIC.md §1.4)
+- **Dated FBA rate cards** — every FBA fee number lives in `fba-rates.js` /
+  `rates/amazon-us-2026.json` (nonpeak + holiday peak, registered by date); a new Amazon
+  rate card is added as a new dated card (LOGIC.md §1.4)
 
 Tests: 213 → 302 (`npm test`).
 
@@ -318,7 +319,7 @@ and adjust stage logic without changing the underlying graduation criteria.
 
 This is designed to be forked and modified. A few guidelines:
 
-- Keep it as a single `index.html` file — this makes it easy to share and run anywhere
+- Keep it as `index.html` + `fba-rates.js` (the dated FBA rate cards), zero dependencies — easy to share and run anywhere
 - Document any new business rules in LOGIC.md with the same format
 - Use `// RULE:` comments for any new decision constants
 - If you change the data schema, increment the version in `STORAGE_KEY` and add a migration function
@@ -328,12 +329,19 @@ This is designed to be forked and modified. A few guidelines:
 ## Fee Table Sources
 
 - Amazon referral fees: [Seller Central Fee Schedule](https://sellercentral.amazon.com/help/hub/reference/external/G200336920)
-- FBA fulfillment fees: [Seller Central FBA Fees](https://sellercentral.amazon.com/help/hub/reference/external/GABBX6GZPA8MSZGW)
-- Fuel surcharge: Amazon announcement effective April 17, 2026
-- All rates confirmed as of June 2026. Amazon may update fees mid-year — check Seller Central.
+- FBA fulfillment fees: [Seller Central FBA Fees](https://sellercentral.amazon.com/help/hub/reference/external/GABBX6GZPA8MSZGW) — 2026 nonpeak (Jan 15 – Oct 14) and holiday peak (Oct 15, 2026 – Jan 14, 2027) cards in `rates/amazon-us-2026.json`
+- Fuel & logistics surcharge: 3.5%, effective April 17, 2026, applied once to either card
+- Current per-SKU fees: Amazon's own `expected-fulfillment-fee-per-unit` from the FBA Fee Preview calibrates the rate-card engine (LOGIC.md §1.5)
+- FBA rate cards verified October 2, 2026. Coverage ends January 14, 2027 — from December 15, 2026 the app warns that a new card must be added.
 
 ---
 
 ## License
 
 MIT — do whatever you want with it.
+
+### Dated FBA fees and sale-period safety (October 2026)
+
+The calculator quotes the selected shipment date (blank uses today). The Sale Planner shows applicable rate windows and uses the highest break-even floor across the entire date range. October 15, 2026 through January 14, 2027 uses the published peak card; January 15, 2027 requires a new verified card. Missing coverage or packaged dimensions blocks a claimed safe plan. Re-import Fee Preview to backfill unit weight, packaged dimensions and Amazon's per-SKU fee estimate, which calibrates every quote (Amazon's actual offset is applied to both nonpeak and peak; the estimate is never re-multiplied by the fuel factor). A price just above the break-even floor can still lose money across a $10/$50 fee band — planner suggestions step past it and exports reject it. Keep any Q4 storage input for storage only.
+
+Rates cover US non-apparel/non-dangerous-goods base fulfillment. See `rates/amazon-us-2026.json` and LOGIC §1 for sources, exclusions, date timing and update instructions. `npm test` runs `test.js` (which loads the shipped fee engine from `index.html`) plus `test-fba.js` (rate cards, seasons, calibration, fee-jump and planner regressions). There is no build or lint command in this static repository.
